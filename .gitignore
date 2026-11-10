@@ -4,7 +4,9 @@ coverage/
 .DS_Store
 *.log
 .env*
-!.env.example
+.aistudio
+metadata.json
+bun.lock
 
 # Local cache & temporary test artifacts
 .data/
