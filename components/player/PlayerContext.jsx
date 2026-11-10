@@ -275,6 +275,17 @@ export function PlayerProvider({ children }) {
     setRepeatMode((prev) => (prev === 'off' ? 'all' : prev === 'all' ? 'one' : 'off'));
   }, []);
 
+  const closePlayer = useCallback(() => {
+    destroyHowl();
+    setIsPlaying(false);
+    setIsLoading(false);
+    setCurrentTime(0);
+    setDuration(0);
+    setCurrentIndex(-1);
+    setIsPlaylistOpen(false);
+    setError(null);
+  }, [destroyHowl]);
+
   useEffect(() => {
     return () => {
       destroyHowl();
@@ -308,6 +319,7 @@ export function PlayerProvider({ children }) {
         seekTo,
         setVolume,
         toggleMute,
+        closePlayer,
         clearError: () => setError(null),
       }}
     >

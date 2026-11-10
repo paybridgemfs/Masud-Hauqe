@@ -54,6 +54,7 @@ export default function GlobalMusicPlayer() {
     setVolume,
     toggleMute,
     playTrack,
+    closePlayer,
     clearError,
   } = usePlayer();
 
@@ -274,8 +275,8 @@ export default function GlobalMusicPlayer() {
             </div>
           </div>
 
-          {/* Right Volume, Download & Queue Controls */}
-          <div className="flex items-center justify-end gap-2 sm:gap-3 w-1/4 sm:w-1/3">
+          {/* Right Volume, Download, Queue & Close Controls */}
+          <div className="flex items-center justify-end gap-1.5 sm:gap-2.5 w-1/4 sm:w-1/3">
             <div className="hidden md:flex items-center gap-2">
               <button
                 type="button"
@@ -317,11 +318,22 @@ export default function GlobalMusicPlayer() {
               type="button"
               onClick={() => setIsPlaylistOpen(!isPlaylistOpen)}
               aria-label="Toggle playback queue"
+              title="Playback Queue"
               className={`p-2 rounded transition-colors ${
                 isPlaylistOpen ? 'text-[#C8A464] bg-[#1C1B18]' : 'text-[#A1A1AA] hover:text-[#F4F1EA]'
               }`}
             >
               <ListMusic className="w-4 h-4" />
+            </button>
+
+            <button
+              type="button"
+              onClick={closePlayer}
+              aria-label="Close music player"
+              title="Close Player"
+              className="p-2 rounded text-[#A1A1AA] hover:text-[#F87171] hover:bg-[#1E1416] transition-colors"
+            >
+              <X className="w-4 h-4" />
             </button>
           </div>
         </div>

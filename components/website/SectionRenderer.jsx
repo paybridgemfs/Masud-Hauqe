@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { motion } from 'motion/react';
-import { ArrowRight, Disc3, Music2, Video, Image as ImageIcon, Mail } from 'lucide-react';
+import { ArrowRight, Play, Disc3, Music2, Video, Image as ImageIcon, Mail } from 'lucide-react';
 import MusicCard from '@/components/music/MusicCard.jsx';
 import AlbumCard from '@/components/music/AlbumCard.jsx';
 import { usePlayer } from '@/components/player/PlayerContext.jsx';
@@ -28,9 +28,32 @@ export default function SectionRenderer({
   switch (type) {
     case 'HERO': {
       const latestTrack = publishedMusic[0] || null;
+      const heroBgImage = content.backgroundImage || artist?.coverImage || '';
+      const portraitImage = artist?.profileImage || '';
+
       return (
-        <section className="relative border-b border-[#222226] overflow-hidden">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 sm:py-20 lg:py-24">
+        <section className="relative border-b border-[#222226] overflow-hidden bg-[#09090B]">
+          {/* Hero Background Image with Black Overlay */}
+          {heroBgImage ? (
+            <div className="absolute inset-0 z-0 pointer-events-none">
+              <Image
+                src={heroBgImage}
+                alt={content.headline || artist?.name || 'Masud Hauqe'}
+                fill
+                priority
+                sizes="100vw"
+                referrerPolicy="no-referrer"
+                className="object-cover object-center"
+              />
+              <div className="absolute inset-0 bg-black/75" />
+              <div className="absolute inset-0 bg-gradient-to-r from-[#09090B]/95 via-[#09090B]/80 to-[#09090B]/65" />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#09090B] via-transparent to-[#09090B]/50" />
+            </div>
+          ) : (
+            <div className="absolute inset-0 z-0 pointer-events-none bg-[radial-gradient(circle_at_top_right,#1F1A11_0%,#09090B_65%)]" />
+          )}
+
+          <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 sm:py-20 lg:py-24">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-stretch">
               {/* Left Column: Editorial Typography Hierarchy */}
               <motion.div
@@ -50,7 +73,7 @@ export default function SectionRenderer({
                   {content.headline || artist?.name || 'Masud Hauqe'}
                 </h1>
 
-                <p className="text-base sm:text-lg text-[#B4B4BC] max-w-2xl leading-relaxed">
+                <p className="text-base sm:text-lg text-[#D4D4D8] max-w-2xl leading-relaxed">
                   {content.subheadline ||
                     artist?.shortBiography ||
                     'Original studio recordings, sonic monographs, and authorized high-resolution MP3 releases.'}
@@ -61,9 +84,10 @@ export default function SectionRenderer({
                     <button
                       type="button"
                       onClick={() => playTrack(latestTrack, publishedMusic)}
-                      className="px-6 py-3 rounded bg-[#C8A464] text-[#09090B] hover:bg-[#D4B475] text-sm font-semibold tracking-wide transition-colors whitespace-nowrap shrink-0"
+                      className="inline-flex items-center gap-2 px-6 py-3 rounded bg-[#C8A464] text-[#09090B] hover:bg-[#D4B475] text-sm font-semibold tracking-wide transition-colors whitespace-nowrap shrink-0"
                     >
-                      Play Latest Release: {latestTrack.title}
+                      <Play className="w-4 h-4 fill-current" />
+                      <span>Play Latest Release</span>
                     </button>
                   ) : (
                     <Link
@@ -76,54 +100,49 @@ export default function SectionRenderer({
 
                   <Link
                     href={content.secondaryCtaUrl || '/about'}
-                    className="px-6 py-3 rounded border border-[#2E2E36] text-[#F4F1EA] hover:border-[#C8A464] hover:text-[#C8A464] text-sm font-medium transition-colors whitespace-nowrap shrink-0"
+                    className="px-6 py-3 rounded border border-[#32323C] bg-[#09090B]/60 backdrop-blur-sm text-[#F4F1EA] hover:border-[#C8A464] hover:text-[#C8A464] text-sm font-medium transition-colors whitespace-nowrap shrink-0"
                   >
                     {content.secondaryCtaText || 'Artist Monograph'}
                   </Link>
                 </div>
               </motion.div>
 
-              {/* Right Column: Matching Height Editorial Portrait / Studio Visual */}
+              {/* Right Column: Clean Editorial Portrait Card (No Disc Overlay Over Image) */}
               <div className="lg:col-span-5 flex">
-                <div className="w-full min-h-[320px] lg:h-full rounded-lg bg-[#111116] border border-[#24242C] overflow-hidden relative flex flex-col justify-between p-6 sm:p-8">
-                  {artist?.coverImage || artist?.profileImage ? (
+                <div className="w-full min-h-[340px] lg:h-full rounded-lg bg-[#111116]/90 border border-[#24242C] overflow-hidden relative flex flex-col justify-end p-6 sm:p-8 shadow-2xl">
+                  {portraitImage ? (
                     <>
                       <Image
-                        src={artist.coverImage || artist.profileImage}
-                        alt={artist.name || 'Masud Hauqe'}
+                        src={portraitImage}
+                        alt={artist?.name || 'Masud Hauqe'}
                         fill
                         sizes="(max-width: 1024px) 100vw, 480px"
                         referrerPolicy="no-referrer"
-                        className="object-cover"
+                        className="object-cover object-center"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/25 to-transparent" />
                     </>
                   ) : (
-                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,#2A2317_0%,#111115_55%,#09090B_100%)]" />
+                    <>
+                      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,#2A2317_0%,#111115_55%,#09090B_100%)]" />
+                      <div className="relative z-10 my-auto flex flex-col items-center justify-center py-8 text-center">
+                        <div className="w-24 h-24 rounded-full border border-[#C8A464]/40 bg-[#0C0C0F]/80 flex items-center justify-center mb-3">
+                          <Disc3 className="w-9 h-9 text-[#C8A464]" />
+                        </div>
+                        <p className="text-xs tracking-[0.18em] text-[#C8A464]">OFFICIAL PORTRAIT</p>
+                      </div>
+                    </>
                   )}
 
-                  <div className="relative z-10 flex items-center justify-between text-xs text-[#C8A464] tracking-[0.18em]">
-                    <span>STUDIO MASTER SERIES</span>
-                    <span className="tabular-nums">{new Date().getFullYear()}</span>
-                  </div>
-
-                  <div className="relative z-10 my-8 flex items-center justify-center">
-                    <div className="w-36 h-36 sm:w-44 sm:h-44 rounded-full border border-[#C8A464]/35 bg-[#0C0C0F]/80 flex items-center justify-center shadow-2xl">
-                      <div className="w-14 h-14 rounded-full border border-[#C8A464]/60 flex items-center justify-center">
-                        <Disc3 className="w-7 h-7 text-[#C8A464]" />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="relative z-10 border-t border-[#2A2A32]/80 pt-4 flex items-center justify-between text-xs text-[#D4D4D8]">
+                  <div className="relative z-10 border-t border-white/15 pt-4 flex items-center justify-between text-xs text-[#D4D4D8]">
                     <div>
                       <p className="font-semibold text-[#F4F1EA]">{artist?.name || 'Masud Hauqe'}</p>
-                      <p className="text-[#9A9AA2]">
+                      <p className="text-[#A1A1AA]">
                         {artist?.location || 'Official Digital Sound Archive'}
                       </p>
                     </div>
-                    <div className="text-right tabular-nums text-[#9A9AA2]">
-                      <span>{publishedMusic.length} Published Works</span>
+                    <div className="text-right tabular-nums text-[#D4D4D8]">
+                      <span>{publishedMusic.length} Works</span>
                       <span aria-hidden="true"> · </span>
                       <span>{publishedAlbums.length} Albums</span>
                     </div>
@@ -133,27 +152,27 @@ export default function SectionRenderer({
             </div>
 
             {/* Full-Width Key Archive Summary Strip Below Hero Split */}
-            <div className="mt-12 pt-8 border-t border-[#1C1C21] grid grid-cols-2 sm:grid-cols-4 gap-6">
+            <div className="mt-12 pt-8 border-t border-white/10 grid grid-cols-2 sm:grid-cols-4 gap-6">
               <div>
-                <p className="text-xs text-[#8E8E96] tracking-wider">ARTIST</p>
+                <p className="text-xs text-[#9A9AA2] tracking-wider">ARTIST</p>
                 <p className="text-base font-semibold text-[#F4F1EA] mt-1">
                   {artist?.name || 'Masud Hauqe'}
                 </p>
               </div>
               <div>
-                <p className="text-xs text-[#8E8E96] tracking-wider">PUBLISHED TRACKS</p>
+                <p className="text-xs text-[#9A9AA2] tracking-wider">PUBLISHED TRACKS</p>
                 <p className="text-base font-semibold text-[#F4F1EA] tabular-nums mt-1">
                   {publishedMusic.length} Master Recordings
                 </p>
               </div>
               <div>
-                <p className="text-xs text-[#8E8E96] tracking-wider">STUDIO ALBUMS</p>
+                <p className="text-xs text-[#9A9AA2] tracking-wider">STUDIO ALBUMS</p>
                 <p className="text-base font-semibold text-[#F4F1EA] tabular-nums mt-1">
                   {publishedAlbums.length} Collections
                 </p>
               </div>
               <div>
-                <p className="text-xs text-[#8E8E96] tracking-wider">AUDIO DELIVERY</p>
+                <p className="text-xs text-[#9A9AA2] tracking-wider">AUDIO DELIVERY</p>
                 <p className="text-base font-semibold text-[#C8A464] mt-1">
                   Direct Stream & MP3
                 </p>
@@ -353,8 +372,8 @@ export default function SectionRenderer({
             </div>
 
             {videoTracks.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {videoTracks.slice(0, 4).map((track) => (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {videoTracks.slice(0, 6).map((track) => (
                   <div
                     key={track.id}
                     className="bg-[#111115] border border-[#222228] rounded-lg overflow-hidden"
@@ -369,9 +388,9 @@ export default function SectionRenderer({
                       />
                     </div>
                     <div className="p-4 flex items-center justify-between gap-4">
-                      <div>
-                        <h3 className="text-base font-semibold text-[#F4F1EA]">{track.title}</h3>
-                        <p className="text-xs text-[#8E8E96] mt-0.5">
+                      <div className="min-w-0">
+                        <h3 className="text-base font-semibold text-[#F4F1EA] truncate">{track.title}</h3>
+                        <p className="text-xs text-[#8E8E96] mt-0.5 truncate">
                           {artist?.name || 'Masud Hauqe'} · {track.duration || '0:00'}
                         </p>
                       </div>

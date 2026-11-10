@@ -2,11 +2,23 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { PlusCircle, Trash2, Eye, EyeOff, Download, Music } from 'lucide-react';
+import {
+  PlusCircle,
+  Trash2,
+  Eye,
+  EyeOff,
+  Download,
+  Music,
+  AlertTriangle,
+  X,
+  Loader2,
+} from 'lucide-react';
 
 export default function AdminMusicClient({ initialMusic = [], albums = [] }) {
   const [musicList, setMusicList] = useState(initialMusic);
   const [statusMsg, setStatusMsg] = useState('');
+  const [trackToDelete, setTrackToDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   async function toggleField(track, field) {
     const nextVal = !track[field];
@@ -24,11 +36,23 @@ export default function AdminMusicClient({ initialMusic = [], albums = [] }) {
     }
   }
 
-  async function handleDelete(track) {
-    const res = await fetch(`/api/music/${track.id}`, { method: 'DELETE' });
-    if (res.ok) {
-      setMusicList((prev) => prev.filter((m) => m.id !== track.id));
-      setStatusMsg(`Deleted "${track.title}".`);
+  async function confirmDeleteTrack() {
+    if (!trackToDelete || isDeleting) return;
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/music/${trackToDelete.id}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+      if (res.ok) {
+        setMusicList((prev) => prev.filter((m) => m.id !== trackToDelete.id));
+        setStatusMsg(
+          `Deleted "${trackToDelete.title}" and removed its MP3 file from Google Drive.`
+        );
+        setTrackToDelete(null);
+      }
+    } finally {
+      setIsDeleting(false);
     }
   }
 
@@ -124,7 +148,7 @@ export default function AdminMusicClient({ initialMusic = [], albums = [] }) {
                       <td className="py-3 px-4 text-right">
                         <button
                           type="button"
-                          onClick={() => handleDelete(track)}
+                          onClick={() => setTrackToDelete(track)}
                           aria-label={`Delete ${track.title}`}
                           className="p-1.5 text-[#9A9AA2] hover:text-[#F87171] transition-colors"
                         >
@@ -145,6 +169,93 @@ export default function AdminMusicClient({ initialMusic = [], albums = [] }) {
           <p className="text-xs text-[#8E8E96] max-w-md mx-auto">
             Your database begins with zero fabricated tracks. Click &ldquo;Add New Music&rdquo; to fetch YouTube metadata and upload your first MP3 master.
           </p>
+        </div>
+      )}
+
+      {/* Custom Delete Confirmation Modal */}
+      {trackToDelete && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-music-modal-title"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4"
+        >
+          <div className="w-full max-w-md bg-[#111115] border border-[#2C2C35] rounded-lg shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[#222228]">
+              <div className="flex items-center gap-2.5 text-[#F87171]">
+                <AlertTriangle className="w-5 h-5 shrink-0" />
+                <h3 id="delete-music-modal-title" className="text-sm font-bold text-[#F4F1EA]">
+                  Confirm Music & Drive File Deletion
+                </h3>
+              </div>
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={() => setTrackToDelete(null)}
+                aria-label="Close confirmation dialog"
+                className="p-1 text-[#8E8E96] hover:text-[#F4F1EA] transition-colors disabled:opacity-50"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4">
+              <p className="text-xs sm:text-sm text-[#D4D4D8] leading-relaxed">
+                Are you sure you want to permanently delete{' '}
+                <span className="font-semibold text-[#F4F1EA]">&ldquo;{trackToDelete.title}&rdquo;</span>?
+              </p>
+
+              <div className="bg-[#09090B] border border-[#24242C] rounded p-3.5 space-y-1.5 text-xs">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[#8E8E96]">Drive MP3 File ID:</span>
+                  <span className="font-mono text-[#C8A464] truncate max-w-[200px]">
+                    {trackToDelete.audioFileId || 'None'}
+                  </span>
+                </div>
+                {trackToDelete.thumbnailFileId && (
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[#8E8E96]">Drive Image File ID:</span>
+                    <span className="font-mono text-[#C8A464] truncate max-w-[200px]">
+                      {trackToDelete.thumbnailFileId}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <p className="text-xs text-[#9A9AA2] leading-relaxed">
+                This action will remove the track from PostgreSQL and permanently delete its MP3 file (and uploaded cover image) from your connected Google Drive.
+              </p>
+            </div>
+
+            <div className="px-5 py-3.5 bg-[#0B0B0E] border-t border-[#222228] flex items-center justify-end gap-3">
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={() => setTrackToDelete(null)}
+                className="px-4 py-2 rounded border border-[#2E2E38] text-xs font-semibold text-[#D4D4D8] hover:text-white transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={confirmDeleteTrack}
+                className="px-4 py-2 rounded bg-[#D64545] hover:bg-[#E05252] text-white text-xs font-semibold inline-flex items-center gap-1.5 transition-colors disabled:opacity-50"
+              >
+                {isDeleting ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Deleting from Drive...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Delete Music & Drive File</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

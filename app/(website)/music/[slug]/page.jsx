@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { getPublicWebsiteData } from '@/lib/db.js';
 import MusicDetailClient from '@/components/music/MusicDetailClient.jsx';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 60;
 
 export async function generateMetadata({ params }) {
   const { slug } = await params;

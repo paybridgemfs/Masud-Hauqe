@@ -4,7 +4,7 @@ import Image from 'next/image';
 import { getPublicWebsiteData } from '@/lib/db.js';
 import { Disc3, Globe, MapPin, Award } from 'lucide-react';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 60;
 
 export async function generateMetadata() {
   const { artist, seoSettings } = await getPublicWebsiteData();

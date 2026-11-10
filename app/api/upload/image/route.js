@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireAdminSession } from '@/lib/auth.js';
-import { uploadImageToGoogleDrive } from '@/lib/google-drive.js';
+import { uploadImageToGoogleDrive, deleteFileFromGoogleDrive } from '@/lib/google-drive.js';
 import { logAuditEvent } from '@/lib/db.js';
 
 const ALLOWED_IMAGE_MIME_TYPES = new Set([
@@ -34,6 +34,7 @@ export async function POST(request) {
   try {
     const formData = await request.formData();
     const imageFile = formData.get('imageFile');
+    const previousFileId = String(formData.get('previousFileId') || '').trim();
 
     if (!imageFile || typeof imageFile === 'string') {
       return NextResponse.json(
@@ -77,6 +78,11 @@ export async function POST(request) {
       mimeType,
     });
 
+    // If replacing an existing Drive image, delete the old image from Google Drive
+    if (previousFileId && previousFileId !== uploadResult.fileId) {
+      await deleteFileFromGoogleDrive(previousFileId);
+    }
+
     await logAuditEvent({
       adminId: admin.id,
       action: 'DRIVE_IMAGE_UPLOADED',
@@ -86,6 +92,7 @@ export async function POST(request) {
         fileName: uploadResult.fileName,
         folderId: uploadResult.folderId,
         fileSize: uploadResult.fileSize,
+        replacedFileId: previousFileId || null,
       },
     });
 
@@ -108,6 +115,48 @@ export async function POST(request) {
             ? err.message
             : 'Failed to upload image to Google Drive Images folder.',
       },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request) {
+  const { authorized, admin } = await requireAdminSession();
+  if (!authorized) {
+    return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    const { searchParams } = new URL(request.url);
+    let fileId = (searchParams.get('fileId') || '').trim();
+
+    if (!fileId) {
+      try {
+        const body = await request.json();
+        fileId = String(body?.fileId || '').trim();
+      } catch {
+        // Ignore empty body
+      }
+    }
+
+    if (!fileId) {
+      return NextResponse.json({ ok: false, error: 'Missing Drive fileId.' }, { status: 400 });
+    }
+
+    await deleteFileFromGoogleDrive(fileId);
+
+    await logAuditEvent({
+      adminId: admin.id,
+      action: 'DRIVE_IMAGE_DELETED',
+      entityType: 'GoogleDriveImage',
+      entityId: fileId,
+    });
+
+    return NextResponse.json({ ok: true, deletedFileId: fileId });
+  } catch (err) {
+    console.error('Google Drive image delete error:', err);
+    return NextResponse.json(
+      { ok: false, error: 'Failed to delete image from Google Drive.' },
       { status: 500 }
     );
   }

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
 import { requireAdminSession } from '@/lib/auth.js';
-import { getDbState, updateDbState, logAuditEvent, createUniqueSlug, cuid } from '@/lib/db.js';
+import { getDbState, updateDbState, appendAuditRecord, createUniqueSlug, cuid } from '@/lib/db.js';
 import { musicSchema } from '@/lib/validation.js';
 import { sanitizeFilename, verifyMp3Signature } from '@/lib/security.js';
 import { getEnvConfig } from '@/lib/env.js';
@@ -239,18 +239,17 @@ export async function POST(request) {
         updatedAt: now,
       };
       state.music.unshift(createdRecord);
-    });
-
-    await logAuditEvent({
-      adminId: admin.id,
-      action: 'MUSIC_CREATED',
-      entityType: 'Music',
-      entityId: createdRecord.id,
-      metadata: {
-        title: createdRecord.title,
-        audioFileId: createdRecord.audioFileId,
-        isPublished: createdRecord.isPublished,
-      },
+      appendAuditRecord(state, {
+        adminId: admin.id,
+        action: 'MUSIC_CREATED',
+        entityType: 'Music',
+        entityId: createdRecord.id,
+        metadata: {
+          title: createdRecord.title,
+          audioFileId: createdRecord.audioFileId,
+          isPublished: createdRecord.isPublished,
+        },
+      });
     });
 
     revalidatePath('/');

@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
 import { requireAdminSession } from '@/lib/auth.js';
-import { getDbState, updateDbState, logAuditEvent } from '@/lib/db.js';
+import { getDbState, updateDbState, appendAuditRecord } from '@/lib/db.js';
 import { artistUpdateSchema, slugify } from '@/lib/validation.js';
+import { deleteFileFromGoogleDrive } from '@/lib/google-drive.js';
 
 export async function GET() {
   const db = await getDbState();
@@ -29,10 +30,21 @@ export async function PUT(request) {
     const data = parsed.data;
     const now = new Date().toISOString();
     let updatedArtist = null;
+    const oldFileIdsToDelete = [];
 
     await updateDbState((state) => {
       const target = state.artists[0];
       if (target) {
+        const nextProfileFileId = data.profileImageFileId || '';
+        const nextCoverFileId = data.coverImageFileId || '';
+
+        if (target.profileImageFileId && target.profileImageFileId !== nextProfileFileId) {
+          oldFileIdsToDelete.push(target.profileImageFileId);
+        }
+        if (target.coverImageFileId && target.coverImageFileId !== nextCoverFileId) {
+          oldFileIdsToDelete.push(target.coverImageFileId);
+        }
+
         target.name = data.name;
         target.slug = data.slug ? slugify(data.slug) : slugify(data.name);
         target.shortBiography = data.shortBiography;
@@ -40,24 +52,27 @@ export async function PUT(request) {
         target.careerInfo = data.careerInfo;
         target.musicalBg = data.musicalBg;
         target.profileImage = data.profileImage;
-        target.profileImageFileId = data.profileImageFileId || '';
+        target.profileImageFileId = nextProfileFileId;
         target.coverImage = data.coverImage;
-        target.coverImageFileId = data.coverImageFileId || '';
+        target.coverImageFileId = nextCoverFileId;
         target.location = data.location;
         target.website = data.website;
         target.achievements = data.achievements;
         target.updatedAt = now;
         updatedArtist = { ...target };
       }
+      appendAuditRecord(state, {
+        adminId: admin.id,
+        action: 'ARTIST_PROFILE_UPDATED',
+        entityType: 'Artist',
+        entityId: updatedArtist?.id || 'masud-hauqe',
+        metadata: { name: data.name },
+      });
     });
 
-    await logAuditEvent({
-      adminId: admin.id,
-      action: 'ARTIST_PROFILE_UPDATED',
-      entityType: 'Artist',
-      entityId: updatedArtist?.id || 'masud-hauqe',
-      metadata: { name: data.name },
-    });
+    for (const oldId of oldFileIdsToDelete) {
+      await deleteFileFromGoogleDrive(oldId);
+    }
 
     revalidatePath('/');
     revalidatePath('/about');

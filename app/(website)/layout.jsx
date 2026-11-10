@@ -3,7 +3,7 @@ import Header from '@/components/website/Header.jsx';
 import Footer from '@/components/website/Footer.jsx';
 import { getPublicWebsiteData } from '@/lib/db.js';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 60;
 
 export default async function WebsiteLayout({ children }) {
   const { artist, settings, headerNav, footerNav, socialLinks } = await getPublicWebsiteData();

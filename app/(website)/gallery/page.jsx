@@ -4,7 +4,7 @@ import Image from 'next/image';
 import { Image as ImageIcon } from 'lucide-react';
 import { getPublicWebsiteData } from '@/lib/db.js';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 60;
 
 export const metadata = {
   title: 'Photography & Visual Gallery — Masud Hauqe',

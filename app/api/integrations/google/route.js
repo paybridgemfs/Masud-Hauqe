@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { requireAdminSession } from '@/lib/auth.js';
 import { getDbState, updateDbState, logAuditEvent } from '@/lib/db.js';
-import { getEnvConfig } from '@/lib/env.js';
+import { getEnvConfig, resolveGoogleRedirectUri } from '@/lib/env.js';
 import {
   generateGoogleAuthUrl,
   ensureDriveMediaFolders,
@@ -54,13 +54,15 @@ export async function POST(request) {
   const body = await request.json();
 
   if (body.action === 'connect') {
-    const authResult = generateGoogleAuthUrl();
+    const clientOrigin = typeof body.origin === 'string' ? body.origin.trim() : '';
+    const redirectUri = resolveGoogleRedirectUri(clientOrigin);
+    const authResult = generateGoogleAuthUrl(redirectUri);
     if (!authResult.ok) {
       return NextResponse.json({ ok: false, error: authResult.error }, { status: 400 });
     }
     const proto = request.headers.get('x-forwarded-proto') || '';
     const host = request.headers.get('x-forwarded-host') || request.headers.get('host') || '';
-    const https = proto.includes('https') || host.includes('.run.app');
+    const https = proto.includes('https') || host.includes('.run.app') || redirectUri.startsWith('https://');
     const cookieStore = await cookies();
     cookieStore.set(OAUTH_STATE_COOKIE, authResult.state, {
       httpOnly: true,
@@ -70,7 +72,11 @@ export async function POST(request) {
       path: '/',
       maxAge: 600,
     });
-    return NextResponse.json({ ok: true, authUrl: authResult.url });
+    return NextResponse.json({
+      ok: true,
+      authUrl: authResult.url,
+      redirectUri: authResult.redirectUri,
+    });
   }
 
   if (body.action === 'ensureFolders') {

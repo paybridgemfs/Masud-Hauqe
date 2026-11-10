@@ -14,6 +14,7 @@ export default function DriveImageUpload({
 }) {
   const inputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
+  const [removing, setRemoving] = useState(false);
   const [error, setError] = useState(null);
 
   const resolvedPreviewUrl = value || (fileId ? `/api/media/${fileId}` : '');
@@ -26,6 +27,9 @@ export default function DriveImageUpload({
     try {
       const formData = new FormData();
       formData.append('imageFile', file);
+      if (fileId) {
+        formData.append('previousFileId', fileId);
+      }
 
       const res = await fetch('/api/upload/image', {
         method: 'POST',
@@ -55,9 +59,24 @@ export default function DriveImageUpload({
     }
   }
 
-  function handleClear() {
+  async function handleClear() {
     setError(null);
+    const oldFileId = fileId;
     onChange({ url: '', fileId: '' });
+
+    if (oldFileId) {
+      setRemoving(true);
+      try {
+        await fetch(`/api/upload/image?fileId=${encodeURIComponent(oldFileId)}`, {
+          method: 'DELETE',
+          credentials: 'include',
+        });
+      } catch {
+        // Non-blocking cleanup
+      } finally {
+        setRemoving(false);
+      }
+    }
   }
 
   return (
@@ -114,7 +133,7 @@ export default function DriveImageUpload({
           <div className="flex flex-wrap items-center gap-2.5">
             <button
               type="button"
-              disabled={uploading}
+              disabled={uploading || removing}
               onClick={() => inputRef.current?.click()}
               className="px-4 py-2.5 bg-[#18181F] hover:bg-[#C8A464] hover:text-[#09090B] disabled:opacity-50 text-[#F4F1EA] border border-[#F4F1EA]/[0.14] rounded text-xs font-bold uppercase tracking-wider transition-colors inline-flex items-center gap-2"
             >
@@ -134,11 +153,12 @@ export default function DriveImageUpload({
             {resolvedPreviewUrl && !uploading && (
               <button
                 type="button"
+                disabled={removing}
                 onClick={handleClear}
-                className="px-3 py-2.5 bg-[#D64545]/10 hover:bg-[#D64545]/20 text-[#D64545] border border-[#D64545]/30 rounded text-xs font-semibold inline-flex items-center gap-1.5 transition-colors"
+                className="px-3 py-2.5 bg-[#D64545]/10 hover:bg-[#D64545]/20 text-[#D64545] border border-[#D64545]/30 rounded text-xs font-semibold inline-flex items-center gap-1.5 transition-colors disabled:opacity-50"
               >
                 <Trash2 className="w-3.5 h-3.5" />
-                <span>Remove</span>
+                <span>{removing ? 'Removing...' : 'Remove'}</span>
               </button>
             )}
           </div>

@@ -4,7 +4,7 @@ import { Disc } from 'lucide-react';
 import { getPublicWebsiteData } from '@/lib/db.js';
 import AlbumCard from '@/components/music/AlbumCard.jsx';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 60;
 
 export const metadata = {
   title: 'Albums & Discography — Masud Hauqe',

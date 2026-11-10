@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
 import { requireAdminSession } from '@/lib/auth.js';
-import { getDbState, updateDbState, logAuditEvent, cuid } from '@/lib/db.js';
+import { getDbState, updateDbState, appendAuditRecord, cuid } from '@/lib/db.js';
 import { sectionSchema } from '@/lib/validation.js';
+import { deleteFileFromGoogleDrive } from '@/lib/google-drive.js';
 
 export async function GET() {
   const db = await getDbState();
@@ -45,14 +46,13 @@ export async function POST(request) {
       updatedAt: now,
     };
     state.sections.push(created);
-  });
-
-  await logAuditEvent({
-    adminId: admin.id,
-    action: 'SECTION_CREATED',
-    entityType: 'Section',
-    entityId: created.id,
-    metadata: { name: created.name, type: created.type },
+    appendAuditRecord(state, {
+      adminId: admin.id,
+      action: 'SECTION_CREATED',
+      entityType: 'Section',
+      entityId: created.id,
+      metadata: { name: created.name, type: created.type },
+    });
   });
 
   revalidatePath('/');
@@ -84,6 +84,7 @@ export async function PUT(request) {
 
   const { id, name, type, position, isVisible, content, settings } = body;
   let updated = null;
+  let oldBgFileIdToDelete = null;
 
   await updateDbState((state) => {
     const target = state.sections.find((s) => s.id === id);
@@ -92,23 +93,36 @@ export async function PUT(request) {
     if (typeof type === 'string') target.type = type;
     if (typeof position === 'number') target.position = position;
     if (typeof isVisible === 'boolean') target.isVisible = isVisible;
-    if (content && typeof content === 'object') target.content = { ...target.content, ...content };
+    if (content && typeof content === 'object') {
+      const oldBgId = target.content?.backgroundImageFileId || '';
+      const nextBgId =
+        typeof content.backgroundImageFileId === 'string'
+          ? content.backgroundImageFileId
+          : oldBgId;
+      if (oldBgId && oldBgId !== nextBgId) {
+        oldBgFileIdToDelete = oldBgId;
+      }
+      target.content = { ...target.content, ...content };
+    }
     if (settings && typeof settings === 'object') target.settings = { ...target.settings, ...settings };
     target.updatedAt = new Date().toISOString();
     updated = { ...target };
+    appendAuditRecord(state, {
+      adminId: admin.id,
+      action: 'SECTION_UPDATED',
+      entityType: 'Section',
+      entityId: id,
+      metadata: { name: updated.name, isVisible: updated.isVisible },
+    });
   });
 
   if (!updated) {
     return NextResponse.json({ ok: false, error: 'Section not found.' }, { status: 404 });
   }
 
-  await logAuditEvent({
-    adminId: admin.id,
-    action: 'SECTION_UPDATED',
-    entityType: 'Section',
-    entityId: id,
-    metadata: { name: updated.name, isVisible: updated.isVisible },
-  });
+  if (oldBgFileIdToDelete) {
+    await deleteFileFromGoogleDrive(oldBgFileIdToDelete);
+  }
 
   revalidatePath('/');
   return NextResponse.json({ ok: true, section: updated });
@@ -122,17 +136,22 @@ export async function DELETE(request) {
 
   const { searchParams } = new URL(request.url);
   const id = searchParams.get('id');
+  let removedSection = null;
 
   await updateDbState((state) => {
+    removedSection = state.sections.find((s) => s.id === id) || null;
     state.sections = state.sections.filter((s) => s.id !== id);
+    appendAuditRecord(state, {
+      adminId: admin.id,
+      action: 'SECTION_DELETED',
+      entityType: 'Section',
+      entityId: id || '',
+    });
   });
 
-  await logAuditEvent({
-    adminId: admin.id,
-    action: 'SECTION_DELETED',
-    entityType: 'Section',
-    entityId: id || '',
-  });
+  if (removedSection?.content?.backgroundImageFileId) {
+    await deleteFileFromGoogleDrive(removedSection.content.backgroundImageFileId);
+  }
 
   revalidatePath('/');
   return NextResponse.json({ ok: true });

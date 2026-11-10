@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireAdminSession } from '@/lib/auth.js';
-import { getDbState, updateDbState, logAuditEvent, cuid } from '@/lib/db.js';
+import { getDbState, updateDbState, appendAuditRecord, cuid } from '@/lib/db.js';
 import { contactMessageSchema } from '@/lib/validation.js';
 import { checkRateLimit } from '@/lib/security.js';
 
@@ -73,13 +73,13 @@ export async function PUT(request) {
     if (msg) {
       msg.isRead = Boolean(isRead);
     }
-  });
-  await logAuditEvent({
-    adminId: admin.id,
-    action: 'CONTACT_MESSAGE_STATUS_UPDATED',
-    entityType: 'ContactMessage',
-    entityId: id,
-    metadata: { isRead },
+    appendAuditRecord(state, {
+      adminId: admin.id,
+      action: 'CONTACT_MESSAGE_STATUS_UPDATED',
+      entityType: 'ContactMessage',
+      entityId: id,
+      metadata: { isRead },
+    });
   });
   return NextResponse.json({ ok: true });
 }
@@ -93,12 +93,12 @@ export async function DELETE(request) {
   const id = searchParams.get('id');
   await updateDbState((state) => {
     state.contactMessages = state.contactMessages.filter((m) => m.id !== id);
-  });
-  await logAuditEvent({
-    adminId: admin.id,
-    action: 'CONTACT_MESSAGE_DELETED',
-    entityType: 'ContactMessage',
-    entityId: id || '',
+    appendAuditRecord(state, {
+      adminId: admin.id,
+      action: 'CONTACT_MESSAGE_DELETED',
+      entityType: 'ContactMessage',
+      entityId: id || '',
+    });
   });
   return NextResponse.json({ ok: true });
 }

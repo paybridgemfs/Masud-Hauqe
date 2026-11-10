@@ -12,6 +12,7 @@ import {
   Check,
   X,
 } from 'lucide-react';
+import DriveImageUpload from '@/components/admin/DriveImageUpload.jsx';
 
 const SECTION_TYPES = [
   { value: 'HERO', label: 'Hero Section' },
@@ -35,7 +36,14 @@ export default function AdminSectionsClient({ initialSections = [] }) {
   const [newType, setNewType] = useState('FEATURED_MUSIC');
   const [newHeading, setNewHeading] = useState('');
   const [editingId, setEditingId] = useState(null);
-  const [editDraft, setEditDraft] = useState({ name: '', heading: '', subheading: '', kicker: '' });
+  const [editDraft, setEditDraft] = useState({
+    name: '',
+    heading: '',
+    subheading: '',
+    kicker: '',
+    backgroundImage: '',
+    backgroundImageFileId: '',
+  });
   const [statusMsg, setStatusMsg] = useState('');
 
   async function handleAddSection(e) {
@@ -101,6 +109,8 @@ export default function AdminSectionsClient({ initialSections = [] }) {
       kicker: sec.content?.kicker || '',
       heading: sec.content?.heading || sec.content?.headline || '',
       subheading: sec.content?.subheading || sec.content?.subheadline || '',
+      backgroundImage: sec.content?.backgroundImage || '',
+      backgroundImageFileId: sec.content?.backgroundImageFileId || '',
     });
   }
 
@@ -112,6 +122,8 @@ export default function AdminSectionsClient({ initialSections = [] }) {
       headline: editDraft.heading,
       subheading: editDraft.subheading,
       subheadline: editDraft.subheading,
+      backgroundImage: editDraft.backgroundImage || '',
+      backgroundImageFileId: editDraft.backgroundImageFileId || '',
     };
     const res = await fetch('/api/sections', {
       method: 'PUT',
@@ -275,56 +287,78 @@ export default function AdminSectionsClient({ initialSections = [] }) {
               </div>
 
               {isEditing && (
-                <div className="pt-3 border-t border-[#1E1E24] grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-[11px] text-[#8E8E96] mb-1">Section Name</label>
-                    <input
-                      type="text"
-                      value={editDraft.name}
-                      onChange={(e) => setEditDraft({ ...editDraft, name: e.target.value })}
-                      className="w-full bg-[#09090B] border border-[#27272E] rounded px-3 py-1.5 text-xs text-[#F4F1EA]"
-                    />
+                <div className="pt-4 border-t border-[#1E1E24] space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-[11px] text-[#8E8E96] mb-1">Section Name</label>
+                      <input
+                        type="text"
+                        value={editDraft.name}
+                        onChange={(e) => setEditDraft({ ...editDraft, name: e.target.value })}
+                        className="w-full bg-[#09090B] border border-[#27272E] rounded px-3 py-1.5 text-xs text-[#F4F1EA]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] text-[#8E8E96] mb-1">Kicker Label</label>
+                      <input
+                        type="text"
+                        value={editDraft.kicker}
+                        onChange={(e) => setEditDraft({ ...editDraft, kicker: e.target.value })}
+                        className="w-full bg-[#09090B] border border-[#27272E] rounded px-3 py-1.5 text-xs text-[#F4F1EA]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] text-[#8E8E96] mb-1">Public Heading</label>
+                      <input
+                        type="text"
+                        value={editDraft.heading}
+                        onChange={(e) => setEditDraft({ ...editDraft, heading: e.target.value })}
+                        className="w-full bg-[#09090B] border border-[#27272E] rounded px-3 py-1.5 text-xs text-[#F4F1EA]"
+                      />
+                    </div>
+                    <div className="sm:col-span-3">
+                      <label className="block text-[11px] text-[#8E8E96] mb-1">Subheading</label>
+                      <input
+                        type="text"
+                        value={editDraft.subheading}
+                        onChange={(e) => setEditDraft({ ...editDraft, subheading: e.target.value })}
+                        className="w-full bg-[#09090B] border border-[#27272E] rounded px-3 py-1.5 text-xs text-[#F4F1EA]"
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-[11px] text-[#8E8E96] mb-1">Kicker Label</label>
-                    <input
-                      type="text"
-                      value={editDraft.kicker}
-                      onChange={(e) => setEditDraft({ ...editDraft, kicker: e.target.value })}
-                      className="w-full bg-[#09090B] border border-[#27272E] rounded px-3 py-1.5 text-xs text-[#F4F1EA]"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] text-[#8E8E96] mb-1">Public Heading</label>
-                    <input
-                      type="text"
-                      value={editDraft.heading}
-                      onChange={(e) => setEditDraft({ ...editDraft, heading: e.target.value })}
-                      className="w-full bg-[#09090B] border border-[#27272E] rounded px-3 py-1.5 text-xs text-[#F4F1EA]"
-                    />
-                  </div>
-                  <div className="sm:col-span-2">
-                    <label className="block text-[11px] text-[#8E8E96] mb-1">Subheading</label>
-                    <input
-                      type="text"
-                      value={editDraft.subheading}
-                      onChange={(e) => setEditDraft({ ...editDraft, subheading: e.target.value })}
-                      className="w-full bg-[#09090B] border border-[#27272E] rounded px-3 py-1.5 text-xs text-[#F4F1EA]"
-                    />
-                  </div>
-                  <div className="flex items-end justify-end gap-2">
+
+                  {sec.type === 'HERO' && (
+                    <div className="pt-2">
+                      <DriveImageUpload
+                        label="Hero Section Background Image (With Dark Overlay)"
+                        value={editDraft.backgroundImage}
+                        fileId={editDraft.backgroundImageFileId}
+                        aspectClass="aspect-video"
+                        helperText="Uploads directly to the Google Drive 'Images' folder and displays behind the Hero section with a black gradient overlay."
+                        onChange={({ url, fileId }) =>
+                          setEditDraft((prev) => ({
+                            ...prev,
+                            backgroundImage: url,
+                            backgroundImageFileId: fileId,
+                          }))
+                        }
+                      />
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-end gap-2 pt-2">
                     <button
                       type="button"
                       onClick={() => saveEditing(sec)}
-                      className="px-3 py-1.5 rounded bg-[#C8A464] text-[#09090B] text-xs font-semibold inline-flex items-center gap-1"
+                      className="px-4 py-2 rounded bg-[#C8A464] text-[#09090B] text-xs font-semibold inline-flex items-center gap-1.5"
                     >
                       <Check className="w-3.5 h-3.5" />
-                      <span>Save</span>
+                      <span>Save Section</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => setEditingId(null)}
-                      className="px-3 py-1.5 rounded border border-[#2E2E38] text-xs text-[#9A9AA2] inline-flex items-center gap-1"
+                      className="px-4 py-2 rounded border border-[#2E2E38] text-xs text-[#9A9AA2] inline-flex items-center gap-1.5"
                     >
                       <X className="w-3.5 h-3.5" />
                       <span>Cancel</span>

@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
 import { requireAdminSession } from '@/lib/auth.js';
-import { getDbState, updateDbState, logAuditEvent, cuid } from '@/lib/db.js';
+import { getDbState, updateDbState, appendAuditRecord, cuid } from '@/lib/db.js';
 import { slugify } from '@/lib/validation.js';
+import { deleteFileFromGoogleDrive } from '@/lib/google-drive.js';
 
 export async function GET() {
   const db = await getDbState();
@@ -34,12 +35,20 @@ export async function PUT(request) {
     const body = await request.json();
     const { group } = body;
     const now = new Date().toISOString();
+    const oldDriveFileIdsToDelete = [];
 
     if (group === 'websiteSettings' && body.values && typeof body.values === 'object') {
       await updateDbState((state) => {
         for (const [key, val] of Object.entries(body.values)) {
           const safeVal = String(val ?? '').slice(0, 5000);
           const existing = state.websiteSettings.find((s) => s.key === key);
+          if (
+            (key === 'logoFileId' || key === 'faviconFileId') &&
+            existing?.value &&
+            existing.value !== safeVal
+          ) {
+            oldDriveFileIdsToDelete.push(existing.value);
+          }
           if (existing) {
             existing.value = safeVal;
             existing.updatedAt = now;
@@ -53,14 +62,13 @@ export async function PUT(request) {
             });
           }
         }
-      });
-
-      await logAuditEvent({
-        adminId: admin.id,
-        action: 'WEBSITE_SETTINGS_UPDATED',
-        entityType: 'WebsiteSetting',
-        entityId: 'global',
-        metadata: { keys: Object.keys(body.values) },
+        appendAuditRecord(state, {
+          adminId: admin.id,
+          action: 'WEBSITE_SETTINGS_UPDATED',
+          entityType: 'WebsiteSetting',
+          entityId: 'global',
+          metadata: { keys: Object.keys(body.values) },
+        });
       });
     } else if (group === 'navigationItems') {
       const { action, item, items } = body;
@@ -89,14 +97,13 @@ export async function PUT(request) {
         } else if (action === 'replaceAll' && Array.isArray(items)) {
           state.navigationItems = items;
         }
-      });
-
-      await logAuditEvent({
-        adminId: admin.id,
-        action: 'NAVIGATION_UPDATED',
-        entityType: 'NavigationItem',
-        entityId: item?.id || 'bulk',
-        metadata: { action },
+        appendAuditRecord(state, {
+          adminId: admin.id,
+          action: 'NAVIGATION_UPDATED',
+          entityType: 'NavigationItem',
+          entityId: item?.id || 'bulk',
+          metadata: { action },
+        });
       });
     } else if (group === 'socialLinks') {
       const { action, item } = body;
@@ -122,14 +129,13 @@ export async function PUT(request) {
         } else if (action === 'delete' && item?.id) {
           state.socialLinks = state.socialLinks.filter((s) => s.id !== item.id);
         }
-      });
-
-      await logAuditEvent({
-        adminId: admin.id,
-        action: 'SOCIAL_LINKS_UPDATED',
-        entityType: 'SocialLink',
-        entityId: item?.id || '',
-        metadata: { action },
+        appendAuditRecord(state, {
+          adminId: admin.id,
+          action: 'SOCIAL_LINKS_UPDATED',
+          entityType: 'SocialLink',
+          entityId: item?.id || '',
+          metadata: { action },
+        });
       });
     } else if (group === 'pages') {
       const { action, page } = body;
@@ -160,14 +166,13 @@ export async function PUT(request) {
         } else if (action === 'delete' && page?.id) {
           state.pages = state.pages.filter((p) => p.id !== page.id);
         }
-      });
-
-      await logAuditEvent({
-        adminId: admin.id,
-        action: 'CMS_PAGE_UPDATED',
-        entityType: 'Page',
-        entityId: page?.id || '',
-        metadata: { action, slug: page?.slug },
+        appendAuditRecord(state, {
+          adminId: admin.id,
+          action: 'CMS_PAGE_UPDATED',
+          entityType: 'Page',
+          entityId: page?.id || '',
+          metadata: { action, slug: page?.slug },
+        });
       });
     } else if (group === 'gallery') {
       const { action, item } = body;
@@ -188,33 +193,46 @@ export async function PUT(request) {
           if (target) {
             if (typeof item.title === 'string') target.title = item.title.trim();
             if (typeof item.imageUrl === 'string') target.imageUrl = item.imageUrl.trim();
-            if (typeof item.imageFileId === 'string') target.imageFileId = item.imageFileId.trim();
+            if (typeof item.imageFileId === 'string') {
+              const nextFileId = item.imageFileId.trim();
+              if (target.imageFileId && target.imageFileId !== nextFileId) {
+                oldDriveFileIdsToDelete.push(target.imageFileId);
+              }
+              target.imageFileId = nextFileId;
+            }
             if (typeof item.description === 'string') target.description = item.description.trim();
             if (typeof item.isPublished === 'boolean') target.isPublished = item.isPublished;
           }
         } else if (action === 'delete' && item?.id) {
+          const removedItem = state.gallery.find((g) => g.id === item.id);
+          if (removedItem?.imageFileId) {
+            oldDriveFileIdsToDelete.push(removedItem.imageFileId);
+          }
           state.gallery = state.gallery.filter((g) => g.id !== item.id);
         }
-      });
-
-      await logAuditEvent({
-        adminId: admin.id,
-        action: 'GALLERY_UPDATED',
-        entityType: 'Gallery',
-        entityId: item?.id || '',
-        metadata: { action },
+        appendAuditRecord(state, {
+          adminId: admin.id,
+          action: 'GALLERY_UPDATED',
+          entityType: 'Gallery',
+          entityId: item?.id || '',
+          metadata: { action },
+        });
       });
     } else if (group === 'seoSettings') {
       const { item } = body;
       if (item && item.page) {
         await updateDbState((state) => {
           const existing = state.seoSettings.find((s) => s.page === item.page);
+          const nextOgFileId = String(item.ogImageFileId || '').trim();
           if (existing) {
+            if (existing.ogImageFileId && existing.ogImageFileId !== nextOgFileId) {
+              oldDriveFileIdsToDelete.push(existing.ogImageFileId);
+            }
             existing.metaTitle = String(item.metaTitle || '').trim();
             existing.metaDescription = String(item.metaDescription || '').trim();
             existing.canonicalUrl = String(item.canonicalUrl || '').trim();
             existing.ogImage = String(item.ogImage || '').trim();
-            existing.ogImageFileId = String(item.ogImageFileId || '').trim();
+            existing.ogImageFileId = nextOgFileId;
             existing.updatedAt = now;
           } else {
             state.seoSettings.push({
@@ -224,19 +242,22 @@ export async function PUT(request) {
               metaDescription: String(item.metaDescription || '').trim(),
               canonicalUrl: String(item.canonicalUrl || '').trim(),
               ogImage: String(item.ogImage || '').trim(),
-              ogImageFileId: String(item.ogImageFileId || '').trim(),
+              ogImageFileId: nextOgFileId,
               updatedAt: now,
             });
           }
-        });
-
-        await logAuditEvent({
-          adminId: admin.id,
-          action: 'SEO_SETTINGS_UPDATED',
-          entityType: 'SEOSetting',
-          entityId: item.page,
+          appendAuditRecord(state, {
+            adminId: admin.id,
+            action: 'SEO_SETTINGS_UPDATED',
+            entityType: 'SEOSetting',
+            entityId: item.page,
+          });
         });
       }
+    }
+
+    for (const fileId of oldDriveFileIdsToDelete) {
+      await deleteFileFromGoogleDrive(fileId);
     }
 
     revalidatePath('/', 'layout');

@@ -1,15 +1,22 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Lock, User, AlertCircle, ArrowLeft, ShieldCheck } from 'lucide-react';
 
 export default function AdminLoginPage() {
+  const router = useRouter();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    router.prefetch('/admin/dashboard');
+    router.prefetch('/admin/settings');
+  }, [router]);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -34,7 +41,8 @@ export default function AdminLoginPage() {
       const targetUrl = data.mustChangePassword
         ? '/admin/settings?forcePasswordChange=1'
         : '/admin/dashboard';
-      window.location.assign(targetUrl);
+      router.replace(targetUrl);
+      router.refresh();
     } catch {
       setError('Network error while connecting to authentication service.');
       setLoading(false);

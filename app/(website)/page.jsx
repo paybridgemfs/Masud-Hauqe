@@ -2,7 +2,7 @@ import React from 'react';
 import { getPublicWebsiteData } from '@/lib/db.js';
 import SectionRenderer from '@/components/website/SectionRenderer.jsx';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 60;
 
 export default async function HomePage() {
   const {

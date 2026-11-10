@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
 import { requireAdminSession } from '@/lib/auth.js';
-import { getDbState, updateDbState, logAuditEvent, createUniqueSlug, cuid } from '@/lib/db.js';
+import { getDbState, updateDbState, appendAuditRecord, createUniqueSlug, cuid } from '@/lib/db.js';
 import { albumSchema } from '@/lib/validation.js';
+import { deleteFileFromGoogleDrive } from '@/lib/google-drive.js';
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
@@ -58,14 +59,13 @@ export async function POST(request) {
         updatedAt: now,
       };
       state.albums.unshift(created);
-    });
-
-    await logAuditEvent({
-      adminId: admin.id,
-      action: 'ALBUM_CREATED',
-      entityType: 'Album',
-      entityId: created.id,
-      metadata: { title: created.title },
+      appendAuditRecord(state, {
+        adminId: admin.id,
+        action: 'ALBUM_CREATED',
+        entityType: 'Album',
+        entityId: created.id,
+        metadata: { title: created.title },
+      });
     });
 
     revalidatePath('/');
@@ -88,6 +88,7 @@ export async function PUT(request) {
   const body = await request.json();
   const { id, title, description, coverImage, coverImageFileId, releaseDate, isPublished } = body;
   let updated = null;
+  let oldCoverFileIdToDelete = null;
 
   await updateDbState(async (state) => {
     const target = state.albums.find((a) => a.id === id);
@@ -98,24 +99,33 @@ export async function PUT(request) {
     }
     if (typeof description === 'string') target.description = description.trim();
     if (typeof coverImage === 'string') target.coverImage = coverImage.trim();
-    if (typeof coverImageFileId === 'string') target.coverImageFileId = coverImageFileId.trim();
+    if (typeof coverImageFileId === 'string') {
+      const nextId = coverImageFileId.trim();
+      if (target.coverImageFileId && target.coverImageFileId !== nextId) {
+        oldCoverFileIdToDelete = target.coverImageFileId;
+      }
+      target.coverImageFileId = nextId;
+    }
     if (typeof releaseDate !== 'undefined') target.releaseDate = releaseDate || null;
     if (typeof isPublished === 'boolean') target.isPublished = isPublished;
     target.updatedAt = new Date().toISOString();
     updated = { ...target };
+    appendAuditRecord(state, {
+      adminId: admin.id,
+      action: 'ALBUM_UPDATED',
+      entityType: 'Album',
+      entityId: id,
+      metadata: { title: updated.title },
+    });
   });
 
   if (!updated) {
     return NextResponse.json({ ok: false, error: 'Album not found.' }, { status: 404 });
   }
 
-  await logAuditEvent({
-    adminId: admin.id,
-    action: 'ALBUM_UPDATED',
-    entityType: 'Album',
-    entityId: id,
-    metadata: { title: updated.title },
-  });
+  if (oldCoverFileIdToDelete) {
+    await deleteFileFromGoogleDrive(oldCoverFileIdToDelete);
+  }
 
   revalidatePath('/');
   revalidatePath('/albums');
@@ -132,22 +142,27 @@ export async function DELETE(request) {
 
   const { searchParams } = new URL(request.url);
   const id = searchParams.get('id');
+  let removedAlbum = null;
 
   await updateDbState((state) => {
+    removedAlbum = state.albums.find((a) => a.id === id) || null;
     state.albums = state.albums.filter((a) => a.id !== id);
     for (const track of state.music) {
       if (track.albumId === id) {
         track.albumId = null;
       }
     }
+    appendAuditRecord(state, {
+      adminId: admin.id,
+      action: 'ALBUM_DELETED',
+      entityType: 'Album',
+      entityId: id || '',
+    });
   });
 
-  await logAuditEvent({
-    adminId: admin.id,
-    action: 'ALBUM_DELETED',
-    entityType: 'Album',
-    entityId: id || '',
-  });
+  if (removedAlbum?.coverImageFileId) {
+    await deleteFileFromGoogleDrive(removedAlbum.coverImageFileId);
+  }
 
   revalidatePath('/');
   revalidatePath('/albums');

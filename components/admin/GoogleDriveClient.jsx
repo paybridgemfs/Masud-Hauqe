@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   HardDrive,
   CheckCircle2,
@@ -11,6 +11,8 @@ import {
   Youtube,
   Music,
   Image as ImageIcon,
+  Copy,
+  Check,
 } from 'lucide-react';
 
 export default function GoogleDriveClient({
@@ -34,16 +36,67 @@ export default function GoogleDriveClient({
       : null
   );
   const [loading, setLoading] = useState(false);
+  const [copiedKey, setCopiedKey] = useState('');
+
+  const browserOrigin =
+    typeof window !== 'undefined' ? window.location.origin : redirectUri.replace(/\/api\/integrations\/google\/callback$/, '');
+  const activeRedirectUri =
+    typeof window !== 'undefined'
+      ? `${window.location.origin}/api/integrations/google/callback`
+      : redirectUri;
+
+  const refreshIntegrationStatus = useCallback(async () => {
+    try {
+      const res = await fetch('/api/integrations/google', { credentials: 'include' });
+      const data = await res.json();
+      if (res.ok && data.ok && data.integration) {
+        setIntegration(data.integration);
+      }
+    } catch {
+      // Ignore background refresh error
+    }
+  }, []);
+
+  useEffect(() => {
+    function handleMessage(event) {
+      if (!event.data || typeof event.data !== 'object') return;
+      if (event.data.type === 'GOOGLE_OAUTH_SUCCESS') {
+        setLoading(false);
+        setStatus({
+          type: 'success',
+          text: 'Google Drive account connected! "Musics" and "Images" folders have been automatically created and saved in PostgreSQL.',
+        });
+        refreshIntegrationStatus();
+      } else if (event.data.type === 'GOOGLE_OAUTH_ERROR') {
+        setLoading(false);
+        setStatus({
+          type: 'error',
+          text: `Google OAuth Error: ${event.data.error || 'Authentication failed.'}`,
+        });
+      }
+    }
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [refreshIntegrationStatus]);
+
+  function copyToClipboard(text, key) {
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(text);
+      setCopiedKey(key);
+      setTimeout(() => setCopiedKey(''), 2000);
+    }
+  }
 
   async function handleConnectGoogle() {
     setLoading(true);
     setStatus(null);
     try {
+      const currentOrigin = typeof window !== 'undefined' ? window.location.origin : '';
       const res = await fetch('/api/integrations/google', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ action: 'connect' }),
+        body: JSON.stringify({ action: 'connect', origin: currentOrigin }),
       });
       const data = await res.json();
       if (!res.ok || !data.ok) {
@@ -51,7 +104,15 @@ export default function GoogleDriveClient({
         setLoading(false);
         return;
       }
-      window.location.href = data.authUrl;
+
+      const popup = window.open(
+        data.authUrl,
+        'google_drive_oauth',
+        'width=580,height=720,menubar=no,toolbar=no,location=yes,status=no'
+      );
+      if (!popup) {
+        window.location.href = data.authUrl;
+      }
     } catch {
       setStatus({ type: 'error', text: 'Failed to reach Google OAuth server endpoint.' });
       setLoading(false);
@@ -326,18 +387,57 @@ export default function GoogleDriveClient({
           </p>
         </div>
 
-        <div className="bg-[#111115] border border-[#222228] rounded-lg p-6 space-y-2 text-xs text-[#9A9AA2]">
-          <h2 className="text-base font-bold text-[#F4F1EA]">OAuth Callback & Delivery Policy</h2>
-          <p>
-            Authorized Redirect URI:{' '}
-            <code className="text-[#C8A464] break-all">{redirectUri}</code>
+        <div className="bg-[#111115] border border-[#222228] rounded-lg p-6 space-y-3 text-xs text-[#9A9AA2]">
+          <h2 className="text-base font-bold text-[#F4F1EA]">
+            Google Cloud Console — OAuth 2.0 Setup URLs
+          </h2>
+          <p className="text-[11px] text-[#8E8E96]">
+            Add both of these exact URLs in Google Cloud Console → APIs &amp; Services → Credentials → OAuth 2.0 Client ID:
           </p>
-          <p className="leading-relaxed">
-            Uploaded MP3s (&quot;Musics&quot;) and images (&quot;Images&quot;) automatically receive{' '}
-            <code className="text-[#D4D4D8]">type: anyone, role: reader</code> permission and are
-            delivered via <code className="text-[#D4D4D8]">/api/music/[id]/stream</code> and{' '}
-            <code className="text-[#D4D4D8]">/api/media/[fileId]</code>.
-          </p>
+
+          <div className="space-y-2 pt-1">
+            <div>
+              <span className="block text-[11px] font-semibold text-[#D4D4D8] mb-1">
+                1. Authorized JavaScript origins:
+              </span>
+              <div className="flex items-center justify-between gap-2 bg-[#09090B] border border-[#27272E] rounded px-3 py-2">
+                <code className="text-[#C8A464] break-all">{browserOrigin}</code>
+                <button
+                  type="button"
+                  onClick={() => copyToClipboard(browserOrigin, 'origin')}
+                  className="p-1 text-[#9A9AA2] hover:text-[#F4F1EA] shrink-0"
+                  title="Copy Origin"
+                >
+                  {copiedKey === 'origin' ? (
+                    <Check className="w-3.5 h-3.5 text-[#4ADE80]" />
+                  ) : (
+                    <Copy className="w-3.5 h-3.5" />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <span className="block text-[11px] font-semibold text-[#D4D4D8] mb-1">
+                2. Authorized redirect URIs (Required to prevent redirect_uri_mismatch):
+              </span>
+              <div className="flex items-center justify-between gap-2 bg-[#09090B] border border-[#27272E] rounded px-3 py-2">
+                <code className="text-[#C8A464] break-all">{activeRedirectUri}</code>
+                <button
+                  type="button"
+                  onClick={() => copyToClipboard(activeRedirectUri, 'redirect')}
+                  className="p-1 text-[#9A9AA2] hover:text-[#F4F1EA] shrink-0"
+                  title="Copy Redirect URI"
+                >
+                  {copiedKey === 'redirect' ? (
+                    <Check className="w-3.5 h-3.5 text-[#4ADE80]" />
+                  ) : (
+                    <Copy className="w-3.5 h-3.5" />
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
     </div>

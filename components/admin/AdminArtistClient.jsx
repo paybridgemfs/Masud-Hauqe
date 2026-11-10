@@ -177,11 +177,11 @@ export default function AdminArtistClient({ initialArtist, initialSocialLinks = 
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <DriveImageUpload
-              label="Profile Portrait Image"
+              label="Profile Portrait Image (Hero Right Card & About Page)"
               value={artist.profileImage}
               fileId={artist.profileImageFileId}
               aspectClass="aspect-square"
-              helperText="Uploads to Google Drive 'Images' folder and saves profileImageFileId in PostgreSQL."
+              helperText="Uploads to Google Drive 'Images' folder. Displayed on the right side of the Hero section and on the About page."
               onChange={({ url, fileId }) =>
                 setArtist((prev) => ({
                   ...prev,
@@ -192,11 +192,11 @@ export default function AdminArtistClient({ initialArtist, initialSocialLinks = 
             />
 
             <DriveImageUpload
-              label="Editorial Cover Image"
+              label="Hero Background / Cover Image (With Dark Overlay)"
               value={artist.coverImage}
               fileId={artist.coverImageFileId}
               aspectClass="aspect-video"
-              helperText="Uploads to Google Drive 'Images' folder and saves coverImageFileId in PostgreSQL."
+              helperText="Uploads to Google Drive 'Images' folder. Displayed as the full-width Hero background with a dark overlay."
               onChange={({ url, fileId }) =>
                 setArtist((prev) => ({
                   ...prev,

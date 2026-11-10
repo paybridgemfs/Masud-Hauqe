@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
 import { requireAdminSession } from '@/lib/auth.js';
-import { getDbState, updateDbState, logAuditEvent, createUniqueSlug } from '@/lib/db.js';
+import { getDbState, updateDbState, appendAuditRecord, createUniqueSlug } from '@/lib/db.js';
 import { deleteFileFromGoogleDrive } from '@/lib/google-drive.js';
 
 export async function GET(request, { params }) {
@@ -24,6 +24,7 @@ export async function PUT(request, { params }) {
   const { id } = await params;
   const body = await request.json();
   let updated = null;
+  let oldThumbnailFileIdToDelete = null;
 
   await updateDbState(async (state) => {
     const target = state.music.find((m) => m.id === id);
@@ -35,7 +36,13 @@ export async function PUT(request, { params }) {
     if (typeof body.description === 'string') target.description = body.description.trim();
     if (typeof body.albumId !== 'undefined') target.albumId = body.albumId || null;
     if (typeof body.thumbnail === 'string') target.thumbnail = body.thumbnail.trim();
-    if (typeof body.thumbnailFileId === 'string') target.thumbnailFileId = body.thumbnailFileId.trim();
+    if (typeof body.thumbnailFileId === 'string') {
+      const nextThumbId = body.thumbnailFileId.trim();
+      if (target.thumbnailFileId && target.thumbnailFileId !== nextThumbId) {
+        oldThumbnailFileIdToDelete = target.thumbnailFileId;
+      }
+      target.thumbnailFileId = nextThumbId;
+    }
     if (typeof body.duration === 'string') target.duration = body.duration.trim();
     if (typeof body.isPublished === 'boolean') {
       target.isPublished = body.isPublished;
@@ -44,19 +51,22 @@ export async function PUT(request, { params }) {
     if (typeof body.downloadEnabled === 'boolean') target.downloadEnabled = body.downloadEnabled;
     target.updatedAt = new Date().toISOString();
     updated = { ...target };
+    appendAuditRecord(state, {
+      adminId: admin.id,
+      action: 'MUSIC_UPDATED',
+      entityType: 'Music',
+      entityId: id,
+      metadata: { title: updated.title, isPublished: updated.isPublished },
+    });
   });
 
   if (!updated) {
     return NextResponse.json({ ok: false, error: 'Track not found.' }, { status: 404 });
   }
 
-  await logAuditEvent({
-    adminId: admin.id,
-    action: 'MUSIC_UPDATED',
-    entityType: 'Music',
-    entityId: id,
-    metadata: { title: updated.title, isPublished: updated.isPublished },
-  });
+  if (oldThumbnailFileIdToDelete) {
+    await deleteFileFromGoogleDrive(oldThumbnailFileIdToDelete);
+  }
 
   revalidatePath('/');
   revalidatePath('/music');
@@ -95,6 +105,17 @@ export async function DELETE(request, { params }) {
     if (idx !== -1) {
       removedTrack = state.music[idx];
       state.music.splice(idx, 1);
+      appendAuditRecord(state, {
+        adminId: admin.id,
+        action: 'MUSIC_DELETED',
+        entityType: 'Music',
+        entityId: id,
+        metadata: {
+          title: removedTrack.title,
+          audioFileId: removedTrack.audioFileId || null,
+          thumbnailFileId: removedTrack.thumbnailFileId || null,
+        },
+      });
     }
   });
 
@@ -105,14 +126,9 @@ export async function DELETE(request, { params }) {
   if (removedTrack.audioFileId) {
     await deleteFileFromGoogleDrive(removedTrack.audioFileId);
   }
-
-  await logAuditEvent({
-    adminId: admin.id,
-    action: 'MUSIC_DELETED',
-    entityType: 'Music',
-    entityId: id,
-    metadata: { title: removedTrack.title },
-  });
+  if (removedTrack.thumbnailFileId) {
+    await deleteFileFromGoogleDrive(removedTrack.thumbnailFileId);
+  }
 
   revalidatePath('/');
   revalidatePath('/music');

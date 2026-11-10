@@ -2,7 +2,7 @@ import React from 'react';
 import { getPublicWebsiteData } from '@/lib/db.js';
 import MusicLibraryClient from '@/components/music/MusicLibraryClient.jsx';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 60;
 
 export async function generateMetadata() {
   const { seoSettings, artist } = await getPublicWebsiteData();
