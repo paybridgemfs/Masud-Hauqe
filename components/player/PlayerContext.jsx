@@ -3,7 +3,6 @@
 import React, { createContext, useContext, useState, useRef, useEffect, useCallback } from 'react';
 import { Howl } from 'howler';
 import { getPublicStreamUrl } from '@/lib/storage/audio-delivery.js';
-import '@/lib/firebase.js';
 
 const PlayerContext = createContext(null);
 

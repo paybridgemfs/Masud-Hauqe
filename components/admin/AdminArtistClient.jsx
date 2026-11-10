@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import { Save, Plus, Trash2, CheckCircle2, AlertCircle } from 'lucide-react';
-import { syncEntityToFirestore } from '@/lib/firebase.js';
 import DriveImageUpload from '@/components/admin/DriveImageUpload.jsx';
 
 export default function AdminArtistClient({ initialArtist, initialSocialLinks = [] }) {
@@ -46,20 +45,6 @@ export default function AdminArtistClient({ initialArtist, initialSocialLinks = 
         setStatus({
           type: 'success',
           text: 'Artist profile, Drive image IDs, and biography saved in PostgreSQL.',
-        });
-        await syncEntityToFirestore('artists', 'masud-hauqe', {
-          id: 'masud-hauqe',
-          name: artist.name,
-          slug: artist.slug,
-          biography: artist.biography,
-          shortBiography: artist.shortBiography,
-          profileImage: artist.profileImage,
-          profileImageFileId: artist.profileImageFileId,
-          coverImage: artist.coverImage,
-          coverImageFileId: artist.coverImageFileId,
-          location: artist.location,
-          website: artist.website,
-          createdAt: new Date(),
         });
       }
     } catch {

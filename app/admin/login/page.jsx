@@ -2,13 +2,9 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { Lock, User, AlertCircle, ArrowLeft, ShieldCheck } from 'lucide-react';
-import { signInWithPopup } from 'firebase/auth';
-import { auth, googleProvider } from '@/lib/firebase.js';
 
 export default function AdminLoginPage() {
-  const router = useRouter();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
@@ -42,21 +38,6 @@ export default function AdminLoginPage() {
     } catch {
       setError('Network error while connecting to authentication service.');
       setLoading(false);
-    }
-  }
-
-  async function handleGoogleAdminSignIn() {
-    setError('');
-    try {
-      const result = await signInWithPopup(auth, googleProvider);
-      if (result.user?.email !== 'mdsagormia179@gmail.com') {
-        setError('This Google account is not authorized as the platform administrator.');
-        return;
-      }
-      // Also sign in to the server session if using verified owner email
-      setUsername('admin');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Google Sign-In cancelled or failed.');
     }
   }
 
@@ -163,16 +144,6 @@ export default function AdminLoginPage() {
               {loading ? 'Verifying Credentials...' : 'Sign In to Admin Console'}
             </button>
           </form>
-
-          <div className="pt-4 border-t border-[#1E1E24]">
-            <button
-              type="button"
-              onClick={handleGoogleAdminSignIn}
-              className="w-full py-2 px-3 rounded border border-[#2A2A34] hover:border-[#C8A464] text-xs font-medium text-[#B4B4BC] hover:text-[#F4F1EA] transition-colors"
-            >
-              Connect Verified Owner Google Session (Firestore Sync)
-            </button>
-          </div>
         </div>
       </div>
     </div>
