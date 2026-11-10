@@ -1,0 +1,255 @@
+// Prisma Schema for Masud Hauqe Official Artist Website & Dynamic CMS Platform
+// Primary Relational Database: PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Admin {
+  id                 String     @id @default(cuid())
+  name               String
+  username           String     @unique
+  email              String?    @unique
+  passwordHash       String
+  role               String     @default("SUPER_ADMIN")
+  isActive           Boolean    @default(true)
+  mustChangePassword Boolean    @default(true)
+  lastLoginAt        DateTime?
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+  auditLogs          AuditLog[]
+
+  @@index([username])
+  @@map("admins")
+}
+
+model Artist {
+  id                 String   @id @default(cuid())
+  name               String
+  slug               String   @unique
+  biography          String   @default("")
+  shortBiography     String   @default("")
+  profileImage       String   @default("")
+  profileImageFileId String   @default("")
+  coverImage         String   @default("")
+  coverImageFileId   String   @default("")
+  location           String   @default("")
+  website            String   @default("")
+  socialLinks        Json     @default("[]")
+  achievements       Json     @default("[]")
+  careerInfo         String   @default("")
+  musicalBg          String   @default("")
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  music              Music[]
+  albums             Album[]
+
+  @@index([slug])
+  @@map("artists")
+}
+
+model Album {
+  id               String    @id @default(cuid())
+  title            String
+  slug             String    @unique
+  description      String    @default("")
+  coverImage       String    @default("")
+  coverImageFileId String    @default("")
+  releaseDate      DateTime?
+  artistId         String
+  artist           Artist    @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  isPublished      Boolean   @default(false)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  tracks           Music[]
+
+  @@index([slug])
+  @@index([artistId])
+  @@index([isPublished])
+  @@map("albums")
+}
+
+model Music {
+  id              String   @id @default(cuid())
+  title           String
+  slug            String   @unique
+  artistId        String
+  artist          Artist   @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  albumId         String?
+  album           Album?   @relation(fields: [albumId], references: [id], onDelete: SetNull)
+  description     String   @default("")
+  thumbnail       String   @default("")
+  thumbnailFileId String   @default("")
+  youtubeUrl      String   @default("")
+  youtubeVideoId  String   @default("")
+  duration        String   @default("0:00")
+  audioProvider   String   @default("google_drive")
+  audioFileId     String   @default("")
+  audioFileName   String   @default("")
+  audioMimeType   String   @default("audio/mpeg")
+  audioFileSize   Int      @default(0)
+  uploadStatus    String   @default("pending")
+  isPublished     Boolean  @default(false)
+  downloadEnabled Boolean  @default(true)
+  playCount       Int      @default(0)
+  downloadCount   Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([slug])
+  @@index([artistId])
+  @@index([albumId])
+  @@index([isPublished])
+  @@index([createdAt])
+  @@index([playCount])
+  @@map("music")
+}
+
+model GoogleIntegration {
+  id                    String    @id @default(cuid())
+  provider              String    @unique @default("google_drive")
+  accountEmail          String    @default("")
+  encryptedRefreshToken String    @default("")
+  uploadFolderId        String    @default("")
+  uploadFolderName      String    @default("")
+  musicFolderId         String    @default("")
+  musicFolderName       String    @default("Musics")
+  imageFolderId         String    @default("")
+  imageFolderName       String    @default("Images")
+  connected             Boolean   @default(false)
+  lastUploadAt          DateTime?
+  lastUploadStatus      String    @default("idle")
+  connectedAt           DateTime?
+  updatedAt             DateTime  @updatedAt
+
+  @@map("google_integrations")
+}
+
+model WebsiteSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  type      String   @default("string")
+  updatedAt DateTime @updatedAt
+
+  @@index([key])
+  @@map("website_settings")
+}
+
+model Page {
+  id              String   @id @default(cuid())
+  title           String
+  slug            String   @unique
+  content         String
+  metaTitle       String   @default("")
+  metaDescription String   @default("")
+  isPublished     Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([slug])
+  @@map("pages")
+}
+
+model Section {
+  id        String   @id @default(cuid())
+  name      String
+  type      String
+  content   Json     @default("{}")
+  settings  Json     @default("{}")
+  position  Int      @default(0)
+  isVisible Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([position])
+  @@index([isVisible])
+  @@map("sections")
+}
+
+model NavigationItem {
+  id        String  @id @default(cuid())
+  label     String
+  url       String
+  location  String  @default("header")
+  position  Int     @default(0)
+  isVisible Boolean @default(true)
+  parentId  String?
+
+  @@index([location, position])
+  @@map("navigation_items")
+}
+
+model SocialLink {
+  id        String  @id @default(cuid())
+  platform  String
+  url       String
+  icon      String  @default("globe")
+  position  Int     @default(0)
+  isVisible Boolean @default(true)
+
+  @@index([position])
+  @@map("social_links")
+}
+
+model Gallery {
+  id          String   @id @default(cuid())
+  title       String
+  imageUrl    String
+  imageFileId String   @default("")
+  description String   @default("")
+  position    Int      @default(0)
+  isPublished Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  @@index([position, isPublished])
+  @@map("gallery")
+}
+
+model ContactMessage {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  subject   String
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([isRead, createdAt])
+  @@map("contact_messages")
+}
+
+model SEOSetting {
+  id              String   @id @default(cuid())
+  page            String   @unique
+  metaTitle       String
+  metaDescription String
+  canonicalUrl    String   @default("")
+  ogImage         String   @default("")
+  ogImageFileId   String   @default("")
+  updatedAt       DateTime @updatedAt
+
+  @@index([page])
+  @@map("seo_settings")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  adminId    String?
+  admin      Admin?   @relation(fields: [adminId], references: [id], onDelete: SetNull)
+  action     String
+  entityType String
+  entityId   String   @default("")
+  metadata   Json     @default("{}")
+  ipAddress  String   @default("")
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([adminId])
+  @@map("audit_logs")
+}

@@ -1,0 +1,6 @@
+{
+  "name": "Masud Hauqe — Official Artist Platform & CMS",
+  "description": "Official music artist portfolio, streaming library, MP3 delivery platform, and dynamic content management system for Masud Hauqe.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

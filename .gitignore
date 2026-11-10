@@ -1,0 +1,20 @@
+node_modules/
+.next/
+coverage/
+.DS_Store
+*.log
+.env*
+!.env.example
+
+# Local cache & temporary test artifacts
+.data/
+.playwright-cli/
+public/assets/aistudio/
+
+# AI Studio & Firebase blueprint files (not required for Render / PostgreSQL deployment)
+firebase-blueprint.json
+firebase-applet-config.json
+firestore.rules
+DRAFT_firestore.rules
+firestore.rules.test.ts
+security_spec.md
