@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   ChevronDown,
@@ -19,6 +20,131 @@ import {
   Activity,
 } from 'lucide-react';
 import ShimmerImage from '@/components/ui/ShimmerImage.jsx';
+
+/**
+ * High-Performance Audio Spectrum Visualizer
+ * Runs in its own 60fps requestAnimationFrame loop updating DOM heights directly.
+ * Zero React re-renders during playback, completely eliminating stutter/freeze.
+ */
+function AudioSpectrumVisualizer({ isPlaying, audioMetrics }) {
+  const barsRef = useRef([]);
+  const animFrameRef = useRef(null);
+  const heightsRef = useRef(new Array(32).fill(12));
+
+  useEffect(() => {
+    let lastTime = performance.now();
+
+    const animate = (time) => {
+      const dt = Math.min(0.05, (time - lastTime) * 0.001);
+      lastTime = time;
+      const t = time * 0.001; // Continuous elapsed seconds (smooth float)
+
+      const freqData = audioMetrics?.frequencyData;
+      const hasRealAudio = Boolean(freqData && freqData.some((b) => b > 10));
+
+      // Musical beat and tempo simulation (~124 BPM rhythm)
+      const kick = Math.pow(Math.max(0, Math.sin(t * 4.3)), 4);
+      const snare = Math.pow(Math.max(0, Math.sin((t + 0.35) * 4.3)), 6);
+      const hihat = Math.pow(Math.max(0, Math.sin(t * 8.6)), 2);
+
+      for (let i = 0; i < 32; i++) {
+        let target = 8;
+
+        if (isPlaying) {
+          if (hasRealAudio) {
+            // Map 32 bands across frequency bins
+            const byteIdx = Math.floor((i / 32) * (freqData.length - 1));
+            const raw = freqData[byteIdx] || 0;
+            const norm = raw / 255;
+            if (i < 8) {
+              target = Math.min(94, Math.max(14, norm * 78 + kick * 22));
+            } else {
+              target = Math.min(92, Math.max(12, norm * 86));
+            }
+          } else {
+            // Highly dynamic, organic sound wave synthesis with dancing bass, mids & highs
+            if (i < 8) {
+              // Bass & Sub-Bass (0 - 7): Bounces hard on kick, rolls with dynamic bassline (18% - 88%)
+              const bassRoll = Math.sin(t * 6.0 + i * 0.45) * 0.35 + 0.55;
+              const subThump = Math.cos(t * 8.5 + i * 0.3) * 0.2;
+              target = Math.min(
+                92,
+                Math.max(14, 18 + kick * 54 + bassRoll * 22 + subThump * 10)
+              );
+            } else if (i < 22) {
+              // Mid-Range & Vocals (8 - 21): Melodic sweeps, snare cracks, fluid oscillations
+              const midWave =
+                Math.sin(t * 8.2 + i * 0.7) * 0.35 +
+                Math.cos(t * 12.4 + i * 0.5) * 0.25 +
+                0.5;
+              target = Math.min(
+                90,
+                Math.max(12, 14 + snare * 46 + midWave * 32)
+              );
+            } else {
+              // Highs & Treble (22 - 31): Crisp hi-hat sizzle, shimmer & air
+              const highSizzle = Math.sin(t * 16.0 + i * 1.1) * 0.35 + 0.5;
+              const flutter = (Math.sin(t * 22.0 + i * 2.0) + 1) * 0.5;
+              target = Math.min(
+                85,
+                Math.max(10, 12 + hihat * 38 + highSizzle * 24 + flutter * 12)
+              );
+            }
+          }
+        } else {
+          // Paused / idle state: gentle breathing wave
+          target = 8 + Math.sin(t * 1.8 + i * 0.25) * 4;
+        }
+
+        // Physical spring / lerp smoothing - instantaneous attack, smooth natural decay
+        const current = heightsRef.current[i];
+        const lerpFactor = target > current ? 0.42 : 0.22; // snappy rise, smooth fall
+        const nextHeight = current + (target - current) * lerpFactor;
+        heightsRef.current[i] = nextHeight;
+
+        // Direct DOM update (ZERO React re-renders, silky smooth 60/120 FPS!)
+        const barEl = barsRef.current[i];
+        if (barEl) {
+          barEl.style.height = `${nextHeight.toFixed(1)}%`;
+        }
+      }
+
+      animFrameRef.current = requestAnimationFrame(animate);
+    };
+
+    animFrameRef.current = requestAnimationFrame(animate);
+
+    return () => {
+      if (animFrameRef.current) {
+        cancelAnimationFrame(animFrameRef.current);
+      }
+    };
+  }, [isPlaying, audioMetrics]);
+
+  return (
+    <div className="h-20 sm:h-28 lg:h-32 px-3 py-2.5 rounded-2xl bg-[#0C0C12]/80 border border-[#C8A464]/20 backdrop-blur-md flex items-end justify-between gap-1 sm:gap-1.5 shadow-[inset_0_2px_8px_rgba(0,0,0,0.6)] overflow-hidden">
+      {Array.from({ length: 32 }).map((_, idx) => {
+        const isBass = idx < 8;
+        return (
+          <div
+            key={idx}
+            className="flex-1 h-full flex items-end justify-center"
+          >
+            <div
+              ref={(el) => (barsRef.current[idx] = el)}
+              style={{ height: '14%' }}
+              className={`w-full rounded-full will-change-[height] ${
+                isBass
+                  ? 'bg-gradient-to-t from-[#B45309] via-[#C8A464] to-[#FDE047] shadow-[0_0_12px_rgba(200,164,100,0.6)]'
+                  : 'bg-gradient-to-t from-[#8E6F36] via-[#C8A464] to-[#F4F1EA]'
+              }`}
+            />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 export default function FullScreenPlayer({
   isOpen,
@@ -56,52 +182,7 @@ export default function FullScreenPlayer({
   const formattedTotalDuration =
     duration > 0 ? formatSeconds(duration) : currentTrack.duration || '0:00';
 
-  // Extract real audio reactive parameters
-  const freqData = audioMetrics?.frequencyData;
   const isBeat = Boolean(audioMetrics?.beat);
-  const stereoWidth = audioMetrics?.stereoWidth || 0.6;
-  const spectralEnergy = audioMetrics?.spectralEnergy || 0;
-
-  // Real-time audio responsive bar height calculation (Dynamic 32 Dancing Bands across full frequency)
-  const getBandHeight = (bandIdx, totalBands = 32) => {
-    if (!isPlaying) return 6;
-
-    // Check if we have real Web Audio API byte data
-    if (freqData && freqData.length > 0) {
-      const byteIdx = Math.floor((bandIdx / totalBands) * (freqData.length - 1));
-      const rawByte = freqData[byteIdx] || 0;
-      if (rawByte > 0) {
-        // Natural log-style frequency mapping (prevents bass pinning at 100%)
-        const normalized = Math.min(100, Math.round((rawByte / 255) * 88));
-        return Math.max(8, normalized);
-      }
-    }
-
-    // Dynamic wave physical synthesis without static pinning on the first 8 bars
-    const t = currentTime;
-    const bandFreqRatio = (bandIdx + 1) / totalBands;
-    const fundamental = Math.sin(t * 7.5 + bandIdx * 0.6);
-    const harmonic = Math.cos(t * 14.8 + bandIdx * 1.1) * 0.45;
-    const beatPulse = isBeat ? (Math.sin(bandIdx * 0.5) * 25) : 0;
-    const stereoMod = Math.sin(bandIdx * stereoWidth + t * 2) * 8;
-    const dynamicBass = bandIdx < 8 ? Math.abs(Math.sin(t * 5.2 + bandIdx * 0.4)) * 45 : 0;
-
-    const baseVal = Math.max(
-      8,
-      Math.min(
-        100,
-        Math.round(
-          14 +
-            (fundamental * 22 + harmonic * 15) +
-            dynamicBass +
-            beatPulse +
-            stereoMod +
-            spectralEnergy * 10
-        )
-      )
-    );
-    return baseVal;
-  };
 
   function handleSwipeNext() {
     setSlideDirection(1);
@@ -127,23 +208,30 @@ export default function FullScreenPlayer({
       {/* ============================================================
           FULL-SCREEN BLURRED THUMBNAIL BACKGROUND (DYNAMIC & VIBRANT)
       ============================================================ */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+      <div className="absolute inset-0 pointer-events-none overflow-hidden select-none">
         {currentTrack.thumbnail ? (
-          <div className="absolute -inset-16 scale-125 filter blur-3xl opacity-35 transition-all duration-700 ease-out">
-            <ShimmerImage
-              src={currentTrack.thumbnail}
-              alt=""
-              fill
-              priority
-              className="object-cover object-center"
-            />
-          </div>
+          <>
+            {/* Real high-res artwork dynamically blurred and scaled */}
+            <div className="absolute -inset-12 filter blur-2xl scale-110 opacity-55 transition-opacity duration-700 ease-out">
+              <Image
+                key={currentTrack.id || currentTrack.thumbnail}
+                src={currentTrack.thumbnail}
+                alt=""
+                fill
+                sizes="100vw"
+                priority={false}
+                referrerPolicy="no-referrer"
+                className="object-cover object-center pointer-events-none"
+              />
+            </div>
+            {/* Radial vignette for cinematic depth */}
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(7,7,9,0.55)_65%,rgba(7,7,9,0.92)_100%)]" />
+            {/* Soft vertical gradient to preserve contrast for player controls */}
+            <div className="absolute inset-0 bg-gradient-to-b from-[#070709]/65 via-[#070709]/30 to-[#070709]/85" />
+          </>
         ) : (
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_40%,rgba(200,164,100,0.25)_0%,rgba(7,7,9,0.98)_75%)]" />
         )}
-        {/* Soft Vignette & Deep Obsidian Gradient Overlays for Readability */}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#070709] via-[#070709]/75 to-[#070709]/85" />
-        <div className="absolute inset-0 bg-black/40" />
       </div>
 
       {/* ============================================================
@@ -272,26 +360,12 @@ export default function FullScreenPlayer({
 
             {/* ============================================================
                 TALL AUDIO-REACTIVE SPECTRUM VISUALIZER (ENHANCED HEIGHT)
-                32 Dynamic Dancing Bars that react to beat, volume & frequency
+                32 Dynamic Dancing Bars: Bass, Mids, Highs animated at 60 FPS
             ============================================================ */}
-            <div className="h-16 sm:h-24 lg:h-28 px-3 py-2 rounded-xl bg-[#0C0C12]/80 border border-white/10 backdrop-blur-md flex items-end justify-between gap-1 shadow-inner overflow-hidden">
-              {Array.from({ length: 32 }).map((_, idx) => {
-                const heightPercent = getBandHeight(idx, 32);
-                const isBass = idx < 8;
-                return (
-                  <motion.div
-                    key={idx}
-                    animate={{ height: `${heightPercent}%` }}
-                    transition={{ duration: 0.08, ease: 'easeOut' }}
-                    className={`w-full rounded-full transition-all ${
-                      isBass
-                        ? 'bg-gradient-to-t from-[#B45309] via-[#C8A464] to-[#FDE047] shadow-[0_0_8px_rgba(200,164,100,0.5)]'
-                        : 'bg-gradient-to-t from-[#8E6F36] via-[#C8A464] to-[#F4F1EA]'
-                    }`}
-                  />
-                );
-              })}
-            </div>
+            <AudioSpectrumVisualizer
+              isPlaying={isPlaying}
+              audioMetrics={audioMetrics}
+            />
 
             {/* Seek Slider + Timestamps */}
             <div className="space-y-1">
@@ -318,7 +392,9 @@ export default function FullScreenPlayer({
                 onClick={() => setShuffle(!shuffle)}
                 aria-label="Toggle shuffle"
                 className={`p-2 rounded-full transition-colors ${
-                  shuffle ? 'text-[#C8A464] bg-[#C8A464]/15' : 'text-[#8E8E96] hover:text-[#F4F1EA]'
+                  shuffle
+                    ? 'text-[#C8A464] bg-[#C8A464]/15'
+                    : 'text-[#8E8E96] hover:text-[#F4F1EA]'
                 }`}
               >
                 <Shuffle className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -381,7 +457,7 @@ export default function FullScreenPlayer({
                   type="button"
                   onClick={toggleMute}
                   aria-label={isMuted ? 'Unmute' : 'Mute'}
-                  className="p-1 text-[#8E8E96] hover:text-[#F4F1EA]"
+                  className="p-1 rounded-full text-[#8E8E96] hover:text-[#F4F1EA]"
                 >
                   {isMuted || volume === 0 ? (
                     <VolumeX className="w-4 h-4" />
@@ -391,23 +467,24 @@ export default function FullScreenPlayer({
                 </button>
                 <input
                   type="range"
-                  aria-label="Volume"
+                  aria-label="Volume slider"
                   min={0}
                   max={1}
-                  step={0.02}
+                  step={0.01}
                   value={isMuted ? 0 : volume}
                   onChange={(e) => setVolume(Number(e.target.value))}
-                  className="w-full h-1.5 bg-[#26262E] accent-[#C8A464] rounded-lg cursor-pointer"
+                  className="w-full h-1 bg-[#222228] accent-[#C8A464] rounded-lg cursor-pointer"
                 />
               </div>
 
-              <div className="flex items-center justify-end w-full sm:w-auto">
+              {/* Download MP3 */}
+              <div className="flex items-center gap-2 ml-auto">
                 {downloadUrl && (
                   <a
                     href={downloadUrl}
                     download
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#18181E] hover:bg-[#25252E] text-[#D4D4D8] hover:text-[#C8A464] border border-white/10 text-xs font-medium transition-colors"
                     aria-label={`Download ${currentTrack.title} MP3`}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-[#C8A464]/15 hover:bg-[#C8A464] border border-[#C8A464]/40 text-[#F4F1EA] hover:text-[#09090B] text-xs font-semibold transition-colors shrink-0"
                   >
                     <Download className="w-3.5 h-3.5" />
                     <span>Download MP3</span>
@@ -420,63 +497,70 @@ export default function FullScreenPlayer({
       </main>
 
       {/* ============================================================
-          SLIDE-OVER QUEUE DRAWER IN FULL SCREEN
+          QUEUE DRAWER MODAL
       ============================================================ */}
       <AnimatePresence>
         {showQueue && (
           <motion.div
-            initial={{ opacity: 0, x: '100%' }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: '100%' }}
-            transition={{ duration: 0.25, ease: 'easeOut' }}
-            className="absolute inset-y-0 right-0 z-30 w-full sm:w-96 bg-[#0E0E14]/98 border-l border-white/10 p-5 flex flex-col justify-between backdrop-blur-2xl shadow-2xl"
+            initial={{ opacity: 0, y: 100 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 100 }}
+            transition={{ duration: 0.25 }}
+            className="absolute inset-x-0 bottom-0 top-16 z-30 bg-[#0C0C12]/95 backdrop-blur-2xl border-t border-white/10 p-4 sm:p-6 flex flex-col"
           >
-            <div className="flex-1 overflow-hidden flex flex-col">
-              <div className="flex items-center justify-between pb-3 border-b border-white/10 shrink-0">
-                <h2 className="text-sm font-bold text-[#F4F1EA]">
-                  Playback Queue ({playlist.length})
-                </h2>
-                <button
-                  type="button"
-                  onClick={() => setShowQueue(false)}
-                  className="text-xs text-[#8E8E96] hover:text-[#F4F1EA] p-1"
-                >
-                  Close
-                </button>
-              </div>
+            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+              <h2 className="text-base sm:text-lg font-semibold text-[#F4F1EA]">
+                Up Next ({playlist.length} Tracks)
+              </h2>
+              <button
+                type="button"
+                onClick={() => setShowQueue(false)}
+                className="text-xs text-[#C8A464] font-medium hover:underline"
+              >
+                Close Queue
+              </button>
+            </div>
 
-              <div className="mt-3 flex-1 overflow-y-auto divide-y divide-white/5 space-y-1 pr-1">
-                {playlist.map((item, idx) => {
-                  const active = item.id === currentTrack.id;
-                  return (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => playTrack(item)}
-                      className={`w-full text-left p-2.5 rounded-lg flex items-center justify-between gap-2.5 transition-colors ${
-                        active
-                          ? 'bg-[#C8A464]/15 text-[#C8A464]'
-                          : 'hover:bg-white/5 text-[#E4E4E7]'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <span className="text-[11px] font-mono text-[#8E8E96] w-4">
-                          {idx + 1}
-                        </span>
-                        <div className="min-w-0">
-                          <p className="text-xs font-semibold truncate">{item.title}</p>
-                          <p className="text-[10px] text-[#8E8E96] truncate">
-                            {item.artist?.name || 'Masud Hauqe'}
-                          </p>
-                        </div>
-                      </div>
-                      <span className="text-[11px] text-[#8E8E96] font-mono shrink-0">
-                        {item.duration || '0:00'}
+            <div className="flex-1 overflow-y-auto divide-y divide-white/5 py-2">
+              {playlist.map((item, index) => {
+                const active = item.id === currentTrack.id;
+                return (
+                  <button
+                    type="button"
+                    key={item.id}
+                    onClick={() => {
+                      playTrack(item);
+                      setShowQueue(false);
+                    }}
+                    className={`w-full text-left py-2.5 px-3 rounded-lg flex items-center justify-between gap-3 transition-colors ${
+                      active
+                        ? 'bg-[#C8A464]/15 text-[#C8A464]'
+                        : 'hover:bg-white/5 text-[#D4D4D8]'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="text-xs font-mono text-[#8E8E96] w-5 text-right shrink-0">
+                        {index + 1}
                       </span>
-                    </button>
-                  );
-                })}
-              </div>
+                      <div className="min-w-0">
+                        <p
+                          className={`text-sm truncate font-medium ${
+                            active ? 'text-[#C8A464]' : 'text-[#F4F1EA]'
+                          }`}
+                        >
+                          {item.title}
+                        </p>
+                        <p className="text-xs text-[#8E8E96] truncate">
+                          {item.artist?.name || 'Masud Hauqe'}
+                        </p>
+                      </div>
+                    </div>
+                    <span className="text-xs font-mono text-[#8E8E96] shrink-0">
+                      {item.duration || '3:45'}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </motion.div>
         )}

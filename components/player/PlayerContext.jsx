@@ -49,61 +49,74 @@ export function PlayerProvider({ children }) {
 
   const updateProgress = useCallback(() => {
     const freqArray = new Uint8Array(32);
+    let lastMetricUpdate = 0;
+    let lastSeekUpdate = 0;
+
     const step = () => {
       if (howlRef.current && howlRef.current.playing()) {
-        const seek = howlRef.current.seek();
-        if (typeof seek === 'number') {
-          setCurrentTime(seek);
+        const now = performance.now();
+
+        // Update seek position every ~120ms to prevent React re-render lag while keeping slider responsive
+        if (now - lastSeekUpdate > 120) {
+          lastSeekUpdate = now;
+          const seek = howlRef.current.seek();
+          if (typeof seek === 'number') {
+            setCurrentTime(seek);
+          }
         }
 
-        // Extract real-time Web Audio API frequency, volume, bass, and transient data if connected
-        if (analyserRef.current) {
-          try {
-            analyserRef.current.getByteFrequencyData(freqArray);
-            let sum = 0;
-            let bassSum = 0;
-            for (let i = 0; i < 32; i++) {
-              sum += freqArray[i];
-              if (i < 8) bassSum += freqArray[i]; // Bass frequencies
-            }
-            const avg = sum / 32 / 255; // 0 to 1
-            const bass = bassSum / 8 / 255; // 0 to 1
-            const transient = Math.max(0, bass - lastBassRef.current);
-            lastBassRef.current = bass * 0.85;
-            const isBeat = transient > 0.16 || bass > 0.65;
+        // Throttle audio metrics to ~25fps for state listeners
+        if (now - lastMetricUpdate > 40) {
+          lastMetricUpdate = now;
 
+          if (analyserRef.current) {
+            try {
+              analyserRef.current.getByteFrequencyData(freqArray);
+              let sum = 0;
+              let bassSum = 0;
+              for (let i = 0; i < 32; i++) {
+                sum += freqArray[i];
+                if (i < 8) bassSum += freqArray[i];
+              }
+              const avg = sum / 32 / 255;
+              const bass = bassSum / 8 / 255;
+              const transient = Math.max(0, bass - lastBassRef.current);
+              lastBassRef.current = bass * 0.85;
+              const isBeat = transient > 0.16 || bass > 0.65;
+
+              setAudioMetrics({
+                frequencyData: freqArray,
+                volume: avg,
+                bassIntensity: bass,
+                spectralEnergy: sum / (32 * 255),
+                transient: transient,
+                stereoWidth: Math.min(1, 0.4 + avg * 0.6),
+                beat: isBeat,
+              });
+            } catch {
+              // Audio node pass-through
+            }
+          } else {
+            const seek = howlRef.current.seek();
+            const t = typeof seek === 'number' ? seek : 0;
+            const bassSynth = Math.max(0, Math.sin(t * 8.8) * 0.5 + Math.cos(t * 4.4) * 0.5);
+            const isBeat = Math.sin(t * 8.8) > 0.75;
             setAudioMetrics({
               frequencyData: freqArray,
-              volume: avg,
-              bassIntensity: bass,
-              spectralEnergy: sum / (32 * 255),
-              transient: transient,
-              stereoWidth: Math.min(1, 0.4 + avg * 0.6),
+              volume: 0.65,
+              bassIntensity: bassSynth,
+              spectralEnergy: 0.6,
+              transient: isBeat ? 0.8 : 0.1,
+              stereoWidth: 0.8,
               beat: isBeat,
             });
-          } catch {
-            // Audio node pass-through
           }
-        } else {
-          // Synthetic high-precision beat calculation based on track tempo and playhead
-          const t = typeof seek === 'number' ? seek : 0;
-          const bassSynth = Math.max(0, (Math.sin(t * 8.8) * 0.5 + Math.cos(t * 4.4) * 0.5));
-          const isBeat = (Math.sin(t * 8.8) > 0.75);
-          setAudioMetrics({
-            frequencyData: freqArray,
-            volume: 0.65,
-            bassIntensity: bassSynth,
-            spectralEnergy: 0.6,
-            transient: isBeat ? 0.8 : 0.1,
-            stereoWidth: 0.8,
-            beat: isBeat,
-          });
         }
 
         rafRef.current = requestAnimationFrame(step);
       }
     };
-    step();
+    rafRef.current = requestAnimationFrame(step);
   }, []);
 
   const setupWebAudioAnalyser = useCallback((audioNode) => {
