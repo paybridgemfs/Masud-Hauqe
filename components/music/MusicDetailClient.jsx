@@ -65,16 +65,6 @@ export default function MusicDetailClient({ track, relatedTracks = [] }) {
             </div>
 
             <h1 className="text-3xl sm:text-4xl font-bold text-[#F4F1EA]">{track.title}</h1>
-
-            {track.description ? (
-              <p className="text-sm sm:text-base text-[#D4D4D8] leading-relaxed whitespace-pre-line">
-                {track.description}
-              </p>
-            ) : (
-              <p className="text-sm text-[#8E8E96]">
-                Authorized studio master recording by {track.artist?.name || 'Masud Hauqe'}.
-              </p>
-            )}
           </div>
 
           <div className="pt-6 border-t border-[#1E1E24] flex flex-wrap items-center gap-4">
@@ -136,8 +126,8 @@ export default function MusicDetailClient({ track, relatedTracks = [] }) {
       {relatedTracks.length > 0 && (
         <section className="space-y-6 border-t border-[#222226] pt-12">
           <h2 className="text-2xl font-bold text-[#F4F1EA]">Related Recordings</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {relatedTracks.slice(0, 3).map((item) => (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+            {relatedTracks.slice(0, 4).map((item) => (
               <MusicCard key={item.id} track={item} queue={relatedTracks} />
             ))}
           </div>

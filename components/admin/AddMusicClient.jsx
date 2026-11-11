@@ -37,7 +37,6 @@ export default function AddMusicClient({
 
   const [title, setTitle] = useState('');
   const [artistName, setArtistName] = useState(defaultArtistName);
-  const [description, setDescription] = useState('');
   const [thumbnail, setThumbnail] = useState('');
   const [thumbnailFileId, setThumbnailFileId] = useState('');
   const [duration, setDuration] = useState('0:00');
@@ -86,7 +85,6 @@ export default function AddMusicClient({
         const meta = data.metadata;
         setTitle(meta.title || '');
         setArtistName(meta.artistName || defaultArtistName);
-        setDescription(meta.description || '');
         setThumbnail(meta.thumbnail || '');
         setThumbnailFileId('');
         setDuration(meta.duration || '0:00');
@@ -200,7 +198,6 @@ export default function AddMusicClient({
     formData.append('title', title.trim());
     formData.append('artistName', artistName.trim() || defaultArtistName);
     formData.append('albumId', albumId || '');
-    formData.append('description', description.trim());
     formData.append('thumbnail', thumbnail.trim());
     formData.append('thumbnailFileId', thumbnailFileId.trim());
     formData.append('youtubeUrl', youtubeUrl.trim());
@@ -310,7 +307,7 @@ export default function AddMusicClient({
           <p className="text-xs font-semibold tracking-[0.18em] text-[#C8A464]">STEP 1</p>
           <h2 className="text-lg font-bold text-[#F4F1EA]">Fetch YouTube Video Information</h2>
           <p className="text-xs text-[#8E8E96]">
-            Paste an official YouTube video URL to automatically retrieve the song title, thumbnail, description, and duration via YouTube Data API v3.
+            Paste an official YouTube video URL to automatically retrieve the song title, thumbnail, and duration via YouTube Data API v3.
           </p>
         </div>
 
@@ -447,20 +444,6 @@ export default function AddMusicClient({
                     className="w-full bg-[#09090B] border border-[#27272E] rounded px-3.5 py-2 text-sm text-[#F4F1EA] font-mono focus:outline-none focus:border-[#C8A464]"
                   />
                 </div>
-              </div>
-
-              <div>
-                <label htmlFor="track-desc" className="block text-xs font-semibold text-[#D4D4D8] mb-1">
-                  Description & Liner Notes
-                </label>
-                <textarea
-                  id="track-desc"
-                  rows={4}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Song description, credits, and lyrics..."
-                  className="w-full bg-[#09090B] border border-[#27272E] rounded px-3.5 py-2 text-sm text-[#F4F1EA] focus:outline-none focus:border-[#C8A464]"
-                />
               </div>
             </div>
           </div>

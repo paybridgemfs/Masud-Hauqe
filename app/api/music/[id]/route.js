@@ -33,7 +33,6 @@ export async function PUT(request, { params }) {
       target.title = body.title.trim();
       target.slug = await createUniqueSlug(state.music, target.title, target.id);
     }
-    if (typeof body.description === 'string') target.description = body.description.trim();
     if (typeof body.albumId !== 'undefined') target.albumId = body.albumId || null;
     if (typeof body.thumbnail === 'string') target.thumbnail = body.thumbnail.trim();
     if (typeof body.thumbnailFileId === 'string') {

@@ -45,7 +45,6 @@ export async function GET(request) {
     items = items.filter(
       (m) =>
         m.title.toLowerCase().includes(search) ||
-        (m.description || '').toLowerCase().includes(search) ||
         (m.album?.title || '').toLowerCase().includes(search)
     );
   }
@@ -102,7 +101,6 @@ export async function POST(request) {
         title: String(formData.get('title') || ''),
         artistName: String(formData.get('artistName') || ''),
         albumId: String(formData.get('albumId') || ''),
-        description: String(formData.get('description') || ''),
         thumbnail: String(formData.get('thumbnail') || ''),
         thumbnailFileId: String(formData.get('thumbnailFileId') || ''),
         youtubeUrl: String(formData.get('youtubeUrl') || ''),
@@ -219,7 +217,6 @@ export async function POST(request) {
         slug,
         artistId,
         albumId: parsed.data.albumId || null,
-        description: parsed.data.description || '',
         thumbnail: parsed.data.thumbnail || '',
         thumbnailFileId: parsed.data.thumbnailFileId || '',
         youtubeUrl: parsed.data.youtubeUrl || '',

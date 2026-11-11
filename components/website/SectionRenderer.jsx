@@ -186,10 +186,12 @@ export default function SectionRenderer({
     case 'FEATURED_MUSIC':
     case 'LATEST_RELEASES':
     case 'POPULAR_MUSIC': {
+      const displayLimit =
+        Number(content.limit) && Number(content.limit) !== 6 ? Number(content.limit) : 8;
       const tracksToShow =
         type === 'POPULAR_MUSIC'
-          ? popularMusic.slice(0, Number(content.limit || 6))
-          : publishedMusic.slice(0, Number(content.limit || 6));
+          ? popularMusic.slice(0, displayLimit)
+          : publishedMusic.slice(0, displayLimit);
 
       return (
         <section className="border-b border-[#222226] py-16 sm:py-20">
@@ -216,7 +218,7 @@ export default function SectionRenderer({
             </div>
 
             {tracksToShow.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
                 {tracksToShow.map((track) => (
                   <MusicCard key={track.id} track={track} queue={tracksToShow} />
                 ))}
@@ -271,8 +273,8 @@ export default function SectionRenderer({
             </div>
 
             {publishedAlbums.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {publishedAlbums.slice(0, 6).map((album) => (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                {publishedAlbums.slice(0, 12).map((album) => (
                   <AlbumCard key={album.id} album={album} />
                 ))}
               </div>

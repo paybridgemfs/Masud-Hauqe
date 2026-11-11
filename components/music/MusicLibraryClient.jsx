@@ -11,7 +11,7 @@ export default function MusicLibraryClient({ initialMusic = [], albums = [] }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedAlbumId, setSelectedAlbumId] = useState('all');
   const [sortOrder, setSortOrder] = useState('latest'); // 'latest' | 'popular'
-  const [visibleCount, setVisibleCount] = useState(9);
+  const [visibleCount, setVisibleCount] = useState(12);
 
   const filteredMusic = useMemo(() => {
     let list = [...initialMusic];
@@ -21,7 +21,6 @@ export default function MusicLibraryClient({ initialMusic = [], albums = [] }) {
       list = list.filter(
         (m) =>
           m.title.toLowerCase().includes(q) ||
-          (m.description || '').toLowerCase().includes(q) ||
           (m.album?.title || '').toLowerCase().includes(q)
       );
     }
@@ -52,9 +51,9 @@ export default function MusicLibraryClient({ initialMusic = [], albums = [] }) {
             value={searchQuery}
             onChange={(e) => {
               setSearchQuery(e.target.value);
-              setVisibleCount(9);
+              setVisibleCount(12);
             }}
-            placeholder="Search recordings by title, description, or album..."
+            placeholder="Search recordings by title or album..."
             aria-label="Search music library"
             className="w-full bg-[#09090B] border border-[#27272E] rounded pl-10 pr-4 py-2 text-sm text-[#F4F1EA] placeholder:text-[#71717A] focus:outline-none focus:border-[#C8A464]"
           />
@@ -67,7 +66,7 @@ export default function MusicLibraryClient({ initialMusic = [], albums = [] }) {
             value={selectedAlbumId}
             onChange={(e) => {
               setSelectedAlbumId(e.target.value);
-              setVisibleCount(9);
+              setVisibleCount(12);
             }}
             className="bg-[#09090B] border border-[#27272E] rounded px-3 py-2 text-xs font-medium text-[#F4F1EA] focus:outline-none focus:border-[#C8A464]"
           >
@@ -121,7 +120,7 @@ export default function MusicLibraryClient({ initialMusic = [], albums = [] }) {
       {/* Music Grid or Empty State */}
       {displayedMusic.length > 0 ? (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
             {displayedMusic.map((track) => (
               <MusicCard key={track.id} track={track} queue={filteredMusic} />
             ))}
@@ -131,7 +130,7 @@ export default function MusicLibraryClient({ initialMusic = [], albums = [] }) {
             <div className="pt-4 text-center">
               <button
                 type="button"
-                onClick={() => setVisibleCount((prev) => prev + 9)}
+                onClick={() => setVisibleCount((prev) => prev + 12)}
                 className="px-6 py-2.5 rounded border border-[#2E2E38] text-xs font-semibold text-[#F4F1EA] hover:border-[#C8A464] hover:text-[#C8A464] transition-colors"
               >
                 Load More Recordings ({filteredMusic.length - visibleCount} remaining)

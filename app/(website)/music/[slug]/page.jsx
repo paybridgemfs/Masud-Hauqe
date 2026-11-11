@@ -14,12 +14,10 @@ export async function generateMetadata({ params }) {
   }
   return {
     title: `${track.title} — ${artist?.name || 'Masud Hauqe'}`,
-    description:
-      track.description ||
-      `Listen to ${track.title} by ${artist?.name || 'Masud Hauqe'} on the official artist platform.`,
+    description: `Listen to ${track.title} by ${artist?.name || 'Masud Hauqe'} on the official artist platform.`,
     openGraph: {
       title: `${track.title} — ${artist?.name || 'Masud Hauqe'}`,
-      description: track.description || '',
+      description: `Listen to ${track.title} by ${artist?.name || 'Masud Hauqe'}.`,
       images: track.thumbnail ? [track.thumbnail] : [],
     },
   };
@@ -34,7 +32,7 @@ export default async function MusicDetailPage({ params }) {
     notFound();
   }
 
-  const relatedTracks = publishedMusic.filter((m) => m.id !== track.id).slice(0, 3);
+  const relatedTracks = publishedMusic.filter((m) => m.id !== track.id).slice(0, 4);
 
   return <MusicDetailClient track={track} relatedTracks={relatedTracks} />;
 }
