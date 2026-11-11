@@ -204,7 +204,7 @@ export default function AdminAlbumsClient({ initialAlbums = [] }) {
                       <span>{album.title}</span>
                     </div>
                   </td>
-                  <td className="py-3 px-4 text-[#8E8E96] font-mono">/albums/{album.slug}</td>
+                  <td className="py-3 px-4 text-[#8E8E96] font-mono">/releases/{album.slug}</td>
                   <td className="py-3 px-4 text-[#C8A464] font-mono">
                     {album.coverImageFileId ? `${album.coverImageFileId.slice(0, 14)}...` : '—'}
                   </td>

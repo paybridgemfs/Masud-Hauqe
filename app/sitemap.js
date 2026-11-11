@@ -6,7 +6,7 @@ export default async function sitemap() {
   const baseUrl = appUrl.replace(/\/$/, '');
   const { publishedMusic, publishedAlbums, pages } = await getPublicWebsiteData();
 
-  const staticRoutes = ['', '/about', '/music', '/albums', '/videos', '/gallery', '/contact'].map(
+  const staticRoutes = ['', '/about', '/music', '/releases', '/videos', '/gallery', '/contact'].map(
     (route) => ({
       url: `${baseUrl}${route}`,
       lastModified: new Date(),
@@ -23,7 +23,7 @@ export default async function sitemap() {
   }));
 
   const albumRoutes = publishedAlbums.map((album) => ({
-    url: `${baseUrl}/albums/${album.slug}`,
+    url: `${baseUrl}/releases/${album.slug}`,
     lastModified: new Date(album.updatedAt || album.createdAt),
     changeFrequency: 'monthly',
     priority: 0.7,

@@ -2,13 +2,13 @@
 
 import React from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { motion } from 'motion/react';
 import { ArrowRight, Play, Disc3, Music2, Video, Image as ImageIcon, Mail } from 'lucide-react';
 import MusicCard from '@/components/music/MusicCard.jsx';
 import AlbumCard from '@/components/music/AlbumCard.jsx';
 import SocialMediaLinks from '@/components/website/SocialMediaLinks.jsx';
 import { usePlayer } from '@/components/player/PlayerContext.jsx';
+import ShimmerImage from '@/components/ui/ShimmerImage.jsx';
 
 const fadeUp = {
   initial: { opacity: 0, y: 20 },
@@ -44,18 +44,17 @@ export default function SectionRenderer({
           {/* Hero Background Image with Black Overlay */}
           {heroBgImage ? (
             <div className="absolute inset-0 z-0 pointer-events-none">
-              <Image
+              <ShimmerImage
                 src={heroBgImage}
                 alt={content.headline || artist?.name || 'Masud Hauqe'}
                 fill
                 priority
                 sizes="100vw"
-                referrerPolicy="no-referrer"
                 className="object-cover object-center"
               />
-              <div className="absolute inset-0 bg-black/75" />
-              <div className="absolute inset-0 bg-gradient-to-r from-[#09090B]/95 via-[#09090B]/80 to-[#09090B]/65" />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#09090B] via-transparent to-[#09090B]/50" />
+              <div className="absolute inset-0 z-[2] bg-black/75" />
+              <div className="absolute inset-0 z-[2] bg-gradient-to-r from-[#09090B]/95 via-[#09090B]/80 to-[#09090B]/65" />
+              <div className="absolute inset-0 z-[2] bg-gradient-to-t from-[#09090B] via-transparent to-[#09090B]/50" />
             </div>
           ) : (
             <div className="absolute inset-0 z-0 pointer-events-none bg-[radial-gradient(circle_at_top_right,#1F1A11_0%,#09090B_65%)]" />
@@ -125,15 +124,14 @@ export default function SectionRenderer({
                 <div className="w-full min-h-[340px] lg:h-full rounded-lg bg-[#111116]/90 border border-[#24242C] overflow-hidden relative flex flex-col justify-end p-6 sm:p-8 shadow-2xl">
                   {portraitImage ? (
                     <>
-                      <Image
+                      <ShimmerImage
                         src={portraitImage}
                         alt={artist?.name || 'Masud Hauqe'}
                         fill
                         sizes="(max-width: 1024px) 100vw, 480px"
-                        referrerPolicy="no-referrer"
                         className="object-cover object-center"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/25 to-transparent" />
+                      <div className="absolute inset-0 z-[2] bg-gradient-to-t from-black/90 via-black/25 to-transparent" />
                     </>
                   ) : (
                     <>
@@ -298,7 +296,7 @@ export default function SectionRenderer({
                 )}
               </div>
               <Link
-                href="/albums"
+                href="/releases"
                 className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#C8A464] hover:text-[#D4B475] transition-colors whitespace-nowrap shrink-0 group"
               >
                 <span>View All Releases</span>
@@ -326,7 +324,7 @@ export default function SectionRenderer({
                   </p>
                 </div>
                 <Link
-                  href="/admin/albums"
+                  href="/admin/releases"
                   className="px-4 py-2 text-xs font-semibold bg-[#1E1E24] text-[#F4F1EA] hover:bg-[#27272F] border border-[#2E2E38] rounded whitespace-nowrap shrink-0"
                 >
                   Manage Releases
@@ -521,12 +519,11 @@ export default function SectionRenderer({
                     className="group bg-[#111115] border border-[#222228] hover:border-[#C8A464]/50 rounded-lg overflow-hidden transition-colors shadow-sm hover:shadow-xl"
                   >
                     <div className="relative aspect-[4/3] bg-[#16161B] overflow-hidden">
-                      <Image
+                      <ShimmerImage
                         src={item.imageUrl}
                         alt={item.title}
                         fill
                         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                        referrerPolicy="no-referrer"
                         className="object-cover group-hover:scale-[1.04] transition-transform duration-500 ease-out"
                       />
                     </div>

@@ -2,7 +2,6 @@
 
 import React, { useEffect } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Play,
@@ -22,6 +21,7 @@ import {
 } from 'lucide-react';
 import { usePlayer } from './PlayerContext.jsx';
 import { getPublicDownloadUrl } from '@/lib/storage/audio-delivery.js';
+import ShimmerImage from '@/components/ui/ShimmerImage.jsx';
 
 function formatSeconds(secs) {
   if (!secs || Number.isNaN(secs) || secs < 0) return '0:00';
@@ -185,12 +185,11 @@ export default function GlobalMusicPlayer() {
             <div className="flex items-center gap-3.5 min-w-0 w-[28%]">
               <div className="relative w-12 h-12 rounded-md bg-[#18181C] border border-[#27272C] overflow-hidden shrink-0 flex items-center justify-center">
                 {currentTrack.thumbnail ? (
-                  <Image
+                  <ShimmerImage
                     src={currentTrack.thumbnail}
                     alt={currentTrack.title}
                     fill
                     sizes="48px"
-                    referrerPolicy="no-referrer"
                     className="object-cover"
                   />
                 ) : (
@@ -389,12 +388,11 @@ export default function GlobalMusicPlayer() {
             <div className="flex items-center gap-2.5 min-w-0 flex-1">
               <div className="relative w-10 h-10 rounded bg-[#18181C] border border-[#27272C] overflow-hidden shrink-0 flex items-center justify-center">
                 {currentTrack.thumbnail ? (
-                  <Image
+                  <ShimmerImage
                     src={currentTrack.thumbnail}
                     alt={currentTrack.title}
                     fill
                     sizes="40px"
-                    referrerPolicy="no-referrer"
                     className="object-cover"
                   />
                 ) : (

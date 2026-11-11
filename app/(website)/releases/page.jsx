@@ -46,7 +46,7 @@ export default async function AlbumsPage() {
           </p>
           <div className="pt-2">
             <Link
-              href="/admin/albums"
+              href="/admin/releases"
               className="inline-flex items-center px-4 py-2 rounded bg-[#C8A464] text-[#09090B] text-xs font-semibold hover:bg-[#D4B475] transition-colors"
             >
               Create First Release in Admin CMS

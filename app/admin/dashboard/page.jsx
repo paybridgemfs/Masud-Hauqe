@@ -64,7 +64,7 @@ export default async function AdminDashboardPage() {
             <Disc className="w-4 h-4 text-[#C8A464]" />
           </div>
           <p className="text-2xl font-bold text-[#F4F1EA] tabular-nums">{allAlbums.length}</p>
-          <Link href="/admin/albums" className="text-xs text-[#C8A464] hover:underline inline-block">
+          <Link href="/admin/releases" className="text-xs text-[#C8A464] hover:underline inline-block">
             Open Release Manager →
           </Link>
         </div>

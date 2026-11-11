@@ -69,7 +69,7 @@ export async function POST(request) {
     });
 
     revalidatePath('/');
-    revalidatePath('/albums');
+    revalidatePath('/releases');
     revalidatePath('/music');
 
     return NextResponse.json({ ok: true, album: created });
@@ -128,8 +128,8 @@ export async function PUT(request) {
   }
 
   revalidatePath('/');
-  revalidatePath('/albums');
-  revalidatePath(`/albums/${updated.slug}`);
+  revalidatePath('/releases');
+  revalidatePath(`/releases/${updated.slug}`);
 
   return NextResponse.json({ ok: true, album: updated });
 }
@@ -165,7 +165,7 @@ export async function DELETE(request) {
   }
 
   revalidatePath('/');
-  revalidatePath('/albums');
+  revalidatePath('/releases');
   revalidatePath('/music');
 
   return NextResponse.json({ ok: true });

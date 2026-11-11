@@ -1,6 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
+import ShimmerImage from '@/components/ui/ShimmerImage.jsx';
 import { Image as ImageIcon } from 'lucide-react';
 import { getPublicWebsiteData } from '@/lib/db.js';
 
@@ -37,7 +37,7 @@ export default async function GalleryPage() {
               className="bg-[#111115] border border-[#222228] rounded-lg overflow-hidden flex flex-col"
             >
               <div className="relative aspect-[4/3] bg-[#16161B] overflow-hidden">
-                <Image
+                <ShimmerImage
                   src={item.imageUrl}
                   alt={item.title}
                   fill

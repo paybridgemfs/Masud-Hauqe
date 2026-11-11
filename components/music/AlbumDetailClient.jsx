@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { motion } from 'motion/react';
 import {
   Play,
@@ -25,6 +24,7 @@ import {
 } from 'lucide-react';
 import { usePlayer } from '@/components/player/PlayerContext.jsx';
 import { getPublicDownloadUrl } from '@/lib/storage/audio-delivery.js';
+import ShimmerImage from '@/components/ui/ShimmerImage.jsx';
 
 function parseDurationToSeconds(durationStr) {
   if (!durationStr || typeof durationStr !== 'string') return 0;
@@ -72,7 +72,7 @@ export default function AlbumDetailClient({ album, shareUrl: initialShareUrl = '
   } = usePlayer();
 
   const [copied, setCopied] = useState(false);
-  const shareUrl = initialShareUrl || `/albums/${album.slug}`;
+  const shareUrl = initialShareUrl || `/releases/${album.slug}`;
 
   const tracks = album.tracks || [];
   const releaseDateStr = album.releaseDate
@@ -107,7 +107,7 @@ export default function AlbumDetailClient({ album, shareUrl: initialShareUrl = '
 
   function handleCopyLink() {
     if (typeof window === 'undefined') return;
-    const fullUrl = `${window.location.origin}/albums/${album.slug}`;
+    const fullUrl = `${window.location.origin}/releases/${album.slug}`;
     navigator.clipboard?.writeText(fullUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2200);
@@ -148,7 +148,7 @@ export default function AlbumDetailClient({ album, shareUrl: initialShareUrl = '
         transition={{ duration: 0.3 }}
       >
         <Link
-          href="/albums"
+          href="/releases"
           className="inline-flex items-center gap-2 text-xs font-semibold text-[#9A9AA2] hover:text-[#C8A464] transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
@@ -166,12 +166,11 @@ export default function AlbumDetailClient({ album, shareUrl: initialShareUrl = '
         <div className="lg:col-span-4 flex">
           <div className="relative w-full aspect-square rounded-lg bg-[#16161C] border border-[#26262E] overflow-hidden flex items-center justify-center shadow-lg">
             {album.coverImage ? (
-              <Image
+              <ShimmerImage
                 src={album.coverImage}
                 alt={album.title}
                 fill
                 sizes="(max-width: 1024px) 100vw, 400px"
-                referrerPolicy="no-referrer"
                 className="object-cover"
               />
             ) : (

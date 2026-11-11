@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { motion } from 'motion/react';
 import {
   Play,
@@ -23,6 +22,7 @@ import {
 } from 'lucide-react';
 import { usePlayer } from '@/components/player/PlayerContext.jsx';
 import { getPublicDownloadUrl } from '@/lib/storage/audio-delivery.js';
+import ShimmerImage from '@/components/ui/ShimmerImage.jsx';
 import MusicCard from './MusicCard.jsx';
 
 function formatSeconds(secs) {
@@ -106,12 +106,11 @@ export default function MusicDetailClient({ track, relatedTracks = [], shareUrl:
         <div className="lg:col-span-4 flex">
           <div className="relative w-full aspect-square rounded-lg bg-[#16161C] border border-[#26262E] overflow-hidden flex items-center justify-center shadow-lg">
             {track.thumbnail ? (
-              <Image
+              <ShimmerImage
                 src={track.thumbnail}
                 alt={track.title}
                 fill
                 sizes="(max-width: 1024px) 100vw, 400px"
-                referrerPolicy="no-referrer"
                 className="object-cover"
               />
             ) : (
@@ -147,7 +146,7 @@ export default function MusicDetailClient({ track, relatedTracks = [], shareUrl:
                 </div>
                 <p className="text-xs sm:text-sm font-semibold text-[#F4F1EA] truncate">
                   {track.album ? (
-                    <Link href={`/albums/${track.album.slug}`} className="hover:text-[#C8A464]">
+                    <Link href={`/releases/${track.album.slug}`} className="hover:text-[#C8A464]">
                       {track.album.title}
                     </Link>
                   ) : (

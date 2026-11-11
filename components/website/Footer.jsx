@@ -58,7 +58,7 @@ export default function Footer({ artist, settings = {}, footerNav = [], socialLi
                 </Link>
               </li>
               <li>
-                <Link href="/albums" className="hover:text-[#F4F1EA] transition-colors">
+                <Link href="/releases" className="hover:text-[#F4F1EA] transition-colors">
                   Releases
                 </Link>
               </li>

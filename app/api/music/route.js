@@ -253,7 +253,7 @@ export async function POST(request) {
 
     revalidatePath('/');
     revalidatePath('/music');
-    revalidatePath('/albums');
+    revalidatePath('/releases');
     revalidatePath('/videos');
 
     return NextResponse.json({ ok: true, music: createdRecord });

@@ -1,6 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
+import ShimmerImage from '@/components/ui/ShimmerImage.jsx';
 import { getPublicWebsiteData } from '@/lib/db.js';
 import { Disc3, Globe, MapPin, Award } from 'lucide-react';
 import SocialMediaLinks from '@/components/website/SocialMediaLinks.jsx';
@@ -48,8 +48,8 @@ export default async function AboutPage() {
                   <span>{artist.location}</span>
                 </span>
               )}
-              {artist?.location && artist?.website && <span aria-hidden="true">·</span>}
-              {artist?.website && (
+              {artist?.location && (artist?.website && !/\.run\.app/i.test(artist.website) ? artist.website : '') && <span aria-hidden="true">·</span>}
+              {(artist?.website && !/\.run\.app/i.test(artist.website) ? artist.website : '') && (
                 <a
                   href={artist.website}
                   target="_blank"
@@ -77,7 +77,7 @@ export default async function AboutPage() {
         <div className="lg:col-span-5">
           <div className="h-full min-h-[280px] rounded-lg bg-[#111115] border border-[#24242C] overflow-hidden relative flex items-center justify-center p-8">
             {artist?.profileImage || artist?.coverImage ? (
-              <Image
+              <ShimmerImage
                 src={artist.profileImage || artist.coverImage}
                 alt={artist.name || 'Masud Hauqe'}
                 fill

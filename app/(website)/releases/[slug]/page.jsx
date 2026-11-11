@@ -46,7 +46,7 @@ export async function generateMetadata({ params }) {
       title: album.title,
       description: desc,
       type: "music.album",
-      url: `${origin}/albums/${album.slug}`,
+      url: `${origin}/releases/${album.slug}`,
       siteName: artistName,
       images: absoluteCover ? [{ url: absoluteCover, alt: album.title }] : [],
     },
@@ -69,5 +69,5 @@ export default async function AlbumDetailPage({ params }) {
   }
 
   const origin = await resolveOrigin();
-  return <AlbumDetailClient album={album} shareUrl={`${origin}/albums/${album.slug}`} />;
+  return <AlbumDetailClient album={album} shareUrl={`${origin}/releases/${album.slug}`} />;
 }

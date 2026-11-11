@@ -9,14 +9,21 @@ const SEO_PAGES = [
   { id: 'global', label: 'Global Site Defaults', path: '/*' },
   { id: 'home', label: 'Home Page', path: '/' },
   { id: 'music', label: 'Music Catalog', path: '/music' },
-  { id: 'albums', label: 'Albums & Discography', path: '/albums' },
+  { id: 'releases', label: 'Releases & Discography', path: '/releases' },
   { id: 'videos', label: 'Music Videos', path: '/videos' },
   { id: 'about', label: 'Artist Biography', path: '/about' },
   { id: 'gallery', label: 'Visual Gallery', path: '/gallery' },
   { id: 'contact', label: 'Contact & Booking', path: '/contact' },
 ];
 
-export default function AdminSeoClient({ initialSeoSettings = [] }) {
+function buildDefaultCanonical(baseAppUrl, pageId) {
+  const cleanBase = (baseAppUrl || 'http://localhost:3000').replace(/\/+$/, '');
+  const found = SEO_PAGES.find((p) => p.id === pageId);
+  if (!found || found.path === '/*' || found.path === '/') return cleanBase;
+  return `${cleanBase}${found.path}`;
+}
+
+export default function AdminSeoClient({ initialSeoSettings = [], appUrl = '' }) {
   const router = useRouter();
   const [selectedPage, setSelectedPage] = useState('global');
   const [seoList, setSeoList] = useState(initialSeoSettings);
@@ -24,24 +31,36 @@ export default function AdminSeoClient({ initialSeoSettings = [] }) {
   const [notice, setNotice] = useState(null);
   const [error, setError] = useState(null);
 
-  const currentRecord = seoList.find((s) => s.page === selectedPage) || {
+  const defaultCanonicalForSelected = buildDefaultCanonical(appUrl, selectedPage);
+  const rawRecord = seoList.find((s) => s.page === selectedPage);
+  const currentRecord = {
     page: selectedPage,
     metaTitle:
-      selectedPage === 'global'
+      rawRecord?.metaTitle ||
+      (selectedPage === 'global'
         ? 'Masud Hauqe — Official Music & Artist Platform'
-        : `Masud Hauqe — ${SEO_PAGES.find((p) => p.id === selectedPage)?.label || 'Official'}`,
+        : `Masud Hauqe — ${SEO_PAGES.find((p) => p.id === selectedPage)?.label || 'Official'}`),
     metaDescription:
+      rawRecord?.metaDescription ||
       'Official website, discography, streaming catalog, and visual archive of recording artist Masud Hauqe.',
-    canonicalUrl: '',
-    ogImage: '',
-    ogImageFileId: '',
+    canonicalUrl: rawRecord?.canonicalUrl || defaultCanonicalForSelected,
+    ogImage: rawRecord?.ogImage || '',
+    ogImageFileId: rawRecord?.ogImageFileId || '',
   };
 
   const handleFieldChange = (field, value) => {
     setSeoList((prev) => {
       const exists = prev.some((s) => s.page === selectedPage);
       if (exists) {
-        return prev.map((s) => (s.page === selectedPage ? { ...s, [field]: value } : s));
+        return prev.map((s) =>
+          s.page === selectedPage
+            ? {
+                ...s,
+                canonicalUrl: s.canonicalUrl || defaultCanonicalForSelected,
+                [field]: value,
+              }
+            : s
+        );
       }
       return [
         ...prev,
@@ -49,7 +68,7 @@ export default function AdminSeoClient({ initialSeoSettings = [] }) {
           page: selectedPage,
           metaTitle: currentRecord.metaTitle,
           metaDescription: currentRecord.metaDescription,
-          canonicalUrl: currentRecord.canonicalUrl,
+          canonicalUrl: currentRecord.canonicalUrl || defaultCanonicalForSelected,
           ogImage: currentRecord.ogImage,
           ogImageFileId: currentRecord.ogImageFileId || '',
           [field]: value,
@@ -227,14 +246,14 @@ export default function AdminSeoClient({ initialSeoSettings = [] }) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div>
                 <label className="block text-xs uppercase tracking-wider text-[#9E9A90] font-semibold mb-2">
-                  Canonical URL (Optional)
+                  Canonical URL (Auto APP_URL)
                 </label>
                 <input
                   type="text"
                   value={currentRecord.canonicalUrl || ''}
                   onChange={(e) => handleFieldChange('canonicalUrl', e.target.value)}
                   className="w-full h-11 px-3.5 bg-[#09090B] border border-[#F4F1EA]/[0.12] rounded text-sm text-[#F4F1EA] focus:outline-none focus:border-[#C8A464]"
-                  placeholder="https://masudhauqe.com/..."
+                  placeholder={defaultCanonicalForSelected}
                 />
               </div>
 
@@ -261,12 +280,7 @@ export default function AdminSeoClient({ initialSeoSettings = [] }) {
               <span>Search Engine Result Preview</span>
             </div>
             <div className="text-xs text-[#9E9A90] truncate">
-              {currentRecord.canonicalUrl ||
-                `https://masudhauqe.com${
-                  SEO_PAGES.find((p) => p.id === selectedPage)?.path === '/*'
-                    ? ''
-                    : SEO_PAGES.find((p) => p.id === selectedPage)?.path
-                }`}
+              {currentRecord.canonicalUrl || defaultCanonicalForSelected}
             </div>
             <div className="text-base font-bold text-[#C8A464] truncate">
               {currentRecord.metaTitle || 'Masud Hauqe — Official Music & Artist Platform'}

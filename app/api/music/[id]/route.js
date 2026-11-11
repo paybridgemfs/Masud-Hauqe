@@ -77,7 +77,7 @@ export async function PUT(request, { params }) {
   revalidatePath('/');
   revalidatePath('/music');
   revalidatePath(`/music/${updated.slug}`);
-  revalidatePath('/albums');
+  revalidatePath('/releases');
   revalidatePath('/videos');
 
   return NextResponse.json({ ok: true, music: updated });
@@ -139,7 +139,7 @@ export async function DELETE(request, { params }) {
 
   revalidatePath('/');
   revalidatePath('/music');
-  revalidatePath('/albums');
+  revalidatePath('/releases');
 
   return NextResponse.json({ ok: true });
 }

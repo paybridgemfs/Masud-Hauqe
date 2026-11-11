@@ -2,11 +2,11 @@
 
 import React from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { motion } from 'motion/react';
 import { Play, Pause, Download, Disc3 } from 'lucide-react';
 import { usePlayer } from '@/components/player/PlayerContext.jsx';
 import { getPublicDownloadUrl } from '@/lib/storage/audio-delivery.js';
+import ShimmerImage from '@/components/ui/ShimmerImage.jsx';
 
 export default function MusicCard({ track, queue = [] }) {
   const { currentTrack, isPlaying, playTrack } = usePlayer();
@@ -26,12 +26,11 @@ export default function MusicCard({ track, queue = [] }) {
       {/* Artwork / Thumbnail with Centered Play Button */}
       <div className="relative aspect-[16/10] bg-[#17171C] overflow-hidden border-b border-[#1E1E24]">
         {track.thumbnail ? (
-          <Image
+          <ShimmerImage
             src={track.thumbnail}
             alt={track.title}
             fill
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-            referrerPolicy="no-referrer"
             className="object-cover group-hover:scale-[1.04] transition-transform duration-500 ease-out"
           />
         ) : (
@@ -43,7 +42,7 @@ export default function MusicCard({ track, queue = [] }) {
           </div>
         )}
 
-        <div className="absolute inset-0 bg-black/35 group-hover:bg-black/45 transition-colors flex items-center justify-center">
+        <div className="absolute inset-0 z-[2] bg-black/35 group-hover:bg-black/45 transition-colors flex items-center justify-center">
           <button
             type="button"
             onClick={() => playTrack(track, queue)}
@@ -72,7 +71,7 @@ export default function MusicCard({ track, queue = [] }) {
               <>
                 <span aria-hidden="true">·</span>
                 <Link
-                  href={`/albums/${track.album.slug}`}
+                  href={`/releases/${track.album.slug}`}
                   className="hover:text-[#C8A464] transition-colors truncate"
                 >
                   {track.album.title}
