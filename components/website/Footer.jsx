@@ -3,12 +3,11 @@ import Link from 'next/link';
 import SocialMediaLinks from '@/components/website/SocialMediaLinks.jsx';
 
 export default function Footer({ artist, settings = {}, footerNav = [], socialLinks = [] }) {
-  const siteName = settings.siteName || artist?.name || 'Masud Hauqe';
-  const footerDesc =
-    settings.footerDescription ||
-    'Official digital repertoire, studio master streaming, and authorized archive of Masud Hauqe.';
+  const siteName = settings.siteName || artist?.name || '';
+  const footerDesc = settings.footerDescription || '';
   const copyrightText =
-    settings.copyrightText || `© ${new Date().getFullYear()} ${siteName}. All Rights Reserved.`;
+    settings.copyrightText ||
+    (siteName ? `© ${new Date().getFullYear()} ${siteName}. All Rights Reserved.` : '');
   const contactEmail = settings.contactEmail || '';
   const contactLocation = settings.contactLocation || '';
 

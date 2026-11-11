@@ -130,9 +130,13 @@ export default function MusicDetailClient({ track, relatedTracks = [], shareUrl:
           <div className="space-y-4">
             <div className="space-y-2">
               <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-[#C8A464] tracking-wider uppercase">
-                <span>{track.artist?.name || 'Masud Hauqe'}</span>
-                <span aria-hidden="true">·</span>
-                <span>{track.album ? `Release: ${track.album.title}` : 'Official Single Master'}</span>
+                {track.artist?.name && (
+                  <>
+                    <span>{track.artist.name}</span>
+                    <span aria-hidden="true">·</span>
+                  </>
+                )}
+                <span>{track.album ? `Release: ${track.album.title}` : 'Single Master'}</span>
               </div>
 
               <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[#F4F1EA] leading-tight">
@@ -299,7 +303,7 @@ export default function MusicDetailClient({ track, relatedTracks = [], shareUrl:
             isOpen={showStoryModal}
             onClose={() => setShowStoryModal(false)}
             track={track}
-            artistName={track.artist?.name || 'Masud Hauqe'}
+            artistName={track.artist?.name || ''}
           />
 
           {/* Primary Actions Bar */}

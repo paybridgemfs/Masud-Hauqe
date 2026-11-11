@@ -17,10 +17,11 @@ export async function generateMetadata() {
   const title =
     globalSeo.metaTitle ||
     settings.siteName ||
-    'Masud Hauqe — Official Artist Platform & CMS';
+    'Official Artist Platform';
   const description =
     globalSeo.metaDescription ||
-    'Official music artist portfolio, streaming library, MP3 delivery platform, and dynamic content management system for Masud Hauqe.';
+    settings.siteTagline ||
+    '';
 
   const faviconFileId = (settings.faviconFileId || '').trim();
   const faviconHref = faviconFileId

@@ -8,10 +8,10 @@ export async function generateMetadata() {
   const { seoSettings, artist } = await getPublicWebsiteData();
   const seo = (seoSettings || []).find((s) => s.page === 'music');
   return {
-    title: seo?.metaTitle || `Music Library — ${artist?.name || 'Masud Hauqe'}`,
+    title: seo?.metaTitle || (artist?.name ? `Music Library — ${artist.name}` : 'Music Library'),
     description:
       seo?.metaDescription ||
-      `Stream and download official published recordings by ${artist?.name || 'Masud Hauqe'}.`,
+      (artist?.name ? `Stream official recordings by ${artist.name}.` : ''),
   };
 }
 
@@ -29,7 +29,7 @@ export default async function MusicPage() {
             Official Music Library
           </h1>
           <p className="text-sm text-[#9A9AA2] mt-1.5 max-w-2xl">
-            Stream authorized master recordings by {artist?.name || 'Masud Hauqe'} or download high-resolution MP3 files directly when enabled.
+            Stream authorized master recordings{artist?.name ? ` by ${artist.name}` : ''} or download high-resolution MP3 files directly when enabled.
           </p>
         </div>
         <div className="text-xs text-[#8E8E96] tabular-nums">

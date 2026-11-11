@@ -29,18 +29,20 @@ export async function generateMetadata({ params }) {
   const { publishedAlbums, artist } = await getPublicWebsiteData();
   const album = publishedAlbums.find((a) => a.slug === slug || a.id === slug);
   if (!album) {
-    return { title: "Release Not Found — Masud Hauqe" };
+    return { title: "Release Not Found" };
   }
 
   const origin = await resolveOrigin();
   const absoluteCover = toAbsoluteUrl(album.coverImage, origin);
-  const artistName = artist?.name || "Masud Hauqe";
+  const artistName = artist?.name || "";
   const desc =
     album.description ||
-    `Listen to the official release "${album.title}" by ${artistName} (${(album.tracks || []).length} tracks).`;
+    (artistName
+      ? `Official release "${album.title}" by ${artistName} (${(album.tracks || []).length} tracks).`
+      : `Official release "${album.title}" (${(album.tracks || []).length} tracks).`);
 
   return {
-    title: `${album.title} — Release by ${artistName}`,
+    title: artistName ? `${album.title} — ${artistName}` : album.title,
     description: desc,
     openGraph: {
       title: album.title,

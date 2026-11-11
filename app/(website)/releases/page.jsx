@@ -7,8 +7,8 @@ import AlbumCard from "@/components/music/AlbumCard.jsx";
 export const revalidate = 60;
 
 export const metadata = {
-  title: "Official Releases & Discography — Masud Hauqe",
-  description: "Explore official studio releases, anthologies, and tracklists by Masud Hauqe.",
+  title: "Official Releases & Discography",
+  description: "Explore official studio releases, anthologies, and tracklists.",
 };
 
 export default async function AlbumsPage() {
@@ -23,7 +23,7 @@ export default async function AlbumsPage() {
             Official Releases & Collections
           </h1>
           <p className="text-sm text-[#9A9AA2] mt-1.5 max-w-2xl">
-            Complete multi-track releases and studio anthologies by {artist?.name || "Masud Hauqe"}.
+            Complete multi-track releases and studio anthologies{artist?.name ? ` by ${artist.name}` : ''}.
           </p>
         </div>
         <span className="text-xs text-[#8E8E96] tabular-nums">

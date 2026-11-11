@@ -29,16 +29,18 @@ export async function generateMetadata({ params }) {
   const { publishedMusic, artist } = await getPublicWebsiteData();
   const track = publishedMusic.find((m) => m.slug === slug || m.id === slug);
   if (!track) {
-    return { title: "Recording Not Found — Masud Hauqe" };
+    return { title: "Recording Not Found" };
   }
 
   const origin = await resolveOrigin();
   const absoluteThumb = toAbsoluteUrl(track.thumbnail, origin);
-  const artistName = artist?.name || "Masud Hauqe";
-  const desc = `Official Master Recording by ${artistName}${track.album ? ` · Release: ${track.album.title}` : ""}.`;
+  const artistName = artist?.name || "";
+  const desc = artistName
+    ? `Master Recording by ${artistName}${track.album ? ` · Release: ${track.album.title}` : ""}.`
+    : `Master Recording: ${track.title}.`;
 
   return {
-    title: `${track.title} — ${artistName}`,
+    title: artistName ? `${track.title} — ${artistName}` : track.title,
     description: desc,
     openGraph: {
       title: track.title,

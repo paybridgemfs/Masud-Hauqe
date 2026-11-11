@@ -7,8 +7,8 @@ import { Mail, MapPin } from 'lucide-react';
 export const revalidate = 60;
 
 export const metadata = {
-  title: 'Contact & Booking — Masud Hauqe',
-  description: 'Contact the management desk of Masud Hauqe for bookings, press, and licensing inquiries.',
+  title: 'Contact & Booking',
+  description: 'Inquiries, bookings, and correspondence.',
 };
 
 export default async function ContactPage() {
@@ -23,7 +23,7 @@ export default async function ContactPage() {
               CORRESPONDENCE & BOOKING
             </p>
             <h1 className="text-3xl sm:text-4xl font-bold text-[#F4F1EA] mt-1">
-              Get in Touch with {artist?.name || 'Masud Hauqe'}
+              Get in Touch{artist?.name ? ` with ${artist.name}` : ''}
             </h1>
             <p className="text-sm text-[#9A9AA2] mt-2 leading-relaxed">
               For concert bookings, studio collaborations, press inquiries, or master sync licensing, use the direct form or management coordinates below.

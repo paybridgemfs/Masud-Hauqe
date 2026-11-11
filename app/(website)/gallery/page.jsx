@@ -7,8 +7,8 @@ import { getPublicWebsiteData } from '@/lib/db.js';
 export const revalidate = 60;
 
 export const metadata = {
-  title: 'Photography & Visual Gallery — Masud Hauqe',
-  description: 'Editorial photography, studio sessions, and live performance gallery of Masud Hauqe.',
+  title: 'Photography & Visual Gallery',
+  description: 'Editorial photography, studio sessions, and visual gallery.',
 };
 
 export default async function GalleryPage() {
@@ -23,7 +23,7 @@ export default async function GalleryPage() {
             Artist Visual Gallery
           </h1>
           <p className="text-sm text-[#9A9AA2] mt-1.5 max-w-2xl">
-            Curated studio portraits, concert photography, and archival imagery of {artist?.name || 'Masud Hauqe'}.
+            Curated studio portraits, concert photography, and archival imagery{artist?.name ? ` of ${artist.name}` : ''}.
           </p>
         </div>
         <span className="text-xs text-[#8E8E96] tabular-nums">{gallery.length} Photographs</span>

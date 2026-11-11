@@ -313,10 +313,7 @@ export default function FullScreenPlayer({
                     />
                   ) : (
                     <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-[#1C1A14] via-[#111115] to-[#09090B] text-center p-4">
-                      <Disc3 className="w-16 h-16 text-[#C8A464] mb-2 animate-[spin_10s_linear_infinite]" />
-                      <span className="text-[10px] tracking-widest text-[#9A9AA2] font-semibold">
-                        MASTER TRACK
-                      </span>
+                      <Disc3 className="w-16 h-16 text-[#C8A464] animate-[spin_10s_linear_infinite]" />
                     </div>
                   )}
                 </motion.div>
@@ -341,10 +338,12 @@ export default function FullScreenPlayer({
               <h1 className="text-lg sm:text-2xl lg:text-3xl font-bold tracking-tight text-[#F4F1EA] truncate">
                 {currentTrack.title}
               </h1>
-              <p className="text-xs sm:text-sm text-[#C8A464] font-medium truncate">
-                {currentTrack.artist?.name || 'Masud Hauqe'}
-                {currentTrack.album?.title ? ` · ${currentTrack.album.title}` : ''}
-              </p>
+              {currentTrack.artist?.name && (
+                <p className="text-xs sm:text-sm text-[#C8A464] font-medium truncate">
+                  {currentTrack.artist.name}
+                  {currentTrack.album?.title ? ` · ${currentTrack.album.title}` : ''}
+                </p>
+              )}
             </div>
 
             {/* ============================================================
@@ -539,14 +538,18 @@ export default function FullScreenPlayer({
                         >
                           {item.title}
                         </p>
-                        <p className="text-xs text-[#8E8E96] truncate">
-                          {item.artist?.name || 'Masud Hauqe'}
-                        </p>
+                        {item.artist?.name && (
+                          <p className="text-xs text-[#8E8E96] truncate">
+                            {item.artist.name}
+                          </p>
+                        )}
                       </div>
                     </div>
-                    <span className="text-xs font-mono text-[#8E8E96] shrink-0">
-                      {item.duration || '3:45'}
-                    </span>
+                    {item.duration && (
+                      <span className="text-xs font-mono text-[#8E8E96] shrink-0">
+                        {item.duration}
+                      </span>
+                    )}
                   </button>
                 );
               })}

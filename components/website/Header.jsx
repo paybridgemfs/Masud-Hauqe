@@ -11,10 +11,10 @@ export default function Header({ settings = {}, navItems = [] }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const logoText = settings.logoText || settings.siteName || 'MASUD HAUQE';
+  const logoText = settings.logoText || settings.siteName || '';
   const logoUrl = settings.logoUrl || '';
   const sticky = settings.stickyHeader !== 'false';
-  const ctaLabel = settings.headerCtaLabel || 'Explore Music';
+  const ctaLabel = settings.headerCtaLabel || '';
   const ctaUrl = settings.headerCtaUrl || '/music';
 
   // Enforce max 5 concise top-level navigation links per Top Bar Contract
@@ -79,12 +79,14 @@ export default function Header({ settings = {}, navItems = [] }) {
 
         {/* Zone 3: 1 primary action (+ mobile hamburger button) */}
         <div className="flex items-center gap-3 shrink-0">
-          <Link
-            href={ctaUrl}
-            className="hidden sm:inline-flex items-center justify-center px-4 py-2 text-xs font-semibold tracking-wider text-[#09090B] bg-[#C8A464] hover:bg-[#D4B475] rounded transition-all hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap shrink-0"
-          >
-            {ctaLabel}
-          </Link>
+          {ctaLabel && (
+            <Link
+              href={ctaUrl}
+              className="hidden sm:inline-flex items-center justify-center px-4 py-2 text-xs font-semibold tracking-wider text-[#09090B] bg-[#C8A464] hover:bg-[#D4B475] rounded transition-all hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap shrink-0"
+            >
+              {ctaLabel}
+            </Link>
+          )}
 
           <button
             type="button"
@@ -142,15 +144,17 @@ export default function Header({ settings = {}, navItems = [] }) {
                   Gallery
                 </Link>
               </nav>
-              <div className="pt-3 border-t border-[#222226]">
-                <Link
-                  href={ctaUrl}
-                  onClick={() => setMobileOpen(false)}
-                  className="w-full inline-flex items-center justify-center px-4 py-2.5 text-sm font-semibold text-[#09090B] bg-[#C8A464] rounded"
-                >
-                  {ctaLabel}
-                </Link>
-              </div>
+              {ctaLabel && (
+                <div className="pt-3 border-t border-[#222226]">
+                  <Link
+                    href={ctaUrl}
+                    onClick={() => setMobileOpen(false)}
+                    className="w-full inline-flex items-center justify-center px-4 py-2.5 text-sm font-semibold text-[#09090B] bg-[#C8A464] rounded"
+                  >
+                    {ctaLabel}
+                  </Link>
+                </div>
+              )}
             </div>
           </motion.div>
         )}

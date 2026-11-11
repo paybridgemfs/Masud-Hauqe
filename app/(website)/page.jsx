@@ -20,9 +20,9 @@ export default async function HomePage() {
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'MusicGroup',
-    name: artist?.name || 'Masud Hauqe',
+    name: artist?.name || '',
     description: artist?.shortBiography || artist?.biography || '',
-    url: settings.website || 'http://localhost:3000',
+    url: settings.website || '',
   };
 
   return (
@@ -47,9 +47,11 @@ export default async function HomePage() {
         ))
       ) : (
         <section className="max-w-7xl mx-auto px-4 py-24 text-center">
-          <h1 className="text-3xl font-bold text-[#F4F1EA]">
-            {artist?.name || 'Masud Hauqe'}
-          </h1>
+          {artist?.name && (
+            <h1 className="text-3xl font-bold text-[#F4F1EA]">
+              {artist.name}
+            </h1>
+          )}
           <p className="text-sm text-[#8E8E96] mt-2">
             All homepage sections are currently hidden. Enable or add sections in the Admin Section Manager.
           </p>

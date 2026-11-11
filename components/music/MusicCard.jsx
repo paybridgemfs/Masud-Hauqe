@@ -66,7 +66,9 @@ export default function MusicCard({ track, queue = [] }) {
       <div className="p-2.5 sm:p-3.5 flex-1 flex flex-col justify-between space-y-1.5 sm:space-y-2.5">
         <div className="min-w-0">
           <div className="flex items-center gap-1 text-[10px] sm:text-[11px] text-[#9A9AA2] mb-0.5 sm:mb-1 truncate">
-            <span className="truncate">{track.artist?.name || 'Masud Hauqe'}</span>
+            {track.artist?.name && (
+              <span className="truncate">{track.artist.name}</span>
+            )}
             {track.album?.title && (
               <>
                 <span aria-hidden="true">·</span>

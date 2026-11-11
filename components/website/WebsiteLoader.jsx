@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Disc3 } from 'lucide-react';
 
-export default function WebsiteLoader({ siteName = 'Masud Hauqe' }) {
+export default function WebsiteLoader({ siteName = '' }) {
   const [isReady, setIsReady] = useState(false);
   const [progress, setProgress] = useState(18);
 
@@ -141,9 +141,11 @@ export default function WebsiteLoader({ siteName = 'Masud Hauqe' }) {
               <p className="text-[11px] font-semibold tracking-[0.28em] text-[#C8A464] uppercase">
                 OFFICIAL ARCHIVE
               </p>
-              <h2 className="text-xl sm:text-2xl font-bold tracking-[0.16em] text-[#F4F1EA] uppercase">
-                {siteName}
-              </h2>
+              {siteName && (
+                <h2 className="text-xl sm:text-2xl font-bold tracking-[0.16em] text-[#F4F1EA] uppercase">
+                  {siteName}
+                </h2>
+              )}
             </div>
 
             {/* Smooth Shimmering Progress Bar */}

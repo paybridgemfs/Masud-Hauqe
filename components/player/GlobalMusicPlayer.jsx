@@ -208,10 +208,12 @@ export default function GlobalMusicPlayer() {
                 >
                   {currentTrack.title}
                 </Link>
-                <p className="text-xs text-[#9A9AA2] truncate mt-0.5">
-                  {currentTrack.artist?.name || 'Masud Hauqe'}
-                  {currentTrack.album?.title ? ` · ${currentTrack.album.title}` : ''}
-                </p>
+                {currentTrack.artist?.name && (
+                  <p className="text-xs text-[#9A9AA2] truncate mt-0.5">
+                    {currentTrack.artist.name}
+                    {currentTrack.album?.title ? ` · ${currentTrack.album.title}` : ''}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -421,9 +423,11 @@ export default function GlobalMusicPlayer() {
                 >
                   {currentTrack.title}
                 </Link>
-                <p className="text-[10px] text-[#9A9AA2] truncate">
-                  {currentTrack.artist?.name || 'Masud Hauqe'}
-                </p>
+                {currentTrack.artist?.name && (
+                  <p className="text-[10px] text-[#9A9AA2] truncate">
+                    {currentTrack.artist.name}
+                  </p>
+                )}
               </div>
             </div>
 

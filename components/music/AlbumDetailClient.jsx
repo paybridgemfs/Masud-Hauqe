@@ -189,9 +189,13 @@ export default function AlbumDetailClient({ album, shareUrl: initialShareUrl = '
           <div className="space-y-4">
             <div className="space-y-2">
               <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-[#C8A464] tracking-wider uppercase tabular-nums">
-                <span>{album.artist?.name || 'Masud Hauqe'}</span>
-                <span aria-hidden="true">·</span>
-                <span>Official Studio Release</span>
+                {album.artist?.name && (
+                  <>
+                    <span>{album.artist.name}</span>
+                    <span aria-hidden="true">·</span>
+                  </>
+                )}
+                <span>Studio Release</span>
               </div>
 
               <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[#F4F1EA] leading-tight">
@@ -413,7 +417,7 @@ export default function AlbumDetailClient({ album, shareUrl: initialShareUrl = '
               isOpen={showStoryModal}
               onClose={() => setShowStoryModal(false)}
               album={album}
-              artistName={album.artist?.name || 'Masud Hauqe'}
+              artistName={album.artist?.name || ''}
             />
           </div>
 
@@ -483,9 +487,11 @@ export default function AlbumDetailClient({ album, shareUrl: initialShareUrl = '
                       >
                         {track.title}
                       </Link>
-                      <p className="text-xs text-[#8E8E96] truncate">
-                        {album.artist?.name || 'Masud Hauqe'}
-                      </p>
+                      {album.artist?.name && (
+                        <p className="text-xs text-[#8E8E96] truncate">
+                          {album.artist.name}
+                        </p>
+                      )}
                     </div>
                   </div>
 
