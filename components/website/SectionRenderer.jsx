@@ -10,6 +10,13 @@ import AlbumCard from '@/components/music/AlbumCard.jsx';
 import SocialMediaLinks from '@/components/website/SocialMediaLinks.jsx';
 import { usePlayer } from '@/components/player/PlayerContext.jsx';
 
+const fadeUp = {
+  initial: { opacity: 0, y: 20 },
+  whileInView: { opacity: 1, y: 0 },
+  viewport: { once: true, margin: '-40px' },
+  transition: { duration: 0.45, ease: [0.22, 1, 0.36, 1] },
+};
+
 export default function SectionRenderer({
   section,
   artist,
@@ -58,9 +65,9 @@ export default function SectionRenderer({
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-stretch">
               {/* Left Column: Editorial Typography Hierarchy (Centered on Mobile, Left on Desktop) */}
               <motion.div
-                initial={{ opacity: 0, y: 12 }}
+                initial={{ opacity: 0, y: 18 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.35 }}
+                transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
                 className="lg:col-span-7 flex flex-col justify-center items-center text-center lg:items-start lg:text-left space-y-6"
               >
                 <p className="text-xs font-semibold tracking-[0.22em] text-[#C8A464]">
@@ -85,7 +92,7 @@ export default function SectionRenderer({
                     <button
                       type="button"
                       onClick={() => playTrack(latestTrack, publishedMusic)}
-                      className="inline-flex items-center gap-2 px-6 py-3 rounded bg-[#C8A464] text-[#09090B] hover:bg-[#D4B475] text-sm font-semibold tracking-wide transition-colors whitespace-nowrap shrink-0"
+                      className="inline-flex items-center gap-2 px-6 py-3 rounded bg-[#C8A464] text-[#09090B] hover:bg-[#D4B475] text-sm font-semibold tracking-wide transition-all hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap shrink-0 shadow-md"
                     >
                       <Play className="w-4 h-4 fill-current" />
                       <span>Play Latest Release</span>
@@ -93,7 +100,7 @@ export default function SectionRenderer({
                   ) : (
                     <Link
                       href={content.primaryCtaUrl || '/music'}
-                      className="px-6 py-3 rounded bg-[#C8A464] text-[#09090B] hover:bg-[#D4B475] text-sm font-semibold tracking-wide transition-colors whitespace-nowrap shrink-0"
+                      className="px-6 py-3 rounded bg-[#C8A464] text-[#09090B] hover:bg-[#D4B475] text-sm font-semibold tracking-wide transition-all hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap shrink-0 shadow-md"
                     >
                       {content.primaryCtaText || 'Listen to Archive'}
                     </Link>
@@ -101,15 +108,20 @@ export default function SectionRenderer({
 
                   <Link
                     href={content.secondaryCtaUrl || '/about'}
-                    className="px-6 py-3 rounded border border-[#32323C] bg-[#09090B]/60 backdrop-blur-sm text-[#F4F1EA] hover:border-[#C8A464] hover:text-[#C8A464] text-sm font-medium transition-colors whitespace-nowrap shrink-0"
+                    className="px-6 py-3 rounded border border-[#32323C] bg-[#09090B]/60 backdrop-blur-sm text-[#F4F1EA] hover:border-[#C8A464] hover:text-[#C8A464] text-sm font-medium transition-all hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap shrink-0"
                   >
                     {content.secondaryCtaText || 'Artist Monograph'}
                   </Link>
                 </div>
               </motion.div>
 
-              {/* Right Column: Clean Editorial Portrait Card (No Disc Overlay Over Image) */}
-              <div className="lg:col-span-5 flex">
+              {/* Right Column: Clean Editorial Portrait Card */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.97, y: 18 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+                className="lg:col-span-5 flex"
+              >
                 <div className="w-full min-h-[340px] lg:h-full rounded-lg bg-[#111116]/90 border border-[#24242C] overflow-hidden relative flex flex-col justify-end p-6 sm:p-8 shadow-2xl">
                   {portraitImage ? (
                     <>
@@ -149,11 +161,16 @@ export default function SectionRenderer({
                     </div>
                   </div>
                 </div>
-              </div>
+              </motion.div>
             </div>
 
             {/* Full-Width Key Archive Summary Strip Below Hero Split */}
-            <div className="mt-12 pt-8 border-t border-white/10 grid grid-cols-2 sm:grid-cols-4 gap-6 text-center sm:text-left">
+            <motion.div
+              initial={{ opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.45, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
+              className="mt-12 pt-8 border-t border-white/10 grid grid-cols-2 sm:grid-cols-4 gap-6 text-center sm:text-left"
+            >
               <div>
                 <p className="text-xs text-[#9A9AA2] tracking-wider">ARTIST</p>
                 <p className="text-base font-semibold text-[#F4F1EA] mt-1">
@@ -178,7 +195,7 @@ export default function SectionRenderer({
                   Direct Stream & MP3
                 </p>
               </div>
-            </div>
+            </motion.div>
           </div>
         </section>
       );
@@ -200,7 +217,10 @@ export default function SectionRenderer({
       return (
         <section className="border-b border-[#222226] py-16 sm:py-20">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10">
+            <motion.div
+              {...fadeUp}
+              className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10"
+            >
               <div>
                 <p className="text-xs font-semibold tracking-[0.2em] text-[#C8A464] mb-2">
                   {content.kicker || 'SELECTED REPERTOIRE'}
@@ -214,12 +234,12 @@ export default function SectionRenderer({
               </div>
               <Link
                 href="/music"
-                className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#C8A464] hover:text-[#D4B475] transition-colors whitespace-nowrap shrink-0"
+                className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#C8A464] hover:text-[#D4B475] transition-colors whitespace-nowrap shrink-0 group"
               >
                 <span>Open Full Music Library</span>
-                <ArrowRight className="w-4 h-4" />
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </Link>
-            </div>
+            </motion.div>
 
             {tracksToShow.length > 0 ? (
               <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-5">
@@ -228,7 +248,10 @@ export default function SectionRenderer({
                 ))}
               </div>
             ) : (
-              <div className="bg-[#101014] border border-[#222228] rounded-lg p-10 text-center max-w-2xl mx-auto">
+              <motion.div
+                {...fadeUp}
+                className="bg-[#101014] border border-[#222228] rounded-lg p-10 text-center max-w-2xl mx-auto"
+              >
                 <Music2 className="w-8 h-8 text-[#C8A464] mx-auto mb-3" />
                 <h3 className="text-lg font-semibold text-[#F4F1EA]">
                   No Published Single Recordings in Archive Yet
@@ -244,7 +267,7 @@ export default function SectionRenderer({
                     Publish First Track in Admin CMS
                   </Link>
                 </div>
-              </div>
+              </motion.div>
             )}
           </div>
         </section>
@@ -255,7 +278,10 @@ export default function SectionRenderer({
       return (
         <section className="border-b border-[#222226] py-16 sm:py-20 bg-[#0B0B0E]">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10">
+            <motion.div
+              {...fadeUp}
+              className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10"
+            >
               <div>
                 <p className="text-xs font-semibold tracking-[0.2em] text-[#C8A464] mb-2">
                   {content.kicker || 'DISCOGRAPHY'}
@@ -269,12 +295,12 @@ export default function SectionRenderer({
               </div>
               <Link
                 href="/albums"
-                className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#C8A464] hover:text-[#D4B475] transition-colors whitespace-nowrap shrink-0"
+                className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#C8A464] hover:text-[#D4B475] transition-colors whitespace-nowrap shrink-0 group"
               >
                 <span>View All Albums</span>
-                <ArrowRight className="w-4 h-4" />
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </Link>
-            </div>
+            </motion.div>
 
             {publishedAlbums.length > 0 ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2.5 sm:gap-4">
@@ -283,7 +309,10 @@ export default function SectionRenderer({
                 ))}
               </div>
             ) : (
-              <div className="bg-[#111115] border border-[#222228] rounded-lg p-8 flex flex-col sm:flex-row items-center justify-between gap-6">
+              <motion.div
+                {...fadeUp}
+                className="bg-[#111115] border border-[#222228] rounded-lg p-8 flex flex-col sm:flex-row items-center justify-between gap-6"
+              >
                 <div>
                   <h3 className="text-base font-semibold text-[#F4F1EA]">
                     Album Discography Awaiting Release
@@ -298,7 +327,7 @@ export default function SectionRenderer({
                 >
                   Manage Albums
                 </Link>
-              </div>
+              </motion.div>
             )}
           </div>
         </section>
@@ -310,7 +339,10 @@ export default function SectionRenderer({
       return (
         <section className="border-b border-[#222226] py-16 sm:py-20">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
+            <motion.div
+              {...fadeUp}
+              className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center"
+            >
               <div className="lg:col-span-5">
                 <p className="text-xs font-semibold tracking-[0.2em] text-[#C8A464] mb-2">
                   {content.kicker || 'ARTIST MONOGRAPH'}
@@ -326,7 +358,7 @@ export default function SectionRenderer({
                 )}
               </div>
 
-              <div className="lg:col-span-7 space-y-5 bg-[#111115] border border-[#222228] rounded-lg p-6 sm:p-8">
+              <div className="lg:col-span-7 space-y-5 bg-[#111115] border border-[#222228] rounded-lg p-6 sm:p-8 shadow-lg">
                 <p className="text-base text-[#E4E4E7] leading-relaxed whitespace-pre-line">
                   {artist?.biography ||
                     artist?.shortBiography ||
@@ -338,14 +370,14 @@ export default function SectionRenderer({
                   </span>
                   <Link
                     href={content.ctaUrl || '/about'}
-                    className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#C8A464] hover:text-[#D4B475] transition-colors"
+                    className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#C8A464] hover:text-[#D4B475] transition-colors group"
                   >
                     <span>{content.ctaText || 'Read Complete Biography'}</span>
-                    <ArrowRight className="w-4 h-4" />
+                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                   </Link>
                 </div>
               </div>
-            </div>
+            </motion.div>
           </div>
         </section>
       );
@@ -358,7 +390,10 @@ export default function SectionRenderer({
       return (
         <section className="border-b border-[#222226] py-16 sm:py-20 bg-[#0B0B0E]">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10">
+            <motion.div
+              {...fadeUp}
+              className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10"
+            >
               <div>
                 <p className="text-xs font-semibold tracking-[0.2em] text-[#C8A464] mb-2">
                   {content.kicker || 'VISUAL ARCHIVE'}
@@ -372,19 +407,24 @@ export default function SectionRenderer({
               </div>
               <Link
                 href="/videos"
-                className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#C8A464] hover:text-[#D4B475] transition-colors whitespace-nowrap shrink-0"
+                className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#C8A464] hover:text-[#D4B475] transition-colors whitespace-nowrap shrink-0 group"
               >
                 <span>Open Video Gallery</span>
-                <ArrowRight className="w-4 h-4" />
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </Link>
-            </div>
+            </motion.div>
 
             {videoTracks.length > 0 ? (
               <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-6">
-                {videoTracks.slice(0, 6).map((track) => (
-                  <div
+                {videoTracks.slice(0, 6).map((track, idx) => (
+                  <motion.div
                     key={track.id}
-                    className="bg-[#111115] border border-[#222228] rounded-lg overflow-hidden flex flex-col"
+                    initial={{ opacity: 0, y: 16 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, margin: '-20px' }}
+                    whileHover={{ y: -4 }}
+                    transition={{ duration: 0.35, delay: Math.min(idx * 0.05, 0.25) }}
+                    className="bg-[#111115] border border-[#222228] hover:border-[#C8A464]/50 rounded-lg overflow-hidden flex flex-col transition-colors shadow-sm hover:shadow-xl"
                   >
                     <div className="aspect-video bg-black">
                       <iframe
@@ -411,11 +451,14 @@ export default function SectionRenderer({
                         Audio Master →
                       </Link>
                     </div>
-                  </div>
+                  </motion.div>
                 ))}
               </div>
             ) : (
-              <div className="bg-[#111115] border border-[#222228] rounded-lg p-8 flex flex-col sm:flex-row items-center justify-between gap-6">
+              <motion.div
+                {...fadeUp}
+                className="bg-[#111115] border border-[#222228] rounded-lg p-8 flex flex-col sm:flex-row items-center justify-between gap-6"
+              >
                 <div className="flex items-start gap-4">
                   <Video className="w-6 h-6 text-[#C8A464] shrink-0 mt-0.5" />
                   <div>
@@ -433,7 +476,7 @@ export default function SectionRenderer({
                 >
                   View Videos Page
                 </Link>
-              </div>
+              </motion.div>
             )}
           </div>
         </section>
@@ -444,7 +487,7 @@ export default function SectionRenderer({
       return (
         <section className="border-b border-[#222226] py-16 sm:py-20">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-end justify-between gap-4 mb-10">
+            <motion.div {...fadeUp} className="flex items-end justify-between gap-4 mb-10">
               <div>
                 <p className="text-xs font-semibold tracking-[0.2em] text-[#C8A464] mb-2">
                   {content.kicker || 'PHOTOGRAPHY'}
@@ -459,14 +502,19 @@ export default function SectionRenderer({
               >
                 Full Gallery →
               </Link>
-            </div>
+            </motion.div>
 
             {gallery.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {gallery.slice(0, 6).map((item) => (
-                  <figure
+                {gallery.slice(0, 6).map((item, idx) => (
+                  <motion.figure
                     key={item.id}
-                    className="bg-[#111115] border border-[#222228] rounded-lg overflow-hidden"
+                    initial={{ opacity: 0, y: 16 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, margin: '-20px' }}
+                    whileHover={{ y: -4 }}
+                    transition={{ duration: 0.35, delay: Math.min(idx * 0.05, 0.25) }}
+                    className="group bg-[#111115] border border-[#222228] hover:border-[#C8A464]/50 rounded-lg overflow-hidden transition-colors shadow-sm hover:shadow-xl"
                   >
                     <div className="relative aspect-[4/3] bg-[#16161B] overflow-hidden">
                       <Image
@@ -475,7 +523,7 @@ export default function SectionRenderer({
                         fill
                         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                         referrerPolicy="no-referrer"
-                        className="object-cover"
+                        className="object-cover group-hover:scale-[1.04] transition-transform duration-500 ease-out"
                       />
                     </div>
                     <figcaption className="p-4">
@@ -484,16 +532,19 @@ export default function SectionRenderer({
                         <p className="text-xs text-[#8E8E96] mt-1">{item.description}</p>
                       )}
                     </figcaption>
-                  </figure>
+                  </motion.figure>
                 ))}
               </div>
             ) : (
-              <div className="bg-[#111115] border border-[#222228] rounded-lg p-8 text-center">
+              <motion.div
+                {...fadeUp}
+                className="bg-[#111115] border border-[#222228] rounded-lg p-8 text-center"
+              >
                 <ImageIcon className="w-7 h-7 text-[#C8A464] mx-auto mb-2" />
                 <p className="text-sm text-[#9A9AA2]">
                   No gallery photographs have been published yet.
                 </p>
-              </div>
+              </motion.div>
             )}
           </div>
         </section>
@@ -503,7 +554,10 @@ export default function SectionRenderer({
     case 'SOCIAL_LINKS': {
       return (
         <section className="border-b border-[#222226] py-12">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-6">
+          <motion.div
+            {...fadeUp}
+            className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-6"
+          >
             <div>
               <h2 className="text-lg font-semibold text-[#F4F1EA]">
                 {content.heading || `Connect with ${artist?.name || 'Masud Hauqe'}`}
@@ -519,7 +573,7 @@ export default function SectionRenderer({
                 Social links can be added in Admin → Artist Management.
               </span>
             )}
-          </div>
+          </motion.div>
         </section>
       );
     }
@@ -529,7 +583,10 @@ export default function SectionRenderer({
       return (
         <section className="py-16 sm:py-20">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="bg-[#111115] border border-[#24242C] rounded-lg p-8 sm:p-12 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-8">
+            <motion.div
+              {...fadeUp}
+              className="bg-[#111115] border border-[#24242C] rounded-lg p-8 sm:p-12 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-8 shadow-xl"
+            >
               <div className="max-w-2xl space-y-2">
                 <p className="text-xs font-semibold tracking-[0.2em] text-[#C8A464]">
                   {content.kicker || 'CORRESPONDENCE'}
@@ -545,7 +602,7 @@ export default function SectionRenderer({
               <div className="flex flex-wrap items-center gap-4 shrink-0">
                 <Link
                   href={content.ctaUrl || '/contact'}
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded bg-[#C8A464] text-[#09090B] hover:bg-[#D4B475] text-sm font-semibold transition-colors whitespace-nowrap"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded bg-[#C8A464] text-[#09090B] hover:bg-[#D4B475] text-sm font-semibold transition-all hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap shadow-md"
                 >
                   <Mail className="w-4 h-4" />
                   <span>{content.ctaText || 'Open Inquiry Desk'}</span>
@@ -559,7 +616,7 @@ export default function SectionRenderer({
                   </a>
                 )}
               </div>
-            </div>
+            </motion.div>
           </div>
         </section>
       );

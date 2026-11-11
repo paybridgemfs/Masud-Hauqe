@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
+import { motion } from 'motion/react';
 import { Search, Music2, Play } from 'lucide-react';
 import MusicCard from './MusicCard.jsx';
 import { usePlayer } from '@/components/player/PlayerContext.jsx';
@@ -45,7 +46,12 @@ export default function MusicLibraryClient({ initialMusic = [], albums = [] }) {
   return (
     <div className="space-y-8">
       {/* Interactive Filter & Search Toolbar */}
-      <div className="bg-[#111115] border border-[#222228] rounded-lg p-4 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35 }}
+        className="bg-[#111115] border border-[#222228] rounded-lg p-4 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4"
+      >
         <div className="relative flex-1">
           <Search className="w-4 h-4 text-[#8E8E96] absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
@@ -57,7 +63,7 @@ export default function MusicLibraryClient({ initialMusic = [], albums = [] }) {
             }}
             placeholder="Search recordings by title or album..."
             aria-label="Search music library"
-            className="w-full bg-[#09090B] border border-[#27272E] rounded pl-10 pr-4 py-2 text-sm text-[#F4F1EA] placeholder:text-[#71717A] focus:outline-none focus:border-[#C8A464]"
+            className="w-full bg-[#09090B] border border-[#27272E] rounded pl-10 pr-4 py-2 text-sm text-[#F4F1EA] placeholder:text-[#71717A] focus:outline-none focus:border-[#C8A464] transition-colors"
           />
         </div>
 
@@ -119,7 +125,7 @@ export default function MusicLibraryClient({ initialMusic = [], albums = [] }) {
             </button>
           )}
         </div>
-      </div>
+      </motion.div>
 
       {/* Music Grid or Empty State */}
       {displayedMusic.length > 0 ? (
@@ -143,7 +149,12 @@ export default function MusicLibraryClient({ initialMusic = [], albums = [] }) {
           )}
         </>
       ) : (
-        <div className="bg-[#111115] border border-[#222228] rounded-lg p-12 text-center max-w-xl mx-auto space-y-3">
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35 }}
+          className="bg-[#111115] border border-[#222228] rounded-lg p-12 text-center max-w-xl mx-auto space-y-3"
+        >
           <Music2 className="w-9 h-9 text-[#C8A464] mx-auto" />
           <h2 className="text-lg font-semibold text-[#F4F1EA]">
             {initialMusic.length === 0
@@ -178,7 +189,7 @@ export default function MusicLibraryClient({ initialMusic = [], albums = [] }) {
               </button>
             </div>
           )}
-        </div>
+        </motion.div>
       )}
     </div>
   );

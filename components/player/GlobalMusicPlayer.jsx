@@ -3,6 +3,7 @@
 import React, { useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { motion, AnimatePresence } from 'motion/react';
 import {
   Play,
   Pause,
@@ -68,10 +69,10 @@ export default function GlobalMusicPlayer() {
       if (e.code === 'Space') {
         e.preventDefault();
         togglePlay();
-      } else if (e.code === 'ArrowRight' && e.altKey) {
+      } else if (e.code === 'ArrowRight') {
         e.preventDefault();
         seekTo(currentTime + 5);
-      } else if (e.code === 'ArrowLeft' && e.altKey) {
+      } else if (e.code === 'ArrowLeft') {
         e.preventDefault();
         seekTo(currentTime - 5);
       }
@@ -93,51 +94,57 @@ export default function GlobalMusicPlayer() {
   return (
     <>
       {/* Playback Queue Drawer (Responsive for Mobile & Desktop) */}
-      {isPlaylistOpen && (
-        <aside
-          aria-label="Current playback queue"
-          className="fixed bottom-28 md:bottom-24 inset-x-3 md:left-auto md:right-6 z-50 md:w-80 bg-[#111114] border border-[#26262B] rounded-lg shadow-2xl overflow-hidden"
-        >
-          <div className="flex items-center justify-between px-4 py-3 border-b border-[#222226]">
-            <span className="text-xs sm:text-sm font-semibold tracking-wide text-[#F4F1EA]">
-              Playback Queue · <span className="tabular-nums">{playlist.length}</span>
-            </span>
-            <button
-              type="button"
-              onClick={() => setIsPlaylistOpen(false)}
-              aria-label="Close playback queue"
-              className="p-1 text-[#A1A1AA] hover:text-[#F4F1EA] transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-          <div className="max-h-60 overflow-y-auto divide-y divide-[#1E1E22]">
-            {playlist.map((item) => {
-              const active = item.id === currentTrack.id;
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => playTrack(item)}
-                  className={`w-full text-left px-4 py-2.5 flex items-center justify-between gap-3 transition-colors ${
-                    active ? 'bg-[#1C1B18] text-[#C8A464]' : 'hover:bg-[#18181C] text-[#F4F1EA]'
-                  }`}
-                >
-                  <div className="min-w-0">
-                    <p className="text-xs sm:text-sm font-medium truncate">{item.title}</p>
-                    <p className="text-[11px] text-[#8E8E96] truncate">
-                      {item.artist?.name || 'Masud Hauqe'}
-                    </p>
-                  </div>
-                  <span className="text-[11px] text-[#8E8E96] tabular-nums shrink-0">
-                    {item.duration || '0:00'}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </aside>
-      )}
+      <AnimatePresence>
+        {isPlaylistOpen && (
+          <motion.aside
+            initial={{ opacity: 0, y: 16, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 16, scale: 0.98 }}
+            transition={{ duration: 0.22, ease: 'easeOut' }}
+            aria-label="Current playback queue"
+            className="fixed bottom-28 md:bottom-24 inset-x-3 md:left-auto md:right-6 z-50 md:w-80 bg-[#111114] border border-[#26262B] rounded-lg shadow-2xl overflow-hidden"
+          >
+            <div className="flex items-center justify-between px-4 py-3 border-b border-[#222226]">
+              <span className="text-xs sm:text-sm font-semibold tracking-wide text-[#F4F1EA]">
+                Playback Queue · <span className="tabular-nums">{playlist.length}</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsPlaylistOpen(false)}
+                aria-label="Close playback queue"
+                className="p-1 text-[#A1A1AA] hover:text-[#F4F1EA] transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="max-h-60 overflow-y-auto divide-y divide-[#1E1E22]">
+              {playlist.map((item) => {
+                const active = item.id === currentTrack.id;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => playTrack(item)}
+                    className={`w-full text-left px-4 py-2.5 flex items-center justify-between gap-3 transition-colors ${
+                      active ? 'bg-[#1C1B18] text-[#C8A464]' : 'hover:bg-[#18181C] text-[#F4F1EA]'
+                    }`}
+                  >
+                    <div className="min-w-0">
+                      <p className="text-xs sm:text-sm font-medium truncate">{item.title}</p>
+                      <p className="text-[11px] text-[#8E8E96] truncate">
+                        {item.artist?.name || 'Masud Hauqe'}
+                      </p>
+                    </div>
+                    <span className="text-[11px] text-[#8E8E96] tabular-nums shrink-0">
+                      {item.duration || '0:00'}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </motion.aside>
+        )}
+      </AnimatePresence>
 
       {/* Error Toast above player if audio stream fails */}
       {error && (
@@ -161,7 +168,10 @@ export default function GlobalMusicPlayer() {
       )}
 
       {/* Persistent Player Container */}
-      <div
+      <motion.div
+        initial={{ y: 80, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
         role="region"
         aria-label="Global music player"
         className="fixed bottom-0 inset-x-0 z-40 bg-[#0D0D10]/95 backdrop-blur-md border-t border-[#222226]"
@@ -471,7 +481,7 @@ export default function GlobalMusicPlayer() {
             </div>
           </div>
         </div>
-      </div>
+      </motion.div>
     </>
   );
 }

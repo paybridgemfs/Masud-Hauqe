@@ -3,6 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { motion } from 'motion/react';
 import { Play, Disc } from 'lucide-react';
 import { usePlayer } from '@/components/player/PlayerContext.jsx';
 
@@ -12,7 +13,14 @@ export default function AlbumCard({ album }) {
   const releaseYear = album.releaseDate ? new Date(album.releaseDate).getFullYear() : null;
 
   return (
-    <article className="group bg-[#111115] border border-[#222228] hover:border-[#C8A464]/50 rounded-lg overflow-hidden transition-colors flex flex-col">
+    <motion.article
+      initial={{ opacity: 0, y: 16 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: '-20px' }}
+      whileHover={{ y: -4 }}
+      transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+      className="group bg-[#111115] border border-[#222228] hover:border-[#C8A464]/50 rounded-lg overflow-hidden transition-colors flex flex-col shadow-sm hover:shadow-xl hover:shadow-black/40"
+    >
       <div className="relative aspect-[16/10] bg-[#16161B] overflow-hidden border-b border-[#1E1E24]">
         {album.coverImage ? (
           <Image
@@ -21,7 +29,7 @@ export default function AlbumCard({ album }) {
             fill
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
             referrerPolicy="no-referrer"
-            className="object-cover group-hover:scale-[1.03] transition-transform duration-300"
+            className="object-cover group-hover:scale-[1.04] transition-transform duration-500 ease-out"
           />
         ) : (
           <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-[#191815] via-[#111115] to-[#0B0B0E] p-3 text-center">
@@ -36,7 +44,7 @@ export default function AlbumCard({ album }) {
               type="button"
               onClick={() => playAlbum(tracks, 0)}
               aria-label={`Play album ${album.title}`}
-              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#C8A464] text-[#09090B] hover:bg-[#D4B475] flex items-center justify-center shadow-lg transition-transform hover:scale-105 active:scale-95"
+              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#C8A464] text-[#09090B] hover:bg-[#D4B475] flex items-center justify-center shadow-lg transition-transform duration-200 hover:scale-110 active:scale-95"
             >
               <Play className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-current ml-0.5" />
             </button>
@@ -55,13 +63,13 @@ export default function AlbumCard({ album }) {
           ) : (
             <Link
               href={`/albums/${album.slug}`}
-              className="text-[#C8A464] hover:underline shrink-0"
+              className="text-[#C8A464] hover:underline font-medium"
             >
               Open →
             </Link>
           )}
         </div>
       </div>
-    </article>
+    </motion.article>
   );
 }

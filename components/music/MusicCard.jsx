@@ -3,6 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { motion } from 'motion/react';
 import { Play, Pause, Download, Disc3 } from 'lucide-react';
 import { usePlayer } from '@/components/player/PlayerContext.jsx';
 import { getPublicDownloadUrl } from '@/lib/storage/audio-delivery.js';
@@ -14,9 +15,16 @@ export default function MusicCard({ track, queue = [] }) {
   const downloadUrl = getPublicDownloadUrl(track);
 
   return (
-    <article className="group bg-[#111115] border border-[#222228] hover:border-[#C8A464]/50 rounded-lg overflow-hidden transition-colors flex flex-col">
-      {/* Artwork Container */}
-      <div className="relative aspect-[16/10] bg-[#16161B] overflow-hidden border-b border-[#1E1E24]">
+    <motion.article
+      initial={{ opacity: 0, y: 16 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: '-20px' }}
+      whileHover={{ y: -4 }}
+      transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+      className="group bg-[#111115] border border-[#222228] hover:border-[#C8A464]/50 rounded-lg overflow-hidden transition-colors flex flex-col shadow-sm hover:shadow-xl hover:shadow-black/40"
+    >
+      {/* Artwork / Thumbnail with Centered Play Button */}
+      <div className="relative aspect-[16/10] bg-[#17171C] overflow-hidden border-b border-[#1E1E24]">
         {track.thumbnail ? (
           <Image
             src={track.thumbnail}
@@ -24,7 +32,7 @@ export default function MusicCard({ track, queue = [] }) {
             fill
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
             referrerPolicy="no-referrer"
-            className="object-cover group-hover:scale-[1.03] transition-transform duration-300"
+            className="object-cover group-hover:scale-[1.04] transition-transform duration-500 ease-out"
           />
         ) : (
           <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-[#17171C] via-[#111115] to-[#1F1B14] p-3 sm:p-4 text-center">
@@ -35,13 +43,12 @@ export default function MusicCard({ track, queue = [] }) {
           </div>
         )}
 
-        {/* Centered Play Trigger & Bottom-Right Duration */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-black/15 flex items-center justify-center">
+        <div className="absolute inset-0 bg-black/35 group-hover:bg-black/45 transition-colors flex items-center justify-center">
           <button
             type="button"
             onClick={() => playTrack(track, queue)}
             aria-label={activePlaying ? `Pause ${track.title}` : `Play ${track.title}`}
-            className="w-8 h-8 sm:w-11 sm:h-11 rounded-full bg-[#C8A464] text-[#09090B] hover:bg-[#D4B475] flex items-center justify-center shadow-lg transition-transform hover:scale-105 active:scale-95"
+            className="w-8 h-8 sm:w-11 sm:h-11 rounded-full bg-[#C8A464] text-[#09090B] hover:bg-[#D4B475] flex items-center justify-center shadow-lg transition-transform duration-200 hover:scale-110 active:scale-95"
           >
             {activePlaying ? (
               <Pause className="w-3.5 h-3.5 sm:w-5 sm:h-5 fill-current" />
@@ -91,7 +98,7 @@ export default function MusicCard({ track, queue = [] }) {
             </Link>
           </div>
 
-          {downloadUrl && (
+          {downloadUrl ? (
             <a
               href={downloadUrl}
               download
@@ -101,9 +108,11 @@ export default function MusicCard({ track, queue = [] }) {
               <Download className="w-3 h-3" />
               <span>MP3</span>
             </a>
+          ) : (
+            <span className="text-[10px] text-[#6E6E77] shrink-0">Stream</span>
           )}
         </div>
       </div>
-    </article>
+    </motion.article>
   );
 }
