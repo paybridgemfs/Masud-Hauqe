@@ -62,6 +62,22 @@ export default function AdminAppearanceClient({ initialSettings = {} }) {
       if (!res.ok || !data.ok) {
         setError(data.error || 'Failed to save appearance settings.');
       } else {
+        if (typeof document !== 'undefined') {
+          const nextFavicon = formData.faviconFileId
+            ? `/api/media/${formData.faviconFileId}?v=${Date.now()}`
+            : formData.faviconUrl || '/favicon.ico';
+          const existingIcons = document.querySelectorAll("link[rel*='icon']");
+          if (existingIcons.length > 0) {
+            existingIcons.forEach((link) => {
+              link.setAttribute('href', nextFavicon);
+            });
+          } else {
+            const link = document.createElement('link');
+            link.rel = 'icon';
+            link.href = nextFavicon;
+            document.head.appendChild(link);
+          }
+        }
         setNotice('Global branding, theme colors, and layout controls saved.');
         router.refresh();
       }

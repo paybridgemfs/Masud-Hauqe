@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { usePlayer } from './PlayerContext.jsx';
 import { getPublicDownloadUrl } from '@/lib/storage/audio-delivery.js';
+import AudioWaveform, { LiveSpectrumBadge } from './AudioWaveform.jsx';
 
 function formatSeconds(secs) {
   if (!secs || Number.isNaN(secs) || secs < 0) return '0:00';
@@ -92,7 +93,7 @@ export default function GlobalMusicPlayer() {
       {isPlaylistOpen && (
         <aside
           aria-label="Current playback queue"
-          className="fixed bottom-20 right-4 z-50 w-80 max-w-[calc(100vw-2rem)] bg-[#111114] border border-[#26262B] rounded-lg shadow-2xl overflow-hidden"
+          className="fixed bottom-24 right-4 z-50 w-80 max-w-[calc(100vw-2rem)] bg-[#111114] border border-[#26262B] rounded-lg shadow-2xl overflow-hidden"
         >
           <div className="flex items-center justify-between px-4 py-3 border-b border-[#222226]">
             <span className="text-sm font-semibold tracking-wide text-[#F4F1EA]">
@@ -119,11 +120,14 @@ export default function GlobalMusicPlayer() {
                     active ? 'bg-[#1C1B18] text-[#C8A464]' : 'hover:bg-[#18181C] text-[#F4F1EA]'
                   }`}
                 >
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium truncate">{item.title}</p>
-                    <p className="text-xs text-[#8E8E96] truncate">
-                      {item.artist?.name || 'Masud Hauqe'}
-                    </p>
+                  <div className="min-w-0 flex items-center gap-2.5">
+                    {active && <LiveSpectrumBadge isPlaying={isPlaying} className="shrink-0" />}
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{item.title}</p>
+                      <p className="text-xs text-[#8E8E96] truncate">
+                        {item.artist?.name || 'Masud Hauqe'}
+                      </p>
+                    </div>
                   </div>
                   <span className="text-xs text-[#8E8E96] tabular-nums shrink-0">
                     {item.duration || '0:00'}
@@ -139,7 +143,7 @@ export default function GlobalMusicPlayer() {
       {error && (
         <div
           role="alert"
-          className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 max-w-xl w-[calc(100vw-2rem)] bg-[#2A1215] border border-[#7F1D1D] text-[#FECACA] px-4 py-2.5 rounded-lg flex items-center justify-between gap-3 shadow-xl"
+          className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 max-w-xl w-[calc(100vw-2rem)] bg-[#2A1215] border border-[#7F1D1D] text-[#FECACA] px-4 py-2.5 rounded-lg flex items-center justify-between gap-3 shadow-xl"
         >
           <div className="flex items-center gap-2.5 text-xs sm:text-sm">
             <AlertCircle className="w-4 h-4 text-[#F87171] shrink-0" />
@@ -162,9 +166,9 @@ export default function GlobalMusicPlayer() {
         aria-label="Global music player"
         className="fixed bottom-0 inset-x-0 z-40 bg-[#0D0D10]/95 backdrop-blur-md border-t border-[#222226] px-4 sm:px-6 py-2.5"
       >
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-          {/* Track Identity */}
-          <div className="flex items-center gap-3 min-w-0 w-1/4 sm:w-1/3">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-3 sm:gap-6">
+          {/* Track Identity + Live Spectrum Indicator */}
+          <div className="flex items-center gap-3 min-w-0 w-1/4 sm:w-1/4">
             <div className="relative w-11 h-11 rounded bg-[#18181C] border border-[#27272C] overflow-hidden shrink-0 flex items-center justify-center">
               {currentTrack.thumbnail ? (
                 <Image
@@ -178,14 +182,21 @@ export default function GlobalMusicPlayer() {
               ) : (
                 <Disc3 className="w-5 h-5 text-[#C8A464]" />
               )}
+              {isPlaying && (
+                <div className="absolute inset-0 bg-black/45 flex items-center justify-center">
+                  <LiveSpectrumBadge isPlaying={isPlaying} />
+                </div>
+              )}
             </div>
             <div className="min-w-0">
-              <Link
-                href={`/music/${currentTrack.slug}`}
-                className="block text-sm font-semibold text-[#F4F1EA] hover:text-[#C8A464] truncate transition-colors"
-              >
-                {currentTrack.title}
-              </Link>
+              <div className="flex items-center gap-2">
+                <Link
+                  href={`/music/${currentTrack.slug}`}
+                  className="block text-sm font-semibold text-[#F4F1EA] hover:text-[#C8A464] truncate transition-colors"
+                >
+                  {currentTrack.title}
+                </Link>
+              </div>
               <p className="text-xs text-[#9A9AA2] truncate">
                 {currentTrack.artist?.name || 'Masud Hauqe'}
                 {currentTrack.album?.title ? ` · ${currentTrack.album.title}` : ''}
@@ -193,8 +204,8 @@ export default function GlobalMusicPlayer() {
             </div>
           </div>
 
-          {/* Center Transport & Seek Bar */}
-          <div className="flex flex-col items-center flex-1 max-w-xl">
+          {/* Center Transport & Interactive Visual Audio Waveform */}
+          <div className="flex flex-col items-center flex-1 max-w-2xl">
             <div className="flex items-center gap-3 sm:gap-5">
               <button
                 type="button"
@@ -221,7 +232,7 @@ export default function GlobalMusicPlayer() {
                 onClick={togglePlay}
                 aria-label={isPlaying ? 'Pause' : 'Play'}
                 disabled={isLoading}
-                className="w-9 h-9 rounded-full bg-[#C8A464] text-[#09090B] hover:bg-[#D4B475] flex items-center justify-center transition-colors disabled:opacity-50"
+                className="w-9 h-9 rounded-full bg-[#C8A464] text-[#09090B] hover:bg-[#D4B475] flex items-center justify-center transition-colors disabled:opacity-50 shadow-md"
               >
                 {isPlaying ? (
                   <Pause className="w-4 h-4 fill-current" />
@@ -255,28 +266,30 @@ export default function GlobalMusicPlayer() {
               </button>
             </div>
 
-            <div className="w-full flex items-center gap-2.5 mt-1">
-              <span className="text-[11px] text-[#8E8E96] tabular-nums w-8 text-right">
+            <div className="w-full flex items-center gap-3 mt-1.5">
+              <span className="text-[11px] text-[#8E8E96] tabular-nums w-8 text-right shrink-0">
                 {formatSeconds(currentTime)}
               </span>
-              <input
-                type="range"
-                aria-label="Seek audio position"
-                min={0}
-                max={duration > 0 ? duration : 100}
-                step={0.5}
-                value={duration > 0 ? currentTime : 0}
-                onChange={(e) => seekTo(Number(e.target.value))}
-                className="flex-1 h-1 bg-[#27272C] accent-[#C8A464] rounded-lg cursor-pointer"
+
+              <AudioWaveform
+                trackId={currentTrack.id || currentTrack.slug || currentTrack.title}
+                isPlaying={isPlaying}
+                isLoading={isLoading}
+                currentTime={currentTime}
+                duration={duration}
+                onSeek={seekTo}
+                barCount={52}
+                heightClass="h-6"
               />
-              <span className="text-[11px] text-[#8E8E96] tabular-nums w-8">
+
+              <span className="text-[11px] text-[#8E8E96] tabular-nums w-8 shrink-0">
                 {duration > 0 ? formatSeconds(duration) : currentTrack.duration || '0:00'}
               </span>
             </div>
           </div>
 
           {/* Right Volume, Download, Queue & Close Controls */}
-          <div className="flex items-center justify-end gap-1.5 sm:gap-2.5 w-1/4 sm:w-1/3">
+          <div className="flex items-center justify-end gap-1.5 sm:gap-2.5 w-1/4 sm:w-1/4">
             <div className="hidden md:flex items-center gap-2">
               <button
                 type="button"

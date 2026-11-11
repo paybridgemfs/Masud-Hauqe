@@ -1,6 +1,7 @@
 import React from 'react';
 import { getPublicWebsiteData } from '@/lib/db.js';
 import ContactFormClient from '@/components/forms/ContactFormClient.jsx';
+import SocialMediaLinks from '@/components/website/SocialMediaLinks.jsx';
 import { Mail, MapPin } from 'lucide-react';
 
 export const revalidate = 60;
@@ -59,23 +60,11 @@ export default async function ContactPage() {
           </div>
 
           {socialLinks.length > 0 && (
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               <p className="text-xs font-semibold tracking-wider text-[#8E8E96]">
                 OFFICIAL SOCIAL CHANNELS
               </p>
-              <div className="flex flex-wrap gap-2.5">
-                {socialLinks.map((s) => (
-                  <a
-                    key={s.id}
-                    href={s.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-3.5 py-2 rounded border border-[#27272E] text-xs font-semibold text-[#F4F1EA] hover:border-[#C8A464] hover:text-[#C8A464]"
-                  >
-                    {s.platform}
-                  </a>
-                ))}
-              </div>
+              <SocialMediaLinks socialLinks={socialLinks} variant="buttons" />
             </div>
           )}
         </div>

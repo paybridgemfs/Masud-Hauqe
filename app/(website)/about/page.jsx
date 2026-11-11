@@ -3,6 +3,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { getPublicWebsiteData } from '@/lib/db.js';
 import { Disc3, Globe, MapPin, Award } from 'lucide-react';
+import SocialMediaLinks from '@/components/website/SocialMediaLinks.jsx';
 
 export const revalidate = 60;
 
@@ -39,29 +40,37 @@ export default async function AboutPage() {
             )}
           </div>
 
-          <div className="flex flex-wrap items-center gap-4 text-xs text-[#9A9AA2] pt-2">
-            {artist?.location && (
-              <span className="inline-flex items-center gap-1.5">
-                <MapPin className="w-3.5 h-3.5 text-[#C8A464]" />
-                <span>{artist.location}</span>
-              </span>
+          <div className="space-y-4 pt-2">
+            <div className="flex flex-wrap items-center gap-4 text-xs text-[#9A9AA2]">
+              {artist?.location && (
+                <span className="inline-flex items-center gap-1.5">
+                  <MapPin className="w-3.5 h-3.5 text-[#C8A464]" />
+                  <span>{artist.location}</span>
+                </span>
+              )}
+              {artist?.location && artist?.website && <span aria-hidden="true">·</span>}
+              {artist?.website && (
+                <a
+                  href={artist.website}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-[#C8A464] hover:underline"
+                >
+                  <Globe className="w-3.5 h-3.5" />
+                  <span>{artist.website}</span>
+                </a>
+              )}
+              <span aria-hidden="true">·</span>
+              <span className="tabular-nums">{publishedMusic.length} Published Recordings</span>
+              <span aria-hidden="true">·</span>
+              <span className="tabular-nums">{publishedAlbums.length} Studio Albums</span>
+            </div>
+
+            {socialLinks.length > 0 && (
+              <div className="pt-1">
+                <SocialMediaLinks socialLinks={socialLinks} variant="footer-icons" />
+              </div>
             )}
-            {artist?.location && artist?.website && <span aria-hidden="true">·</span>}
-            {artist?.website && (
-              <a
-                href={artist.website}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-[#C8A464] hover:underline"
-              >
-                <Globe className="w-3.5 h-3.5" />
-                <span>{artist.website}</span>
-              </a>
-            )}
-            <span aria-hidden="true">·</span>
-            <span className="tabular-nums">{publishedMusic.length} Published Recordings</span>
-            <span aria-hidden="true">·</span>
-            <span className="tabular-nums">{publishedAlbums.length} Studio Albums</span>
           </div>
         </div>
 
@@ -177,19 +186,7 @@ export default async function AboutPage() {
           </p>
         </div>
         {socialLinks.length > 0 ? (
-          <div className="flex flex-wrap items-center gap-3">
-            {socialLinks.map((s) => (
-              <a
-                key={s.id}
-                href={s.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-4 py-2 rounded border border-[#2A2A32] text-xs font-semibold text-[#F4F1EA] hover:border-[#C8A464] hover:text-[#C8A464] transition-colors"
-              >
-                {s.platform}
-              </a>
-            ))}
-          </div>
+          <SocialMediaLinks socialLinks={socialLinks} variant="buttons" />
         ) : (
           <p className="text-xs text-[#71717A]">
             No external social profiles configured yet.

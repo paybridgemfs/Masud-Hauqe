@@ -6,10 +6,19 @@ import Image from 'next/image';
 import { Play, Pause, Download, Disc3, ArrowLeft } from 'lucide-react';
 import { usePlayer } from '@/components/player/PlayerContext.jsx';
 import { getPublicDownloadUrl } from '@/lib/storage/audio-delivery.js';
+import AudioWaveform, { LiveSpectrumBadge } from '@/components/player/AudioWaveform.jsx';
 import MusicCard from './MusicCard.jsx';
 
 export default function MusicDetailClient({ track, relatedTracks = [] }) {
-  const { currentTrack, isPlaying, playTrack } = usePlayer();
+  const {
+    currentTrack,
+    isPlaying,
+    isLoading,
+    currentTime,
+    duration,
+    playTrack,
+    seekTo,
+  } = usePlayer();
   const isCurrent = currentTrack?.id === track.id;
   const activePlaying = isCurrent && isPlaying;
   const downloadUrl = getPublicDownloadUrl(track);
@@ -62,9 +71,43 @@ export default function MusicDetailClient({ track, relatedTracks = [] }) {
               )}
               <span aria-hidden="true">·</span>
               <span className="tabular-nums">Duration {track.duration || '0:00'}</span>
+              {activePlaying && (
+                <>
+                  <span aria-hidden="true">·</span>
+                  <LiveSpectrumBadge isPlaying={activePlaying} />
+                </>
+              )}
             </div>
 
             <h1 className="text-3xl sm:text-4xl font-bold text-[#F4F1EA]">{track.title}</h1>
+
+            {/* Studio Master Waveform Visualization */}
+            <div className="pt-4 pb-2 px-4 rounded-lg bg-[#0B0B0E] border border-[#1E1E24] space-y-2">
+              <div className="flex items-center justify-between text-[11px] text-[#8E8E96] uppercase tracking-wider">
+                <span>Master Audio Waveform</span>
+                <span className="tabular-nums text-[#C8A464]">
+                  {activePlaying ? 'Streaming Live' : isCurrent ? 'Paused' : track.duration || '0:00'}
+                </span>
+              </div>
+              <div className="py-1 flex items-center">
+                <AudioWaveform
+                  trackId={track.id || track.slug || track.title}
+                  isPlaying={activePlaying}
+                  isLoading={isCurrent && isLoading}
+                  currentTime={isCurrent ? currentTime : 0}
+                  duration={isCurrent ? duration : 0}
+                  onSeek={(sec) => {
+                    if (isCurrent) {
+                      seekTo(sec);
+                    } else {
+                      playTrack(track, [track, ...relatedTracks]);
+                    }
+                  }}
+                  barCount={64}
+                  heightClass="h-12"
+                />
+              </div>
+            </div>
           </div>
 
           <div className="pt-6 border-t border-[#1E1E24] flex flex-wrap items-center gap-4">

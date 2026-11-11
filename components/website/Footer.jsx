@@ -1,5 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
+import SocialMediaLinks from '@/components/website/SocialMediaLinks.jsx';
 
 export default function Footer({ artist, settings = {}, footerNav = [], socialLinks = [] }) {
   const siteName = settings.siteName || artist?.name || 'Masud Hauqe';
@@ -36,6 +37,11 @@ export default function Footer({ artist, settings = {}, footerNav = [], socialLi
                     {contactEmail}
                   </a>
                 )}
+              </div>
+            )}
+            {socialLinks.length > 0 && (
+              <div className="pt-3">
+                <SocialMediaLinks socialLinks={socialLinks} variant="footer-icons" />
               </div>
             )}
           </div>
@@ -82,20 +88,7 @@ export default function Footer({ artist, settings = {}, footerNav = [], socialLi
               CONNECT & PLATFORM
             </h2>
             {socialLinks.length > 0 ? (
-              <ul className="space-y-1.5 text-sm">
-                {socialLinks.map((social) => (
-                  <li key={social.id}>
-                    <a
-                      href={social.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[#B4B4BC] hover:text-[#C8A464] transition-colors"
-                    >
-                      {social.platform}
-                    </a>
-                  </li>
-                ))}
-              </ul>
+              <SocialMediaLinks socialLinks={socialLinks} variant="footer-list" />
             ) : (
               <p className="text-xs text-[#71717A] leading-relaxed">
                 Official social channels are managed via the Artist CMS.

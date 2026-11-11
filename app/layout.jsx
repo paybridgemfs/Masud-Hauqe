@@ -22,9 +22,21 @@ export async function generateMetadata() {
     globalSeo.metaDescription ||
     'Official music artist portfolio, streaming library, MP3 delivery platform, and dynamic content management system for Masud Hauqe.';
 
+  const faviconFileId = (settings.faviconFileId || '').trim();
+  const faviconHref = faviconFileId
+    ? `/api/media/${faviconFileId}?v=${encodeURIComponent(faviconFileId.slice(-8))}`
+    : settings.faviconUrl
+    ? settings.faviconUrl
+    : '/favicon.ico';
+
   return {
     title,
     description,
+    icons: {
+      icon: [{ url: faviconHref }],
+      shortcut: [{ url: faviconHref }],
+      apple: [{ url: faviconHref }],
+    },
     openGraph: {
       title,
       description,

@@ -7,6 +7,7 @@ import { motion } from 'motion/react';
 import { ArrowRight, Play, Disc3, Music2, Video, Image as ImageIcon, Mail } from 'lucide-react';
 import MusicCard from '@/components/music/MusicCard.jsx';
 import AlbumCard from '@/components/music/AlbumCard.jsx';
+import SocialMediaLinks from '@/components/website/SocialMediaLinks.jsx';
 import { usePlayer } from '@/components/player/PlayerContext.jsx';
 
 export default function SectionRenderer({
@@ -55,12 +56,12 @@ export default function SectionRenderer({
 
           <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 sm:py-20 lg:py-24">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-stretch">
-              {/* Left Column: Editorial Typography Hierarchy */}
+              {/* Left Column: Editorial Typography Hierarchy (Centered on Mobile, Left on Desktop) */}
               <motion.div
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.35 }}
-                className="lg:col-span-7 flex flex-col justify-center space-y-6"
+                className="lg:col-span-7 flex flex-col justify-center items-center text-center lg:items-start lg:text-left space-y-6"
               >
                 <p className="text-xs font-semibold tracking-[0.22em] text-[#C8A464]">
                   {content.kicker || 'OFFICIAL ARTIST ARCHIVE'}
@@ -73,13 +74,13 @@ export default function SectionRenderer({
                   {content.headline || artist?.name || 'Masud Hauqe'}
                 </h1>
 
-                <p className="text-base sm:text-lg text-[#D4D4D8] max-w-2xl leading-relaxed">
+                <p className="text-base sm:text-lg text-[#D4D4D8] max-w-2xl mx-auto lg:mx-0 leading-relaxed">
                   {content.subheadline ||
                     artist?.shortBiography ||
                     'Original studio recordings, sonic monographs, and authorized high-resolution MP3 releases.'}
                 </p>
 
-                <div className="flex flex-wrap items-center gap-4 pt-2">
+                <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 pt-2 w-full">
                   {latestTrack ? (
                     <button
                       type="button"
@@ -152,7 +153,7 @@ export default function SectionRenderer({
             </div>
 
             {/* Full-Width Key Archive Summary Strip Below Hero Split */}
-            <div className="mt-12 pt-8 border-t border-white/10 grid grid-cols-2 sm:grid-cols-4 gap-6">
+            <div className="mt-12 pt-8 border-t border-white/10 grid grid-cols-2 sm:grid-cols-4 gap-6 text-center sm:text-left">
               <div>
                 <p className="text-xs text-[#9A9AA2] tracking-wider">ARTIST</p>
                 <p className="text-base font-semibold text-[#F4F1EA] mt-1">
@@ -505,19 +506,7 @@ export default function SectionRenderer({
               </p>
             </div>
             {socialLinks.length > 0 ? (
-              <div className="flex flex-wrap items-center gap-4">
-                {socialLinks.map((item) => (
-                  <a
-                    key={item.id}
-                    href={item.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-4 py-2 rounded border border-[#2A2A32] text-xs font-semibold text-[#F4F1EA] hover:border-[#C8A464] hover:text-[#C8A464] transition-colors"
-                  >
-                    {item.platform}
-                  </a>
-                ))}
-              </div>
+              <SocialMediaLinks socialLinks={socialLinks} variant="buttons" />
             ) : (
               <span className="text-xs text-[#71717A]">
                 Social links can be added in Admin → Artist Management.
