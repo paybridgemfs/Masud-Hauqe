@@ -29,7 +29,16 @@ export async function generateMetadata() {
     ? settings.faviconUrl
     : '/favicon.ico';
 
+  const baseUrl = (process.env.APP_URL || 'http://localhost:3000').replace(/\/+$/, '');
+  let metadataBase;
+  try {
+    metadataBase = new URL(baseUrl);
+  } catch {
+    metadataBase = new URL('http://localhost:3000');
+  }
+
   return {
+    metadataBase,
     title,
     description,
     icons: {

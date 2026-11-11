@@ -39,7 +39,7 @@ const NAV_GROUPS = [
     items: [
       { label: 'All Music', href: '/admin/music', icon: Music },
       { label: 'Add Music', href: '/admin/music/add', icon: PlusCircle },
-      { label: 'Albums', href: '/admin/albums', icon: Disc },
+      { label: 'Releases', href: '/admin/albums', icon: Disc },
     ],
   },
   {

@@ -63,7 +63,7 @@ export default async function AboutPage() {
               <span aria-hidden="true">·</span>
               <span className="tabular-nums">{publishedMusic.length} Published Recordings</span>
               <span aria-hidden="true">·</span>
-              <span className="tabular-nums">{publishedAlbums.length} Studio Albums</span>
+              <span className="tabular-nums">{publishedAlbums.length} Official Releases</span>
             </div>
 
             {socialLinks.length > 0 && (

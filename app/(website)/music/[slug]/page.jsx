@@ -1,24 +1,58 @@
-import React from 'react';
-import { notFound } from 'next/navigation';
-import { getPublicWebsiteData } from '@/lib/db.js';
-import MusicDetailClient from '@/components/music/MusicDetailClient.jsx';
+import React from "react";
+import { notFound } from "next/navigation";
+import { headers } from "next/headers";
+import { getPublicWebsiteData } from "@/lib/db.js";
+import MusicDetailClient from "@/components/music/MusicDetailClient.jsx";
 
 export const revalidate = 60;
+
+async function resolveOrigin() {
+  try {
+    const h = await headers();
+    const host = h.get("x-forwarded-host") || h.get("host");
+    const proto = h.get("x-forwarded-proto") || "https";
+    if (host) return `${proto}://${host}`;
+  } catch {
+    // Fallback to APP_URL
+  }
+  return (process.env.APP_URL || "http://localhost:3000").replace(/\/+$/, "");
+}
+
+function toAbsoluteUrl(url, origin) {
+  if (!url) return "";
+  if (url.startsWith("http://") || url.startsWith("https://")) return url;
+  return `${origin}${url.startsWith("/") ? "" : "/"}${url}`;
+}
 
 export async function generateMetadata({ params }) {
   const { slug } = await params;
   const { publishedMusic, artist } = await getPublicWebsiteData();
   const track = publishedMusic.find((m) => m.slug === slug || m.id === slug);
   if (!track) {
-    return { title: 'Recording Not Found — Masud Hauqe' };
+    return { title: "Recording Not Found — Masud Hauqe" };
   }
+
+  const origin = await resolveOrigin();
+  const absoluteThumb = toAbsoluteUrl(track.thumbnail, origin);
+  const artistName = artist?.name || "Masud Hauqe";
+  const desc = `Official Master Recording by ${artistName}${track.album ? ` · Release: ${track.album.title}` : ""}.`;
+
   return {
-    title: `${track.title} — ${artist?.name || 'Masud Hauqe'}`,
-    description: `Listen to ${track.title} by ${artist?.name || 'Masud Hauqe'} on the official artist platform.`,
+    title: `${track.title} — ${artistName}`,
+    description: desc,
     openGraph: {
-      title: `${track.title} — ${artist?.name || 'Masud Hauqe'}`,
-      description: `Listen to ${track.title} by ${artist?.name || 'Masud Hauqe'}.`,
-      images: track.thumbnail ? [track.thumbnail] : [],
+      title: track.title,
+      description: desc,
+      type: "music.song",
+      url: `${origin}/music/${track.slug}`,
+      siteName: artistName,
+      images: absoluteThumb ? [{ url: absoluteThumb, alt: track.title }] : [],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: track.title,
+      description: desc,
+      images: absoluteThumb ? [absoluteThumb] : [],
     },
   };
 }
@@ -34,5 +68,6 @@ export default async function MusicDetailPage({ params }) {
 
   const relatedTracks = publishedMusic.filter((m) => m.id !== track.id).slice(0, 4);
 
-  return <MusicDetailClient track={track} relatedTracks={relatedTracks} />;
+  const origin = await resolveOrigin();
+  return <MusicDetailClient track={track} relatedTracks={relatedTracks} shareUrl={`${origin}/music/${track.slug}`} />;
 }

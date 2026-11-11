@@ -34,7 +34,7 @@ export default function AlbumCard({ album }) {
         ) : (
           <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-[#191815] via-[#111115] to-[#0B0B0E] p-3 text-center">
             <Disc className="w-6 h-6 sm:w-7 sm:h-7 text-[#C8A464]/75 mb-1" />
-            <span className="text-[9px] sm:text-[10px] tracking-[0.14em] text-[#9A9AA2]">ALBUM</span>
+            <span className="text-[9px] sm:text-[10px] tracking-[0.14em] text-[#9A9AA2]">RELEASE</span>
           </div>
         )}
 
@@ -43,7 +43,7 @@ export default function AlbumCard({ album }) {
             <button
               type="button"
               onClick={() => playAlbum(tracks, 0)}
-              aria-label={`Play album ${album.title}`}
+              aria-label={`Play release ${album.title}`}
               className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#C8A464] text-[#09090B] hover:bg-[#D4B475] flex items-center justify-center shadow-lg transition-transform duration-200 hover:scale-110 active:scale-95"
             >
               <Play className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-current ml-0.5" />

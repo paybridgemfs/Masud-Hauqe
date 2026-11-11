@@ -60,12 +60,12 @@ export default async function AdminDashboardPage() {
 
         <div className="bg-[#111115] border border-[#222228] rounded-lg p-5 space-y-2">
           <div className="flex items-center justify-between text-xs text-[#8E8E96]">
-            <span>STUDIO ALBUMS</span>
+            <span>OFFICIAL RELEASES</span>
             <Disc className="w-4 h-4 text-[#C8A464]" />
           </div>
           <p className="text-2xl font-bold text-[#F4F1EA] tabular-nums">{allAlbums.length}</p>
           <Link href="/admin/albums" className="text-xs text-[#C8A464] hover:underline inline-block">
-            Open Album Manager →
+            Open Release Manager →
           </Link>
         </div>
 

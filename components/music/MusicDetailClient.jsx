@@ -16,6 +16,10 @@ import {
   Share2,
   Check,
   Music2,
+  Facebook,
+  MessageCircle,
+  Twitter,
+  Copy,
 } from 'lucide-react';
 import { usePlayer } from '@/components/player/PlayerContext.jsx';
 import { getPublicDownloadUrl } from '@/lib/storage/audio-delivery.js';
@@ -29,7 +33,7 @@ function formatSeconds(secs) {
   return `${mins}:${String(rem).padStart(2, '0')}`;
 }
 
-export default function MusicDetailClient({ track, relatedTracks = [] }) {
+export default function MusicDetailClient({ track, relatedTracks = [], shareUrl: initialShareUrl = '' }) {
   const {
     currentTrack,
     isPlaying,
@@ -39,6 +43,8 @@ export default function MusicDetailClient({ track, relatedTracks = [] }) {
     seekTo,
   } = usePlayer();
   const [copied, setCopied] = useState(false);
+
+  const shareUrl = initialShareUrl || `/music/${track.slug}`;
 
   const isCurrent = currentTrack?.id === track.id;
   const activePlaying = isCurrent && isPlaying;
@@ -55,9 +61,20 @@ export default function MusicDetailClient({ track, relatedTracks = [] }) {
   const safeMaxDuration = isCurrent && duration > 0 ? duration : 100;
   const safeCurrentTime = isCurrent ? Math.min(currentTime, safeMaxDuration) : 0;
 
-  function handleShareLink() {
+  const facebookShareHref = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(
+    shareUrl
+  )}`;
+  const whatsappShareHref = `https://api.whatsapp.com/send?text=${encodeURIComponent(
+    `${track.title} — ${shareUrl}`
+  )}`;
+  const twitterShareHref = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
+    track.title
+  )}&url=${encodeURIComponent(shareUrl)}`;
+
+  function handleCopyLink() {
     if (typeof window === 'undefined') return;
-    navigator.clipboard?.writeText(window.location.href);
+    const fullUrl = `${window.location.origin}/music/${track.slug}`;
+    navigator.clipboard?.writeText(fullUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2200);
   }
@@ -106,14 +123,14 @@ export default function MusicDetailClient({ track, relatedTracks = [] }) {
           </div>
         </div>
 
-        {/* Right: Title, Studio Metadata Grid, Interactive Seek Bar & Actions */}
-        <div className="lg:col-span-8 flex flex-col justify-between space-y-6">
-          <div className="space-y-5">
+        {/* Right: Title, Studio Metadata Grid, Interactive Seek Bar, Social Share & Actions */}
+        <div className="lg:col-span-8 flex flex-col justify-between space-y-5">
+          <div className="space-y-4">
             <div className="space-y-2">
               <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-[#C8A464] tracking-wider uppercase">
                 <span>{track.artist?.name || 'Masud Hauqe'}</span>
                 <span aria-hidden="true">·</span>
-                <span>{track.album ? `Album: ${track.album.title}` : 'Official Single Master'}</span>
+                <span>{track.album ? `Release: ${track.album.title}` : 'Official Single Master'}</span>
               </div>
 
               <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[#F4F1EA] leading-tight">
@@ -121,12 +138,12 @@ export default function MusicDetailClient({ track, relatedTracks = [] }) {
               </h1>
             </div>
 
-            {/* Studio Specifications Grid (Fills the middle space cleanly) */}
+            {/* Studio Specifications Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="p-3.5 rounded-lg bg-[#0B0B0E] border border-[#1E1E24] space-y-1">
+              <div className="p-3 rounded-lg bg-[#0B0B0E] border border-[#1E1E24] space-y-1">
                 <div className="flex items-center gap-1.5 text-[11px] text-[#8E8E96]">
                   <Music2 className="w-3.5 h-3.5 text-[#C8A464]" />
-                  <span>COLLECTION</span>
+                  <span>RELEASE</span>
                 </div>
                 <p className="text-xs sm:text-sm font-semibold text-[#F4F1EA] truncate">
                   {track.album ? (
@@ -134,12 +151,12 @@ export default function MusicDetailClient({ track, relatedTracks = [] }) {
                       {track.album.title}
                     </Link>
                   ) : (
-                    'Single Release'
+                    'Single Track'
                   )}
                 </p>
               </div>
 
-              <div className="p-3.5 rounded-lg bg-[#0B0B0E] border border-[#1E1E24] space-y-1">
+              <div className="p-3 rounded-lg bg-[#0B0B0E] border border-[#1E1E24] space-y-1">
                 <div className="flex items-center gap-1.5 text-[11px] text-[#8E8E96]">
                   <Clock className="w-3.5 h-3.5 text-[#C8A464]" />
                   <span>DURATION</span>
@@ -149,17 +166,17 @@ export default function MusicDetailClient({ track, relatedTracks = [] }) {
                 </p>
               </div>
 
-              <div className="p-3.5 rounded-lg bg-[#0B0B0E] border border-[#1E1E24] space-y-1">
+              <div className="p-3 rounded-lg bg-[#0B0B0E] border border-[#1E1E24] space-y-1">
                 <div className="flex items-center gap-1.5 text-[11px] text-[#8E8E96]">
                   <Calendar className="w-3.5 h-3.5 text-[#C8A464]" />
-                  <span>RELEASED</span>
+                  <span>PUBLISHED</span>
                 </div>
                 <p className="text-xs sm:text-sm font-semibold text-[#F4F1EA] truncate">
                   {publishedDate}
                 </p>
               </div>
 
-              <div className="p-3.5 rounded-lg bg-[#0B0B0E] border border-[#1E1E24] space-y-1">
+              <div className="p-3 rounded-lg bg-[#0B0B0E] border border-[#1E1E24] space-y-1">
                 <div className="flex items-center gap-1.5 text-[11px] text-[#8E8E96]">
                   <Headphones className="w-3.5 h-3.5 text-[#C8A464]" />
                   <span>ACTIVITY</span>
@@ -171,7 +188,7 @@ export default function MusicDetailClient({ track, relatedTracks = [] }) {
             </div>
 
             {/* Interactive On-Page Seek Bar Strip */}
-            <div className="p-4 rounded-lg bg-[#0B0B0E] border border-[#1E1E24] space-y-2.5">
+            <div className="p-3.5 rounded-lg bg-[#0B0B0E] border border-[#1E1E24] space-y-2">
               <div className="flex items-center justify-between text-xs">
                 <span className="font-medium text-[#D4D4D8]">
                   {activePlaying
@@ -204,10 +221,71 @@ export default function MusicDetailClient({ track, relatedTracks = [] }) {
                 className="w-full h-1.5 bg-[#27272C] accent-[#C8A464] rounded-lg cursor-pointer"
               />
             </div>
+
+            {/* Social Media Direct Share Bar (Facebook, WhatsApp, X/Twitter, Copy Link) */}
+            <div className="p-3.5 rounded-lg bg-[#0B0B0E] border border-[#1E1E24] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2 text-xs text-[#9A9AA2]">
+                <Share2 className="w-3.5 h-3.5 text-[#C8A464] shrink-0" />
+                <span className="font-semibold text-[#D4D4D8]">Share Track:</span>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <a
+                  href={facebookShareHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Share on Facebook"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-[#14141A] hover:bg-[#1877F2]/20 border border-[#26262F] hover:border-[#1877F2] text-xs font-medium text-[#E4E4E7] hover:text-white transition-colors"
+                >
+                  <Facebook className="w-3.5 h-3.5 text-[#1877F2]" />
+                  <span>Facebook</span>
+                </a>
+
+                <a
+                  href={whatsappShareHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Share on WhatsApp"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-[#14141A] hover:bg-[#25D366]/20 border border-[#26262F] hover:border-[#25D366] text-xs font-medium text-[#E4E4E7] hover:text-white transition-colors"
+                >
+                  <MessageCircle className="w-3.5 h-3.5 text-[#25D366]" />
+                  <span>WhatsApp</span>
+                </a>
+
+                <a
+                  href={twitterShareHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Share on X (Twitter)"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-[#14141A] hover:bg-white/10 border border-[#26262F] hover:border-[#A1A1AA] text-xs font-medium text-[#E4E4E7] hover:text-white transition-colors"
+                >
+                  <Twitter className="w-3.5 h-3.5 text-[#38BDF8]" />
+                  <span>X (Twitter)</span>
+                </a>
+
+                <button
+                  type="button"
+                  onClick={handleCopyLink}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-[#14141A] hover:bg-[#1E1D18] border border-[#26262F] hover:border-[#C8A464] text-xs font-medium text-[#E4E4E7] hover:text-[#C8A464] transition-colors"
+                >
+                  {copied ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 text-[#4ADE80]" />
+                      <span className="text-[#4ADE80]">Copied!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5 text-[#C8A464]" />
+                      <span>Copy Link</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
           </div>
 
           {/* Primary Actions Bar */}
-          <div className="pt-5 border-t border-[#1E1E24] flex flex-wrap items-center gap-3 sm:gap-4">
+          <div className="pt-4 border-t border-[#1E1E24] flex flex-wrap items-center gap-3 sm:gap-4">
             <button
               type="button"
               onClick={() => playTrack(track, [track, ...relatedTracks])}
@@ -236,24 +314,6 @@ export default function MusicDetailClient({ track, relatedTracks = [] }) {
                 <span>Download MP3</span>
               </a>
             )}
-
-            <button
-              type="button"
-              onClick={handleShareLink}
-              className="px-4 py-3 rounded border border-[#27272E] bg-[#0B0B0E] text-[#D4D4D8] hover:border-[#C8A464] hover:text-[#C8A464] text-xs font-semibold flex items-center gap-2 transition-colors ml-auto"
-            >
-              {copied ? (
-                <>
-                  <Check className="w-4 h-4 text-[#4ADE80]" />
-                  <span className="text-[#4ADE80]">Link Copied</span>
-                </>
-              ) : (
-                <>
-                  <Share2 className="w-4 h-4" />
-                  <span>Share Track</span>
-                </>
-              )}
-            </button>
           </div>
         </div>
       </motion.section>

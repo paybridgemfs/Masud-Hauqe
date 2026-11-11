@@ -43,7 +43,7 @@ export default function AdminAlbumsClient({ initialAlbums = [] }) {
         setCoverImage('');
         setCoverImageFileId('');
         setReleaseDate('');
-        setStatusMsg(`Album "${data.album.title}" created and saved in PostgreSQL.`);
+        setStatusMsg(`Release "${data.album.title}" created and saved in PostgreSQL.`);
       }
     } finally {
       setSaving(false);
@@ -72,18 +72,18 @@ export default function AdminAlbumsClient({ initialAlbums = [] }) {
     });
     if (res.ok) {
       setAlbums((prev) => prev.filter((a) => a.id !== album.id));
-      setStatusMsg(`Album "${album.title}" deleted.`);
+      setStatusMsg(`Release "${album.title}" deleted.`);
     }
   }
 
   return (
     <div className="space-y-8">
-      {/* Create Album Form */}
+      {/* Create Release Form */}
       <form
         onSubmit={handleCreate}
         className="bg-[#111115] border border-[#222228] rounded-lg p-6 space-y-5"
       >
-        <h2 className="text-lg font-bold text-[#F4F1EA]">Create Studio Album</h2>
+        <h2 className="text-lg font-bold text-[#F4F1EA]">Create Official Release</h2>
 
         {statusMsg && (
           <div className="p-3 rounded bg-[#11261B] border border-[#166534] text-xs text-[#BBF7D0]">
@@ -94,7 +94,7 @@ export default function AdminAlbumsClient({ initialAlbums = [] }) {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label htmlFor="album-title" className="block text-xs font-semibold text-[#D4D4D8] mb-1">
-              Album Title *
+              Release Title *
             </label>
             <input
               id="album-title"
@@ -122,7 +122,7 @@ export default function AdminAlbumsClient({ initialAlbums = [] }) {
         </div>
 
         <DriveImageUpload
-          label="Album Cover Artwork"
+          label="Release Cover Artwork"
           value={coverImage}
           fileId={coverImageFileId}
           aspectClass="aspect-square"
@@ -135,7 +135,7 @@ export default function AdminAlbumsClient({ initialAlbums = [] }) {
 
         <div>
           <label htmlFor="album-desc" className="block text-xs font-semibold text-[#D4D4D8] mb-1">
-            Album Description & Liner Notes
+            Release Description & Liner Notes
           </label>
           <textarea
             id="album-desc"
@@ -155,7 +155,7 @@ export default function AdminAlbumsClient({ initialAlbums = [] }) {
               onChange={(e) => setIsPublished(e.target.checked)}
               className="accent-[#C8A464]"
             />
-            <span>Publish Album Publicly</span>
+            <span>Publish Release Publicly</span>
           </label>
 
           <button
@@ -164,18 +164,18 @@ export default function AdminAlbumsClient({ initialAlbums = [] }) {
             className="px-5 py-2 rounded bg-[#C8A464] text-[#09090B] hover:bg-[#D4B475] text-xs font-semibold inline-flex items-center gap-1.5"
           >
             <Plus className="w-4 h-4" />
-            <span>{saving ? 'Creating...' : 'Create Album'}</span>
+            <span>{saving ? 'Creating...' : 'Create Release'}</span>
           </button>
         </div>
       </form>
 
-      {/* Albums Table */}
+      {/* Releases Table */}
       {albums.length > 0 ? (
         <div className="bg-[#111115] border border-[#222228] rounded-lg overflow-hidden">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
               <tr className="border-b border-[#222228] text-[#8E8E96]">
-                <th className="py-3.5 px-4 font-semibold">Album</th>
+                <th className="py-3.5 px-4 font-semibold">Release</th>
                 <th className="py-3.5 px-4 font-semibold">Slug</th>
                 <th className="py-3.5 px-4 font-semibold">Drive Image ID</th>
                 <th className="py-3.5 px-4 font-semibold">Status</th>
@@ -233,7 +233,7 @@ export default function AdminAlbumsClient({ initialAlbums = [] }) {
                     <button
                       type="button"
                       onClick={() => handleDelete(album)}
-                      aria-label={`Delete album ${album.title}`}
+                      aria-label={`Delete release ${album.title}`}
                       className="p-1.5 text-[#9A9AA2] hover:text-[#F87171]"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -247,9 +247,9 @@ export default function AdminAlbumsClient({ initialAlbums = [] }) {
       ) : (
         <div className="bg-[#111115] border border-[#222228] rounded-lg p-10 text-center space-y-2">
           <Disc className="w-8 h-8 text-[#C8A464] mx-auto" />
-          <p className="text-sm font-semibold text-[#F4F1EA]">No Albums Created Yet</p>
+          <p className="text-sm font-semibold text-[#F4F1EA]">No Releases Created Yet</p>
           <p className="text-xs text-[#8E8E96]">
-            Use the form above to create your first studio album collection.
+            Use the form above to create your first official release collection.
           </p>
         </div>
       )}

@@ -35,7 +35,7 @@ export default async function MusicPage() {
         <div className="text-xs text-[#8E8E96] tabular-nums">
           <span>{publishedMusic.length} Published Tracks</span>
           <span aria-hidden="true"> · </span>
-          <span>{publishedAlbums.length} Albums</span>
+          <span>{publishedAlbums.length} Releases</span>
         </div>
       </div>
 

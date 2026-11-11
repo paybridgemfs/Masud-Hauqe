@@ -8,7 +8,7 @@ export default function NotFound() {
         <p className="text-xs font-semibold tracking-[0.2em] text-[#C8A464]">ERROR 404</p>
         <h1 className="text-3xl font-bold text-[#F4F1EA]">Archive Record Not Found</h1>
         <p className="text-sm text-[#9A9AA2] leading-relaxed">
-          The requested page, composition, or album does not exist or is not currently published in the Masud Hauqe archive.
+          The requested page, composition, or release does not exist or is not currently published in the Masud Hauqe archive.
         </p>
         <div className="pt-2 flex items-center justify-center gap-3">
           <Link

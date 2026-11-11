@@ -20,7 +20,7 @@ const SECTION_TYPES = [
   { value: 'FEATURED_MUSIC', label: 'Featured Music' },
   { value: 'LATEST_RELEASES', label: 'Latest Releases' },
   { value: 'POPULAR_MUSIC', label: 'Popular Music' },
-  { value: 'ALBUMS', label: 'Studio Albums' },
+  { value: 'ALBUMS', label: 'Official Releases' },
   { value: 'BIOGRAPHY_PREVIEW', label: 'Artist Biography Preview' },
   { value: 'MUSIC_VIDEOS', label: 'Music Videos' },
   { value: 'GALLERY', label: 'Visual Gallery' },

@@ -18,8 +18,8 @@ export default async function AdminAlbumsPage() {
   return (
     <AdminShell
       admin={admin}
-      title="Album Management"
-      subtitle="Create and organize studio albums and multi-track collections for Masud Hauqe"
+      title="Release Management"
+      subtitle="Create and organize official releases and multi-track collections for Masud Hauqe"
     >
       <AdminAlbumsClient initialAlbums={db.albums || []} />
     </AdminShell>

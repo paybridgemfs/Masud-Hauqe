@@ -157,7 +157,7 @@ export default function SectionRenderer({
                     <div className="text-right tabular-nums text-[#D4D4D8]">
                       <span>{publishedMusic.length} Works</span>
                       <span aria-hidden="true"> · </span>
-                      <span>{publishedAlbums.length} Albums</span>
+                      <span>{publishedAlbums.length} Releases</span>
                     </div>
                   </div>
                 </div>
@@ -184,9 +184,9 @@ export default function SectionRenderer({
                 </p>
               </div>
               <div>
-                <p className="text-xs text-[#9A9AA2] tracking-wider">STUDIO ALBUMS</p>
+                <p className="text-xs text-[#9A9AA2] tracking-wider">OFFICIAL RELEASES</p>
                 <p className="text-base font-semibold text-[#F4F1EA] tabular-nums mt-1">
-                  {publishedAlbums.length} Collections
+                  {publishedAlbums.length} Releases
                 </p>
               </div>
               <div>
@@ -257,7 +257,7 @@ export default function SectionRenderer({
                   No Published Single Recordings in Archive Yet
                 </h3>
                 <p className="text-sm text-[#8E8E96] mt-1.5 leading-relaxed">
-                  Published single tracks will appear here automatically once uploaded through the Admin Add Music workflow. Tracks assigned to an album are available inside their album page.
+                  Published single tracks will appear here automatically once uploaded through the Admin Add Music workflow. Tracks assigned to a release are available inside their release page.
                 </p>
                 <div className="mt-5">
                   <Link
@@ -275,6 +275,10 @@ export default function SectionRenderer({
     }
 
     case 'ALBUMS': {
+      const cleanHeading =
+        content.heading && !/album/i.test(content.heading)
+          ? content.heading
+          : 'Official Releases & Collections';
       return (
         <section className="border-b border-[#222226] py-16 sm:py-20 bg-[#0B0B0E]">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -287,7 +291,7 @@ export default function SectionRenderer({
                   {content.kicker || 'DISCOGRAPHY'}
                 </p>
                 <h2 className="text-2xl sm:text-3xl font-bold text-[#F4F1EA]">
-                  {content.heading || 'Studio Albums & Collections'}
+                  {cleanHeading}
                 </h2>
                 {content.subheading && (
                   <p className="text-sm text-[#9A9AA2] mt-1.5 max-w-2xl">{content.subheading}</p>
@@ -297,7 +301,7 @@ export default function SectionRenderer({
                 href="/albums"
                 className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#C8A464] hover:text-[#D4B475] transition-colors whitespace-nowrap shrink-0 group"
               >
-                <span>View All Albums</span>
+                <span>View All Releases</span>
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </Link>
             </motion.div>
@@ -315,17 +319,17 @@ export default function SectionRenderer({
               >
                 <div>
                   <h3 className="text-base font-semibold text-[#F4F1EA]">
-                    Album Discography Awaiting Release
+                    Official Releases Awaiting Publication
                   </h3>
                   <p className="text-sm text-[#8E8E96] mt-1">
-                    No studio albums have been published yet. Create and publish albums from the Admin Album Manager.
+                    No releases have been published yet. Create and publish releases from the Admin Release Manager.
                   </p>
                 </div>
                 <Link
                   href="/admin/albums"
                   className="px-4 py-2 text-xs font-semibold bg-[#1E1E24] text-[#F4F1EA] hover:bg-[#27272F] border border-[#2E2E38] rounded whitespace-nowrap shrink-0"
                 >
-                  Manage Albums
+                  Manage Releases
                 </Link>
               </motion.div>
             )}

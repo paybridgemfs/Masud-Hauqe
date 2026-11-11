@@ -1,20 +1,61 @@
-import React from 'react';
-import { notFound } from 'next/navigation';
-import { getPublicWebsiteData } from '@/lib/db.js';
-import AlbumDetailClient from '@/components/music/AlbumDetailClient.jsx';
+import React from "react";
+import { notFound } from "next/navigation";
+import { headers } from "next/headers";
+import { getPublicWebsiteData } from "@/lib/db.js";
+import AlbumDetailClient from "@/components/music/AlbumDetailClient.jsx";
 
 export const revalidate = 60;
+
+async function resolveOrigin() {
+  try {
+    const h = await headers();
+    const host = h.get("x-forwarded-host") || h.get("host");
+    const proto = h.get("x-forwarded-proto") || "https";
+    if (host) return `${proto}://${host}`;
+  } catch {
+    // Fallback to APP_URL
+  }
+  return (process.env.APP_URL || "http://localhost:3000").replace(/\/+$/, "");
+}
+
+function toAbsoluteUrl(url, origin) {
+  if (!url) return "";
+  if (url.startsWith("http://") || url.startsWith("https://")) return url;
+  return `${origin}${url.startsWith("/") ? "" : "/"}${url}`;
+}
 
 export async function generateMetadata({ params }) {
   const { slug } = await params;
   const { publishedAlbums, artist } = await getPublicWebsiteData();
   const album = publishedAlbums.find((a) => a.slug === slug || a.id === slug);
   if (!album) {
-    return { title: 'Album Not Found — Masud Hauqe' };
+    return { title: "Release Not Found — Masud Hauqe" };
   }
+
+  const origin = await resolveOrigin();
+  const absoluteCover = toAbsoluteUrl(album.coverImage, origin);
+  const artistName = artist?.name || "Masud Hauqe";
+  const desc =
+    album.description ||
+    `Listen to the official release "${album.title}" by ${artistName} (${(album.tracks || []).length} tracks).`;
+
   return {
-    title: `${album.title} — Album by ${artist?.name || 'Masud Hauqe'}`,
-    description: album.description || `Listen to ${album.title} by ${artist?.name || 'Masud Hauqe'}.`,
+    title: `${album.title} — Release by ${artistName}`,
+    description: desc,
+    openGraph: {
+      title: album.title,
+      description: desc,
+      type: "music.album",
+      url: `${origin}/albums/${album.slug}`,
+      siteName: artistName,
+      images: absoluteCover ? [{ url: absoluteCover, alt: album.title }] : [],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: album.title,
+      description: desc,
+      images: absoluteCover ? [absoluteCover] : [],
+    },
   };
 }
 
@@ -27,5 +68,6 @@ export default async function AlbumDetailPage({ params }) {
     notFound();
   }
 
-  return <AlbumDetailClient album={album} />;
+  const origin = await resolveOrigin();
+  return <AlbumDetailClient album={album} shareUrl={`${origin}/albums/${album.slug}`} />;
 }

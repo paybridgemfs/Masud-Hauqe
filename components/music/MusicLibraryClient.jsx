@@ -61,16 +61,16 @@ export default function MusicLibraryClient({ initialMusic = [], albums = [] }) {
               setSearchQuery(e.target.value);
               setVisibleCount(12);
             }}
-            placeholder="Search recordings by title or album..."
+            placeholder="Search recordings by title or release..."
             aria-label="Search music library"
             className="w-full bg-[#09090B] border border-[#27272E] rounded pl-10 pr-4 py-2 text-sm text-[#F4F1EA] placeholder:text-[#71717A] focus:outline-none focus:border-[#C8A464] transition-colors"
           />
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          {/* Album Filter */}
+          {/* Release Filter */}
           <select
-            aria-label="Filter by album"
+            aria-label="Filter by release"
             value={selectedAlbumId}
             onChange={(e) => {
               setSelectedAlbumId(e.target.value);
@@ -79,11 +79,11 @@ export default function MusicLibraryClient({ initialMusic = [], albums = [] }) {
             className="bg-[#09090B] border border-[#27272E] rounded px-3 py-2 text-xs font-medium text-[#F4F1EA] focus:outline-none focus:border-[#C8A464]"
           >
             <option value="all">
-              Single Releases ({initialMusic.filter((m) => !m.albumId).length})
+              Single Tracks ({initialMusic.filter((m) => !m.albumId).length})
             </option>
             {albums.map((album) => (
               <option key={album.id} value={album.id}>
-                Album: {album.title}
+                Release: {album.title}
               </option>
             ))}
           </select>
@@ -164,7 +164,7 @@ export default function MusicLibraryClient({ initialMusic = [], albums = [] }) {
           <p className="text-sm text-[#8E8E96] leading-relaxed">
             {initialMusic.length === 0
               ? 'Only verified, published recordings stored in PostgreSQL and Google Drive appear here. Add your first track through the Admin Dashboard.'
-              : 'Try clearing your search query or switching the selected album filter.'}
+              : 'Try clearing your search query or switching the selected release filter.'}
           </p>
           {initialMusic.length === 0 ? (
             <div className="pt-2">

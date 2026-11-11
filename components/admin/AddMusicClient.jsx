@@ -554,19 +554,19 @@ export default function AddMusicClient({
           )}
         </section>
 
-        {/* Step 4 & Step 5: Album Selection & Publishing Options */}
+        {/* Step 4 & Step 5: Release Selection & Publishing Options */}
         <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="bg-[#111115] border border-[#222228] rounded-lg p-6 space-y-4">
             <p className="text-xs font-semibold tracking-[0.18em] text-[#C8A464]">STEP 4</p>
-            <h2 className="text-lg font-bold text-[#F4F1EA]">Album Assignment</h2>
+            <h2 className="text-lg font-bold text-[#F4F1EA]">Release Assignment</h2>
             <div className="space-y-3">
               <select
-                aria-label="Select album"
+                aria-label="Select release"
                 value={albumId}
                 onChange={(e) => setAlbumId(e.target.value)}
                 className="w-full bg-[#09090B] border border-[#27272E] rounded px-3.5 py-2.5 text-sm text-[#F4F1EA] focus:outline-none focus:border-[#C8A464]"
               >
-                <option value="">Single Release (No Album)</option>
+                <option value="">Single Track (No Release)</option>
                 {albums.map((alb) => (
                   <option key={alb.id} value={alb.id}>
                     {alb.title}
@@ -580,7 +580,7 @@ export default function AddMusicClient({
                 className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#C8A464] hover:underline"
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>Create New Album Inline</span>
+                <span>Create New Release Inline</span>
               </button>
 
               {showNewAlbumModal && (
@@ -589,7 +589,7 @@ export default function AddMusicClient({
                     type="text"
                     value={newAlbumTitle}
                     onChange={(e) => setNewAlbumTitle(e.target.value)}
-                    placeholder="New Album Title"
+                    placeholder="New Release Title"
                     className="w-full bg-[#111115] border border-[#27272E] rounded px-3 py-1.5 text-xs text-[#F4F1EA]"
                   />
                   <div className="flex items-center gap-2">
@@ -599,7 +599,7 @@ export default function AddMusicClient({
                       disabled={creatingAlbum}
                       className="px-3 py-1.5 rounded bg-[#C8A464] text-[#09090B] text-xs font-semibold"
                     >
-                      {creatingAlbum ? 'Creating...' : 'Save Album'}
+                      {creatingAlbum ? 'Creating...' : 'Save Release'}
                     </button>
                     <button
                       type="button"

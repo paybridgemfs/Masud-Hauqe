@@ -85,7 +85,7 @@ export default function AdminMusicClient({ initialMusic = [], albums = [] }) {
               <thead>
                 <tr className="border-b border-[#222228] text-[#8E8E96]">
                   <th className="py-3.5 px-4 font-semibold">Track</th>
-                  <th className="py-3.5 px-4 font-semibold">Album</th>
+                  <th className="py-3.5 px-4 font-semibold">Release</th>
                   <th className="py-3.5 px-4 font-semibold">Duration</th>
                   <th className="py-3.5 px-4 font-semibold">Status</th>
                   <th className="py-3.5 px-4 font-semibold">MP3 Download</th>

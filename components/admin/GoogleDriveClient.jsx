@@ -354,7 +354,7 @@ export default function GoogleDriveClient({
                   </span>
                 </div>
                 <p className="text-[11px] text-[#8E8E96] mt-0.5">
-                  Stores all uploaded portraits, album covers, gallery photos, and branding images.
+                  Stores all uploaded portraits, release covers, gallery photos, and branding images.
                 </p>
                 <p className="text-xs font-mono text-[#C8A464] mt-1.5 truncate">
                   ID: {imageFolderId || 'Will auto-create on connect'}

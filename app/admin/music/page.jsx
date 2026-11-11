@@ -19,7 +19,7 @@ export default async function AdminMusicPage() {
     <AdminShell
       admin={admin}
       title="All Music"
-      subtitle="Manage published recordings, draft uploads, album assignments, and MP3 download permissions"
+      subtitle="Manage published recordings, draft uploads, release assignments, and MP3 download permissions"
     >
       <AdminMusicClient initialMusic={db.music || []} albums={db.albums || []} />
     </AdminShell>
