@@ -49,6 +49,7 @@ export default function GlobalMusicPlayer() {
     repeatMode,
     error,
     isPlaylistOpen,
+    audioMetrics,
     setIsPlaylistOpen,
     setShuffle,
     cycleRepeatMode,
@@ -520,6 +521,7 @@ export default function GlobalMusicPlayer() {
             isMuted={isMuted}
             shuffle={shuffle}
             repeatMode={repeatMode}
+            audioMetrics={audioMetrics}
             togglePlay={togglePlay}
             playNext={playNext}
             playPrevious={playPrevious}
