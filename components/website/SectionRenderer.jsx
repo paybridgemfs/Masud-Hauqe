@@ -189,10 +189,13 @@ export default function SectionRenderer({
     case 'POPULAR_MUSIC': {
       const displayLimit =
         Number(content.limit) && Number(content.limit) !== 6 ? Number(content.limit) : 8;
+      // Exclude tracks added under an album; album tracks are displayed inside their respective album
+      const singlePublishedMusic = publishedMusic.filter((m) => !m.albumId);
+      const singlePopularMusic = popularMusic.filter((m) => !m.albumId);
       const tracksToShow =
         type === 'POPULAR_MUSIC'
-          ? popularMusic.slice(0, displayLimit)
-          : publishedMusic.slice(0, displayLimit);
+          ? singlePopularMusic.slice(0, displayLimit)
+          : singlePublishedMusic.slice(0, displayLimit);
 
       return (
         <section className="border-b border-[#222226] py-16 sm:py-20">
@@ -219,7 +222,7 @@ export default function SectionRenderer({
             </div>
 
             {tracksToShow.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-5">
                 {tracksToShow.map((track) => (
                   <MusicCard key={track.id} track={track} queue={tracksToShow} />
                 ))}
@@ -228,10 +231,10 @@ export default function SectionRenderer({
               <div className="bg-[#101014] border border-[#222228] rounded-lg p-10 text-center max-w-2xl mx-auto">
                 <Music2 className="w-8 h-8 text-[#C8A464] mx-auto mb-3" />
                 <h3 className="text-lg font-semibold text-[#F4F1EA]">
-                  No Published Recordings in Archive Yet
+                  No Published Single Recordings in Archive Yet
                 </h3>
                 <p className="text-sm text-[#8E8E96] mt-1.5 leading-relaxed">
-                  Published tracks will appear here automatically once uploaded through the Admin Add Music workflow.
+                  Published single tracks will appear here automatically once uploaded through the Admin Add Music workflow. Tracks assigned to an album are available inside their album page.
                 </p>
                 <div className="mt-5">
                   <Link
@@ -274,7 +277,7 @@ export default function SectionRenderer({
             </div>
 
             {publishedAlbums.length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2.5 sm:gap-4">
                 {publishedAlbums.slice(0, 12).map((album) => (
                   <AlbumCard key={album.id} album={album} />
                 ))}
@@ -349,7 +352,9 @@ export default function SectionRenderer({
     }
 
     case 'MUSIC_VIDEOS': {
-      const videoTracks = publishedMusic.filter((m) => m.youtubeVideoId);
+      const videoTracks = publishedMusic.filter(
+        (m) => Boolean(m.youtubeVideoId && m.includeYoutubeVideo)
+      );
       return (
         <section className="border-b border-[#222226] py-16 sm:py-20 bg-[#0B0B0E]">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -375,11 +380,11 @@ export default function SectionRenderer({
             </div>
 
             {videoTracks.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-6">
                 {videoTracks.slice(0, 6).map((track) => (
                   <div
                     key={track.id}
-                    className="bg-[#111115] border border-[#222228] rounded-lg overflow-hidden"
+                    className="bg-[#111115] border border-[#222228] rounded-lg overflow-hidden flex flex-col"
                   >
                     <div className="aspect-video bg-black">
                       <iframe
@@ -390,16 +395,18 @@ export default function SectionRenderer({
                         allowFullScreen
                       />
                     </div>
-                    <div className="p-4 flex items-center justify-between gap-4">
+                    <div className="p-2.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-4 flex-1">
                       <div className="min-w-0">
-                        <h3 className="text-base font-semibold text-[#F4F1EA] truncate">{track.title}</h3>
-                        <p className="text-xs text-[#8E8E96] mt-0.5 truncate">
+                        <h3 className="text-xs sm:text-base font-semibold text-[#F4F1EA] leading-snug line-clamp-2 sm:truncate">
+                          {track.title}
+                        </h3>
+                        <p className="text-[10px] sm:text-xs text-[#8E8E96] mt-0.5 truncate">
                           {artist?.name || 'Masud Hauqe'} · {track.duration || '0:00'}
                         </p>
                       </div>
                       <Link
                         href={`/music/${track.slug}`}
-                        className="text-xs font-semibold text-[#C8A464] hover:underline shrink-0"
+                        className="text-[10px] sm:text-xs font-semibold text-[#C8A464] hover:underline shrink-0 self-start sm:self-auto"
                       >
                         Audio Master →
                       </Link>
@@ -416,7 +423,7 @@ export default function SectionRenderer({
                       No Embedded YouTube Videos Published Yet
                     </h3>
                     <p className="text-sm text-[#8E8E96] mt-1">
-                      When you add music using a YouTube video URL in the Admin Dashboard, its official embedded video automatically appears here.
+                      When adding music in the Admin Dashboard, check &ldquo;Add also YouTube video&rdquo; to display its official YouTube video here.
                     </p>
                   </div>
                 </div>

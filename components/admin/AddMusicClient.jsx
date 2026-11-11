@@ -50,6 +50,7 @@ export default function AddMusicClient({
 
   const [isPublished, setIsPublished] = useState(true);
   const [downloadEnabled, setDownloadEnabled] = useState(true);
+  const [includeYoutubeVideo, setIncludeYoutubeVideo] = useState(false);
 
   const [mp3File, setMp3File] = useState(null);
   const [fileError, setFileError] = useState('');
@@ -205,6 +206,7 @@ export default function AddMusicClient({
     formData.append('duration', duration.trim() || '0:00');
     formData.append('isPublished', String(isPublished));
     formData.append('downloadEnabled', String(downloadEnabled));
+    formData.append('includeYoutubeVideo', String(includeYoutubeVideo));
 
     setUploadLifecycle('uploading');
     setUploadProgress(5);
@@ -643,6 +645,21 @@ export default function AddMusicClient({
                   type="checkbox"
                   checked={downloadEnabled}
                   onChange={(e) => setDownloadEnabled(e.target.checked)}
+                  className="w-4 h-4 accent-[#C8A464]"
+                />
+              </label>
+
+              <label className="flex items-center justify-between p-3 rounded bg-[#09090B] border border-[#27272E] cursor-pointer">
+                <div>
+                  <p className="font-semibold text-[#F4F1EA]">Add also YouTube video</p>
+                  <p className="text-xs text-[#8E8E96]">
+                    When checked, this track&apos;s YouTube video will appear in Official Video Performances
+                  </p>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={includeYoutubeVideo}
+                  onChange={(e) => setIncludeYoutubeVideo(e.target.checked)}
                   className="w-4 h-4 accent-[#C8A464]"
                 />
               </label>

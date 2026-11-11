@@ -27,6 +27,8 @@ export default function MusicLibraryClient({ initialMusic = [], albums = [] }) {
 
     if (selectedAlbumId !== 'all') {
       list = list.filter((m) => m.albumId === selectedAlbumId);
+    } else {
+      list = list.filter((m) => !m.albumId);
     }
 
     if (sortOrder === 'popular') {
@@ -70,10 +72,12 @@ export default function MusicLibraryClient({ initialMusic = [], albums = [] }) {
             }}
             className="bg-[#09090B] border border-[#27272E] rounded px-3 py-2 text-xs font-medium text-[#F4F1EA] focus:outline-none focus:border-[#C8A464]"
           >
-            <option value="all">All Albums ({initialMusic.length})</option>
+            <option value="all">
+              Single Releases ({initialMusic.filter((m) => !m.albumId).length})
+            </option>
             {albums.map((album) => (
               <option key={album.id} value={album.id}>
-                {album.title}
+                Album: {album.title}
               </option>
             ))}
           </select>
@@ -120,7 +124,7 @@ export default function MusicLibraryClient({ initialMusic = [], albums = [] }) {
       {/* Music Grid or Empty State */}
       {displayedMusic.length > 0 ? (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-5">
             {displayedMusic.map((track) => (
               <MusicCard key={track.id} track={track} queue={filteredMusic} />
             ))}

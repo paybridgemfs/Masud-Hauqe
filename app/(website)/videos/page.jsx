@@ -12,7 +12,9 @@ export const metadata = {
 
 export default async function VideosPage() {
   const { artist, publishedMusic } = await getPublicWebsiteData();
-  const videoTracks = publishedMusic.filter((m) => m.youtubeVideoId);
+  const videoTracks = publishedMusic.filter(
+    (m) => Boolean(m.youtubeVideoId && m.includeYoutubeVideo)
+  );
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 sm:py-20 space-y-10">
@@ -30,7 +32,7 @@ export default async function VideosPage() {
       </div>
 
       {videoTracks.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-6">
           {videoTracks.map((track) => (
             <article
               key={track.id}
@@ -45,16 +47,18 @@ export default async function VideosPage() {
                   allowFullScreen
                 />
               </div>
-              <div className="p-5 flex items-center justify-between gap-4">
+              <div className="p-2.5 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-4 flex-1">
                 <div className="min-w-0">
-                  <h2 className="text-base font-semibold text-[#F4F1EA] truncate">{track.title}</h2>
-                  <p className="text-xs text-[#8E8E96] mt-0.5 truncate">
-                    {artist?.name || 'Masud Hauqe'} · Duration {track.duration || '0:00'}
+                  <h2 className="text-xs sm:text-base font-semibold text-[#F4F1EA] leading-snug line-clamp-2 sm:truncate">
+                    {track.title}
+                  </h2>
+                  <p className="text-[10px] sm:text-xs text-[#8E8E96] mt-0.5 truncate">
+                    {artist?.name || 'Masud Hauqe'} · {track.duration || '0:00'}
                   </p>
                 </div>
                 <Link
                   href={`/music/${track.slug}`}
-                  className="px-3.5 py-2 rounded border border-[#2E2E38] text-xs font-semibold text-[#C8A464] hover:border-[#C8A464] whitespace-nowrap shrink-0"
+                  className="px-2 sm:px-3.5 py-1 sm:py-2 rounded border border-[#2E2E38] text-[10px] sm:text-xs font-semibold text-[#C8A464] hover:border-[#C8A464] whitespace-nowrap shrink-0 self-start sm:self-auto"
                 >
                   Audio Master
                 </Link>
@@ -67,7 +71,7 @@ export default async function VideosPage() {
           <Video className="w-9 h-9 text-[#C8A464] mx-auto" />
           <h2 className="text-lg font-semibold text-[#F4F1EA]">No Official Videos Published Yet</h2>
           <p className="text-sm text-[#8E8E96] leading-relaxed">
-            When tracks are added via YouTube URL in the Admin Add Music workflow, their embedded YouTube videos appear automatically on this page.
+            When adding tracks in the Admin Add Music workflow, check &ldquo;Add also YouTube video&rdquo; to display their official embedded YouTube videos on this page.
           </p>
           <div className="pt-2">
             <Link

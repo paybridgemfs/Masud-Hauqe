@@ -48,6 +48,9 @@ export async function PUT(request, { params }) {
       target.uploadStatus = body.isPublished ? 'published' : 'uploaded';
     }
     if (typeof body.downloadEnabled === 'boolean') target.downloadEnabled = body.downloadEnabled;
+    if (typeof body.includeYoutubeVideo === 'boolean') {
+      target.includeYoutubeVideo = body.includeYoutubeVideo;
+    }
     target.updatedAt = new Date().toISOString();
     updated = { ...target };
     appendAuditRecord(state, {
@@ -55,7 +58,11 @@ export async function PUT(request, { params }) {
       action: 'MUSIC_UPDATED',
       entityType: 'Music',
       entityId: id,
-      metadata: { title: updated.title, isPublished: updated.isPublished },
+      metadata: {
+        title: updated.title,
+        isPublished: updated.isPublished,
+        includeYoutubeVideo: Boolean(updated.includeYoutubeVideo),
+      },
     });
   });
 
@@ -71,6 +78,7 @@ export async function PUT(request, { params }) {
   revalidatePath('/music');
   revalidatePath(`/music/${updated.slug}`);
   revalidatePath('/albums');
+  revalidatePath('/videos');
 
   return NextResponse.json({ ok: true, music: updated });
 }

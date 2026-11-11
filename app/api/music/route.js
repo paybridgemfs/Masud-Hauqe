@@ -108,6 +108,7 @@ export async function POST(request) {
         duration: String(formData.get('duration') || '0:00'),
         isPublished: formData.get('isPublished') === 'true',
         downloadEnabled: formData.get('downloadEnabled') !== 'false',
+        includeYoutubeVideo: formData.get('includeYoutubeVideo') === 'true',
       };
 
       if (!mp3File || typeof mp3File === 'string') {
@@ -230,6 +231,7 @@ export async function POST(request) {
         uploadStatus: parsed.data.isPublished ? 'published' : 'uploaded',
         isPublished: Boolean(parsed.data.isPublished),
         downloadEnabled: Boolean(parsed.data.downloadEnabled),
+        includeYoutubeVideo: Boolean(parsed.data.includeYoutubeVideo),
         playCount: 0,
         downloadCount: 0,
         createdAt: now,

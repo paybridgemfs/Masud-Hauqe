@@ -9,6 +9,7 @@ import {
   EyeOff,
   Download,
   Music,
+  Video,
   AlertTriangle,
   X,
   Loader2,
@@ -88,6 +89,7 @@ export default function AdminMusicClient({ initialMusic = [], albums = [] }) {
                   <th className="py-3.5 px-4 font-semibold">Duration</th>
                   <th className="py-3.5 px-4 font-semibold">Status</th>
                   <th className="py-3.5 px-4 font-semibold">MP3 Download</th>
+                  <th className="py-3.5 px-4 font-semibold">YouTube Video</th>
                   <th className="py-3.5 px-4 font-semibold text-right">Plays / Downloads</th>
                   <th className="py-3.5 px-4 font-semibold text-right">Actions</th>
                 </tr>
@@ -141,6 +143,22 @@ export default function AdminMusicClient({ initialMusic = [], albums = [] }) {
                           <Download className="w-3.5 h-3.5" />
                           <span>{track.downloadEnabled ? 'Enabled' : 'Disabled'}</span>
                         </button>
+                      </td>
+                      <td className="py-3 px-4">
+                        {track.youtubeVideoId ? (
+                          <button
+                            type="button"
+                            onClick={() => toggleField(track, 'includeYoutubeVideo')}
+                            className={`inline-flex items-center gap-1.5 text-xs font-medium ${
+                              track.includeYoutubeVideo ? 'text-[#4ADE80]' : 'text-[#71717A]'
+                            }`}
+                          >
+                            <Video className="w-3.5 h-3.5" />
+                            <span>{track.includeYoutubeVideo ? 'Added' : 'Hidden'}</span>
+                          </button>
+                        ) : (
+                          <span className="text-[11px] text-[#52525B]">No YT ID</span>
+                        )}
                       </td>
                       <td className="py-3 px-4 text-right tabular-nums text-[#B4B4BC]">
                         {track.playCount || 0} / {track.downloadCount || 0}

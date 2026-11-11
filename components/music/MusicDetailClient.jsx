@@ -149,8 +149,8 @@ export default function MusicDetailClient({ track, relatedTracks = [] }) {
         </div>
       </section>
 
-      {/* Embedded Official YouTube Video if present */}
-      {track.youtubeVideoId && (
+      {/* Embedded Official YouTube Video if enabled */}
+      {track.youtubeVideoId && track.includeYoutubeVideo && (
         <section className="space-y-4">
           <h2 className="text-xl font-bold text-[#F4F1EA]">Official Video Performance</h2>
           <div className="aspect-video max-w-4xl bg-black border border-[#222228] rounded-lg overflow-hidden">
@@ -169,7 +169,7 @@ export default function MusicDetailClient({ track, relatedTracks = [] }) {
       {relatedTracks.length > 0 && (
         <section className="space-y-6 border-t border-[#222226] pt-12">
           <h2 className="text-2xl font-bold text-[#F4F1EA]">Related Recordings</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-5">
             {relatedTracks.slice(0, 4).map((item) => (
               <MusicCard key={item.id} track={item} queue={relatedTracks} />
             ))}
