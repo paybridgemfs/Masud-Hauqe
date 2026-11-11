@@ -38,10 +38,13 @@ export default function GoogleDriveClient({
   const [loading, setLoading] = useState(false);
   const [copiedKey, setCopiedKey] = useState('');
 
+  const isInternal = (url) => /localhost:(1000\b|10000\b)|127\.0\.0\.1:(1000\b|10000\b)/.test(url || '');
   const browserOrigin =
-    typeof window !== 'undefined' ? window.location.origin : redirectUri.replace(/\/api\/integrations\/google\/callback$/, '');
+    typeof window !== 'undefined' && !isInternal(window.location.origin)
+      ? window.location.origin
+      : redirectUri.replace(/\/api\/integrations\/google\/callback$/, '');
   const activeRedirectUri =
-    typeof window !== 'undefined'
+    typeof window !== 'undefined' && !isInternal(window.location.origin)
       ? `${window.location.origin}/api/integrations/google/callback`
       : redirectUri;
 
@@ -91,7 +94,10 @@ export default function GoogleDriveClient({
     setLoading(true);
     setStatus(null);
     try {
-      const currentOrigin = typeof window !== 'undefined' ? window.location.origin : '';
+      const currentOrigin =
+        typeof window !== 'undefined' && !isInternal(window.location.origin)
+          ? window.location.origin
+          : browserOrigin;
       const res = await fetch('/api/integrations/google', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

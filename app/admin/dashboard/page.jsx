@@ -34,7 +34,6 @@ export default async function AdminDashboardPage() {
   const unreadMessages = (db.contactMessages || []).filter((m) => !m.isRead).length;
   const gdrive = db.googleIntegrations?.[0] || {};
   const visibleSections = (db.sections || []).filter((s) => s.isVisible).length;
-  const recentAuditLogs = (db.auditLogs || []).slice(0, 6);
 
   return (
     <AdminShell
@@ -208,39 +207,6 @@ export default async function AdminDashboardPage() {
         </div>
       </section>
 
-      {/* Recent Audit Trail */}
-      <section className="bg-[#111115] border border-[#222228] rounded-lg overflow-hidden">
-        <div className="px-6 py-4 border-b border-[#222228] flex items-center justify-between">
-          <h2 className="text-base font-bold text-[#F4F1EA]">Recent Security & CMS Audit Logs</h2>
-          <Link href="/admin/settings" className="text-xs text-[#C8A464] hover:underline">
-            View All Logs →
-          </Link>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
-            <thead>
-              <tr className="border-b border-[#1E1E24] text-[#8E8E96]">
-                <th className="py-3 px-6 font-semibold">Action</th>
-                <th className="py-3 px-4 font-semibold">Entity</th>
-                <th className="py-3 px-4 font-semibold">Record ID</th>
-                <th className="py-3 px-6 font-semibold text-right">Timestamp</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#1A1A20]">
-              {recentAuditLogs.map((log) => (
-                <tr key={log.id} className="hover:bg-[#15151A]">
-                  <td className="py-3 px-6 font-medium text-[#F4F1EA]">{log.action}</td>
-                  <td className="py-3 px-4 text-[#9A9AA2]">{log.entityType}</td>
-                  <td className="py-3 px-4 text-[#8E8E96] font-mono">{log.entityId || '—'}</td>
-                  <td className="py-3 px-6 text-right text-[#8E8E96] tabular-nums">
-                    {new Date(log.createdAt).toLocaleString('en-US')}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
     </AdminShell>
   );
 }

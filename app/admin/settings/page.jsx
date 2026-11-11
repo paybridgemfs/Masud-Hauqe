@@ -21,11 +21,10 @@ export default async function AdminSettingsPage({ searchParams }) {
     <AdminShell
       admin={admin}
       title="Security & Admin Settings"
-      subtitle="Manage administrator credentials, password rotation, and audit logs."
+      subtitle="Manage administrator credentials and password rotation."
     >
       <AdminSettingsClient
         admin={admin}
-        auditLogs={db.auditLogs || []}
         promptPasswordChange={promptPasswordChange}
       />
     </AdminShell>

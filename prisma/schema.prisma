@@ -22,7 +22,6 @@ model Admin {
   lastLoginAt        DateTime?
   createdAt          DateTime   @default(now())
   updatedAt          DateTime   @updatedAt
-  auditLogs          AuditLog[]
 
   @@index([username])
   @@map("admins")
@@ -238,18 +237,3 @@ model SEOSetting {
   @@map("seo_settings")
 }
 
-model AuditLog {
-  id         String   @id @default(cuid())
-  adminId    String?
-  admin      Admin?   @relation(fields: [adminId], references: [id], onDelete: SetNull)
-  action     String
-  entityType String
-  entityId   String   @default("")
-  metadata   Json     @default("{}")
-  ipAddress  String   @default("")
-  createdAt  DateTime @default(now())
-
-  @@index([createdAt])
-  @@index([adminId])
-  @@map("audit_logs")
-}

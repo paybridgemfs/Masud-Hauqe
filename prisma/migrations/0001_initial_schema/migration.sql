@@ -215,18 +215,7 @@ CREATE TABLE IF NOT EXISTS "seo_settings" (
 
 CREATE UNIQUE INDEX IF NOT EXISTS "seo_settings_page_key" ON "seo_settings"("page");
 
-CREATE TABLE IF NOT EXISTS "audit_logs" (
-    "id" TEXT NOT NULL,
-    "adminId" TEXT,
-    "action" TEXT NOT NULL,
-    "entityType" TEXT NOT NULL,
-    "entityId" TEXT NOT NULL DEFAULT '',
-    "metadata" JSONB NOT NULL DEFAULT '{}',
-    "ipAddress" TEXT NOT NULL DEFAULT '',
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT "audit_logs_pkey" PRIMARY KEY ("id"),
-    CONSTRAINT "audit_logs_adminId_fkey" FOREIGN KEY ("adminId") REFERENCES "admins"("id") ON DELETE SET NULL ON UPDATE CASCADE
-);
+DROP TABLE IF EXISTS "audit_logs" CASCADE;
 
 -- Safe non-destructive schema upgrades for existing tables
 ALTER TABLE "artists" ADD COLUMN IF NOT EXISTS "profileImageFileId" TEXT NOT NULL DEFAULT '';

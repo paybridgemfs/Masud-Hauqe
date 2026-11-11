@@ -21,7 +21,6 @@ export async function GET() {
     pages: db.pages || [],
     gallery: db.gallery || [],
     seoSettings: db.seoSettings || [],
-    auditLogs: (db.auditLogs || []).slice(0, 100),
   });
 }
 
