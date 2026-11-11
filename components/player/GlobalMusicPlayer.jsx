@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'motion/react';
 import {
@@ -18,10 +18,12 @@ import {
   AlertCircle,
   X,
   Disc3,
+  PictureInPicture2,
 } from 'lucide-react';
 import { usePlayer } from './PlayerContext.jsx';
 import { getPublicDownloadUrl } from '@/lib/storage/audio-delivery.js';
 import ShimmerImage from '@/components/ui/ShimmerImage.jsx';
+import FloatingMiniVisualizer from './FloatingMiniVisualizer.jsx';
 
 function formatSeconds(secs) {
   if (!secs || Number.isNaN(secs) || secs < 0) return '0:00';
@@ -32,6 +34,9 @@ function formatSeconds(secs) {
 }
 
 export default function GlobalMusicPlayer() {
+  const [showPip, setShowPip] = useState(false);
+  const [isPipExpanded, setIsPipExpanded] = useState(false);
+
   const {
     playlist,
     currentTrack,
@@ -333,6 +338,23 @@ export default function GlobalMusicPlayer() {
 
               <button
                 type="button"
+                onClick={() => {
+                  setShowPip(true);
+                  setIsPipExpanded(true);
+                }}
+                aria-label="Floating Visualizer & PiP Player"
+                title="Floating Visualizer (PiP)"
+                className={`p-2 rounded transition-colors ${
+                  showPip
+                    ? 'text-[#C8A464] bg-[#1C1B18]'
+                    : 'text-[#A1A1AA] hover:text-[#C8A464]'
+                }`}
+              >
+                <PictureInPicture2 className="w-4 h-4" />
+              </button>
+
+              <button
+                type="button"
                 onClick={() => setIsPlaylistOpen(!isPlaylistOpen)}
                 aria-label="Toggle playback queue"
                 title="Playback Queue"
@@ -459,6 +481,20 @@ export default function GlobalMusicPlayer() {
 
               <button
                 type="button"
+                onClick={() => {
+                  setShowPip(true);
+                  setIsPipExpanded((prev) => !prev);
+                }}
+                aria-label="Floating PiP Player"
+                className={`p-1.5 rounded transition-colors ${
+                  showPip ? 'text-[#C8A464] bg-[#1C1B18]' : 'text-[#A1A1AA]'
+                }`}
+              >
+                <PictureInPicture2 className="w-3.5 h-3.5" />
+              </button>
+
+              <button
+                type="button"
                 onClick={() => setIsPlaylistOpen(!isPlaylistOpen)}
                 aria-label="Toggle playback queue"
                 className={`p-1.5 rounded transition-colors ${
@@ -480,6 +516,28 @@ export default function GlobalMusicPlayer() {
           </div>
         </div>
       </motion.div>
+
+      {/* Floating Mini Visualizer & Picture-in-Picture Player */}
+      <AnimatePresence>
+        {showPip && (
+          <FloatingMiniVisualizer
+            currentTrack={currentTrack}
+            isPlaying={isPlaying}
+            isLoading={isLoading}
+            currentTime={currentTime}
+            duration={duration}
+            togglePlay={togglePlay}
+            playNext={playNext}
+            playPrevious={playPrevious}
+            isPipExpanded={isPipExpanded}
+            setIsPipExpanded={setIsPipExpanded}
+            onClose={() => setShowPip(false)}
+            formatSeconds={formatSeconds}
+            isMuted={isMuted}
+            toggleMute={toggleMute}
+          />
+        )}
+      </AnimatePresence>
     </>
   );
 }

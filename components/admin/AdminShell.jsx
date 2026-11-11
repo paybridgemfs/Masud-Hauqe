@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard,
+  BarChart3,
   UserCheck,
   Music,
   PlusCircle,
@@ -28,7 +29,10 @@ import {
 const NAV_GROUPS = [
   {
     group: 'Overview',
-    items: [{ label: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard }],
+    items: [
+      { label: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
+      { label: 'Live Analytics & Heatmap', href: '/admin/analytics', icon: BarChart3 },
+    ],
   },
   {
     group: 'Artist Management',

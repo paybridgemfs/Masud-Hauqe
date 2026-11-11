@@ -78,7 +78,9 @@ export default async function AdminDashboardPage() {
             {totalPlays} <span className="text-xs font-normal text-[#8E8E96]">plays</span> ·{' '}
             {totalDownloads} <span className="text-xs font-normal text-[#8E8E96]">downloads</span>
           </p>
-          <span className="text-xs text-[#8E8E96] block">Live database counters</span>
+          <Link href="/admin/analytics" className="text-xs text-[#C8A464] hover:underline inline-block">
+            View Analytics & Heatmap →
+          </Link>
         </div>
 
         <div className="bg-[#111115] border border-[#222228] rounded-lg p-5 space-y-2">

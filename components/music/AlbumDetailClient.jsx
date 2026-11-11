@@ -21,10 +21,12 @@ import {
   MessageCircle,
   Twitter,
   Copy,
+  Sparkles,
 } from 'lucide-react';
 import { usePlayer } from '@/components/player/PlayerContext.jsx';
 import { getPublicDownloadUrl } from '@/lib/storage/audio-delivery.js';
 import ShimmerImage from '@/components/ui/ShimmerImage.jsx';
+import StoryCardModal from '@/components/music/StoryCardModal.jsx';
 
 function parseDurationToSeconds(durationStr) {
   if (!durationStr || typeof durationStr !== 'string') return 0;
@@ -72,6 +74,7 @@ export default function AlbumDetailClient({ album, shareUrl: initialShareUrl = '
   } = usePlayer();
 
   const [copied, setCopied] = useState(false);
+  const [showStoryModal, setShowStoryModal] = useState(false);
   const shareUrl = initialShareUrl || `/releases/${album.slug}`;
 
   const tracks = album.tracks || [];
@@ -394,8 +397,24 @@ export default function AlbumDetailClient({ album, shareUrl: initialShareUrl = '
                     </>
                   )}
                 </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowStoryModal(true)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-gradient-to-r from-[#C8A464]/20 via-[#D4B475]/15 to-[#C8A464]/20 hover:from-[#C8A464]/30 hover:to-[#D4B475]/30 border border-[#C8A464]/60 text-xs font-semibold text-[#F4F1EA] hover:text-white transition-all shadow-sm"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-[#C8A464]" />
+                  <span>Story Card (IG/FB)</span>
+                </button>
               </div>
             </div>
+
+            <StoryCardModal
+              isOpen={showStoryModal}
+              onClose={() => setShowStoryModal(false)}
+              album={album}
+              artistName={album.artist?.name || 'Masud Hauqe'}
+            />
           </div>
 
           {tracks.length > 0 && (
