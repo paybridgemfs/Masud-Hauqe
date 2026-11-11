@@ -122,7 +122,7 @@ function AudioSpectrumVisualizer({ isPlaying, audioMetrics }) {
   }, [isPlaying, audioMetrics]);
 
   return (
-    <div className="h-20 sm:h-28 lg:h-32 px-3 py-2.5 rounded-2xl bg-[#0C0C12]/80 border border-[#C8A464]/20 backdrop-blur-md flex items-end justify-between gap-1 sm:gap-1.5 shadow-[inset_0_2px_8px_rgba(0,0,0,0.6)] overflow-hidden">
+    <div className="h-24 sm:h-28 lg:h-32 px-3 py-2.5 rounded-2xl flex items-end justify-between gap-1 sm:gap-1.5 overflow-hidden">
       {Array.from({ length: 32 }).map((_, idx) => {
         const isBass = idx < 8;
         return (
@@ -247,18 +247,7 @@ export default function FullScreenPlayer({
           <ChevronDown className="w-5 h-5 sm:w-5 sm:h-5" />
           <span className="hidden sm:inline text-xs font-semibold">Minimize</span>
         </button>
-
-        {/* Center Indicator */}
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#121217]/90 border border-[#C8A464]/30 text-[10px] sm:text-xs font-mono font-semibold text-[#C8A464]">
-            <Activity className="w-3.5 h-3.5 text-[#C8A464]" />
-            <span>{isPlaying ? 'AUDIO SPECTRUM REACTIVE' : 'SPECTRUM IDLE'}</span>
-            {isBeat && (
-              <span className="w-1.5 h-1.5 rounded-full bg-[#4ADE80] animate-ping ml-0.5" />
-            )}
-          </div>
-        </div>
-
+        
         <button
           type="button"
           onClick={() => setShowQueue(!showQueue)}
@@ -346,7 +335,7 @@ export default function FullScreenPlayer({
               RIGHT ON DESKTOP / BOTTOM ON MOBILE:
               Title, Subtitle, Tall Audio-Reactive Visualizer & Controls
           ============================================================ */}
-          <div className="flex-1 min-w-0 w-full max-w-xl flex flex-col justify-center space-y-3 sm:space-y-4">
+          <div className="min-w-0 w-full max-w-xl flex flex-col justify-center space-y-3 sm:space-y-4">
             {/* Track Info */}
             <div className="text-center lg:text-left space-y-0.5 sm:space-y-1">
               <h1 className="text-lg sm:text-2xl lg:text-3xl font-bold tracking-tight text-[#F4F1EA] truncate">
@@ -451,7 +440,7 @@ export default function FullScreenPlayer({
             </div>
 
             {/* Bottom Utilities (Volume Slider on Desktop, MP3 Download Button) */}
-            <div className="pt-2 border-t border-white/10 flex items-center justify-between gap-3 text-xs">
+            <div className="pt-2 flex items-center justify-between gap-3 text-xs">
               <div className="hidden sm:flex items-center gap-2 flex-1 max-w-[220px]">
                 <button
                   type="button"
