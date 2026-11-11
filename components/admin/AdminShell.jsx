@@ -70,7 +70,7 @@ const NAV_GROUPS = [
     items: [
       { label: 'Google Drive & YouTube', href: '/admin/integrations/google-drive', icon: HardDrive },
       { label: 'Contact Messages', href: '/admin/messages', icon: Mail },
-      { label: 'Profile, Security & Logs', href: '/admin/settings', icon: Settings },
+      { label: 'Profile & Admin Security', href: '/admin/settings', icon: Settings },
     ],
   },
 ];

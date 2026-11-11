@@ -169,10 +169,10 @@ export default function MusicLibraryClient({ initialMusic = [], albums = [] }) {
           {initialMusic.length === 0 ? (
             <div className="pt-2">
               <Link
-                href="/admin/music/add"
+                href="/releases"
                 className="inline-flex items-center px-4 py-2 rounded bg-[#C8A464] text-[#09090B] text-xs font-semibold hover:bg-[#D4B475] transition-colors"
               >
-                Add First Track in Admin CMS
+                Browse Discography Releases
               </Link>
             </div>
           ) : (

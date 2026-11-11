@@ -36,6 +36,7 @@ export function PlayerProvider({ children }) {
   const sourceNodeRef = useRef(null);
   const connectedAudioElementRef = useRef(null);
   const lastBassRef = useRef(0);
+  const lastSeekTimeRef = useRef(0);
   const currentTrack = currentIndex >= 0 && currentIndex < playlist.length ? playlist[currentIndex] : null;
 
   const stopProgressLoop = useCallback(() => {
@@ -56,11 +57,11 @@ export function PlayerProvider({ children }) {
       if (howlRef.current && howlRef.current.playing()) {
         const now = performance.now();
 
-        // Update seek position every ~120ms to prevent React re-render lag while keeping slider responsive
-        if (now - lastSeekUpdate > 120) {
+        // Update seek position every ~120ms, skipping if user just seeked in the last 400ms
+        if (now - lastSeekUpdate > 120 && now - lastSeekTimeRef.current > 400) {
           lastSeekUpdate = now;
           const seek = howlRef.current.seek();
-          if (typeof seek === 'number') {
+          if (typeof seek === 'number' && !isNaN(seek)) {
             setCurrentTime(seek);
           }
         }
@@ -229,6 +230,12 @@ export function PlayerProvider({ children }) {
           setCurrentTime(0);
           handleTrackEndedRef.current();
         },
+        onseek: () => {
+          // Allow progress updates once Howler confirms seeking is complete
+          setTimeout(() => {
+            lastSeekTimeRef.current = 0;
+          }, 150);
+        },
         onloaderror: (_id, errCode) => {
           setIsLoading(false);
           setIsPlaying(false);
@@ -361,9 +368,15 @@ export function PlayerProvider({ children }) {
 
   const seekTo = useCallback((seconds) => {
     if (!howlRef.current) return;
-    const clamped = Math.max(0, Math.min(seconds, howlRef.current.duration() || 0));
-    howlRef.current.seek(clamped);
+    const dur = howlRef.current.duration() || 0;
+    const clamped = Math.max(0, Math.min(seconds, dur > 0 ? dur : seconds));
+    lastSeekTimeRef.current = performance.now();
     setCurrentTime(clamped);
+    try {
+      howlRef.current.seek(clamped);
+    } catch {
+      // Audio element seeking safe fallback
+    }
   }, []);
 
   const setVolume = useCallback(

@@ -30,6 +30,11 @@ function AudioSpectrumVisualizer({ isPlaying, audioMetrics }) {
   const barsRef = useRef([]);
   const animFrameRef = useRef(null);
   const heightsRef = useRef(new Array(32).fill(12));
+  const metricsRef = useRef(audioMetrics);
+
+  useEffect(() => {
+    metricsRef.current = audioMetrics;
+  }, [audioMetrics]);
 
   useEffect(() => {
     let lastTime = performance.now();
@@ -39,7 +44,7 @@ function AudioSpectrumVisualizer({ isPlaying, audioMetrics }) {
       lastTime = time;
       const t = time * 0.001; // Continuous elapsed seconds (smooth float)
 
-      const freqData = audioMetrics?.frequencyData;
+      const freqData = metricsRef.current?.frequencyData;
       const hasRealAudio = Boolean(freqData && freqData.some((b) => b > 10));
 
       // Musical beat and tempo simulation (~124 BPM rhythm)
@@ -119,7 +124,7 @@ function AudioSpectrumVisualizer({ isPlaying, audioMetrics }) {
         cancelAnimationFrame(animFrameRef.current);
       }
     };
-  }, [isPlaying, audioMetrics]);
+  }, [isPlaying]);
 
   return (
     <div className="h-24 sm:h-28 lg:h-32 px-3 py-2.5 rounded-2xl flex items-end justify-between gap-1 sm:gap-1.5 overflow-hidden">
@@ -174,11 +179,14 @@ export default function FullScreenPlayer({
 }) {
   const [showQueue, setShowQueue] = useState(false);
   const [slideDirection, setSlideDirection] = useState(0); // 1 = slide from right (next), -1 = slide from left (prev)
+  const [isScrubbing, setIsScrubbing] = useState(false);
+  const [scrubValue, setScrubValue] = useState(0);
 
   if (!isOpen || !currentTrack) return null;
 
   const safeMaxDuration = duration > 0 ? duration : 100;
-  const safeCurrentTime = Math.min(currentTime, safeMaxDuration);
+  const currentSliderValue = isScrubbing ? scrubValue : Math.min(currentTime, safeMaxDuration);
+  const displayTime = isScrubbing ? scrubValue : currentTime;
   const formattedTotalDuration =
     duration > 0 ? formatSeconds(duration) : currentTrack.duration || '0:00';
 
@@ -363,12 +371,23 @@ export default function FullScreenPlayer({
                 min={0}
                 max={safeMaxDuration}
                 step={0.1}
-                value={safeCurrentTime}
-                onChange={(e) => seekTo(Number(e.target.value))}
+                value={currentSliderValue}
+                onPointerDown={() => {
+                  setIsScrubbing(true);
+                  setScrubValue(currentTime);
+                }}
+                onChange={(e) => {
+                  setScrubValue(Number(e.target.value));
+                }}
+                onPointerUp={(e) => {
+                  const val = Number(e.currentTarget.value);
+                  setIsScrubbing(false);
+                  seekTo(val);
+                }}
                 className="w-full h-1.5 bg-[#222228] accent-[#C8A464] rounded-lg cursor-pointer"
               />
               <div className="flex items-center justify-between text-[11px] text-[#8E8E96] font-mono tabular-nums">
-                <span>{formatSeconds(currentTime)}</span>
+                <span>{formatSeconds(displayTime)}</span>
                 <span>{formattedTotalDuration}</span>
               </div>
             </div>

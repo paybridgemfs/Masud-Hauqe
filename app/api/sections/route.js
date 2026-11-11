@@ -67,6 +67,147 @@ export async function PUT(request) {
 
   const body = await request.json();
 
+  // Support bulk restore of standard repertoire sections
+  if (body.action === 'restoreDefaults') {
+    const now = new Date().toISOString();
+    const defaultSections = [
+      {
+        id: 'sec-hero',
+        name: 'Editorial Hero Section',
+        type: 'HERO',
+        position: 1,
+        isVisible: true,
+        content: {
+          kicker: 'OFFICIAL ARTIST ARCHIVE',
+          headline: 'Masud Hauqe',
+          subheadline:
+            'Original studio recordings, sonic monographs, and authorized high-resolution MP3 releases.',
+          primaryCtaText: 'Listen to Archive',
+          primaryCtaUrl: '/music',
+          secondaryCtaText: 'Artist Monograph',
+          secondaryCtaUrl: '/about',
+          showLatestPlayButton: true,
+          latestPlayButtonText: 'Play Latest Release',
+        },
+        settings: { layout: 'split-editorial', theme: 'obsidian-gold' },
+        createdAt: now,
+        updatedAt: now,
+      },
+      {
+        id: 'sec-featured-music',
+        name: 'Featured & Latest Releases',
+        type: 'FEATURED_MUSIC',
+        position: 2,
+        isVisible: true,
+        content: {
+          kicker: 'SELECTED REPERTOIRE',
+          heading: 'Published Master Recordings',
+          subheading:
+            'Stream directly in the persistent studio player or download authorized MP3 masters when enabled.',
+          ctaText: 'Open Full Music Library',
+          ctaUrl: '/music',
+          showCtaButton: true,
+          limit: 8,
+          emptyHeading: 'No Tracks Published Yet',
+          emptyText:
+            'Published audio recordings from the library will appear here automatically.',
+        },
+        settings: { columns: 4 },
+        createdAt: now,
+        updatedAt: now,
+      },
+      {
+        id: 'sec-albums',
+        name: 'Official Releases & Anthologies',
+        type: 'ALBUMS',
+        position: 3,
+        isVisible: true,
+        content: {
+          kicker: 'DISCOGRAPHY',
+          heading: 'Official Releases & Collections',
+          subheading: 'Curated multi-track releases and conceptual bodies of work.',
+          ctaText: 'View All Releases',
+          ctaUrl: '/releases',
+          showCtaButton: true,
+          limit: 12,
+          emptyHeading: 'No Official Releases Yet',
+          emptyText:
+            'Curated albums, EPs, and discography collections will appear here once published.',
+        },
+        settings: { columns: 6 },
+        createdAt: now,
+        updatedAt: now,
+      },
+      {
+        id: 'sec-bio-preview',
+        name: 'Artist Biography Preview',
+        type: 'BIOGRAPHY_PREVIEW',
+        position: 4,
+        isVisible: true,
+        content: {
+          kicker: 'ARTIST PORTRAIT',
+          heading: 'The Sonic Architecture of Masud Hauqe',
+          subheading: 'Career notes, musical philosophy, and acoustic monographs.',
+          ctaText: 'Read Full Biography',
+          ctaUrl: '/about',
+          showCtaButton: true,
+        },
+        settings: { style: 'monograph' },
+        createdAt: now,
+        updatedAt: now,
+      },
+      {
+        id: 'sec-videos',
+        name: 'Official YouTube Sessions',
+        type: 'MUSIC_VIDEOS',
+        position: 5,
+        isVisible: true,
+        content: {
+          kicker: 'VISUAL ARCHIVE',
+          heading: 'Official Video Performances',
+          subheading:
+            'Embedded directly from official YouTube releases associated with published works.',
+          ctaText: 'Open Video Gallery',
+          ctaUrl: '/videos',
+          showCtaButton: true,
+          limit: 6,
+          emptyHeading: 'No Music Videos Linked Yet',
+          emptyText:
+            'YouTube video performances linked to published music tracks will appear here.',
+        },
+        settings: { limit: 6 },
+        createdAt: now,
+        updatedAt: now,
+      },
+      {
+        id: 'sec-contact',
+        name: 'Direct Management & Booking Inquiry',
+        type: 'CONTACT_SECTION',
+        position: 6,
+        isVisible: true,
+        content: {
+          kicker: 'CORRESPONDENCE',
+          heading: 'Management, Licensing & Press Inquiries',
+          subheading:
+            'Connect directly with the management desk of Masud Hauqe for performance bookings, sync licensing, or press requests.',
+          ctaText: 'Open Inquiry Desk',
+          ctaUrl: '/contact',
+          showCtaButton: true,
+          showEmailButton: true,
+        },
+        settings: {},
+        createdAt: now,
+        updatedAt: now,
+      },
+    ];
+
+    await updateDbState((state) => {
+      state.sections = defaultSections;
+    });
+    revalidatePath('/');
+    return NextResponse.json({ ok: true, sections: defaultSections });
+  }
+
   // Support bulk reorder
   if (Array.isArray(body.orderedIds)) {
     await updateDbState((state) => {

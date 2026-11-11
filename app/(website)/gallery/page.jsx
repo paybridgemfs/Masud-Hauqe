@@ -64,10 +64,10 @@ export default async function GalleryPage() {
           </p>
           <div className="pt-2">
             <Link
-              href="/admin/gallery"
+              href="/about"
               className="inline-flex items-center px-4 py-2 rounded bg-[#C8A464] text-[#09090B] text-xs font-semibold hover:bg-[#D4B475] transition-colors"
             >
-              Manage Gallery in Admin CMS
+              Explore Artist Biography
             </Link>
           </div>
         </div>

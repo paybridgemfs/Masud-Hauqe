@@ -35,6 +35,8 @@ function formatSeconds(secs) {
 
 export default function GlobalMusicPlayer() {
   const [isFullScreen, setIsFullScreen] = useState(false);
+  const [isScrubbing, setIsScrubbing] = useState(false);
+  const [scrubValue, setScrubValue] = useState(0);
 
   const {
     playlist,
@@ -92,7 +94,8 @@ export default function GlobalMusicPlayer() {
 
   const downloadUrl = getPublicDownloadUrl(currentTrack);
   const safeMaxDuration = duration > 0 ? duration : 100;
-  const safeCurrentTime = Math.min(currentTime, safeMaxDuration);
+  const currentSliderValue = isScrubbing ? scrubValue : Math.min(currentTime, safeMaxDuration);
+  const displayTime = isScrubbing ? scrubValue : currentTime;
   const formattedTotalDuration =
     duration > 0 ? formatSeconds(duration) : currentTrack.duration || '0:00';
 
@@ -281,7 +284,7 @@ export default function GlobalMusicPlayer() {
 
               <div className="w-full flex items-center gap-3 mt-1.5">
                 <span className="text-[11px] text-[#8E8E96] tabular-nums w-9 text-right shrink-0">
-                  {formatSeconds(currentTime)}
+                  {formatSeconds(displayTime)}
                 </span>
                 <input
                   type="range"
@@ -289,8 +292,19 @@ export default function GlobalMusicPlayer() {
                   min={0}
                   max={safeMaxDuration}
                   step={0.1}
-                  value={safeCurrentTime}
-                  onChange={(e) => seekTo(Number(e.target.value))}
+                  value={currentSliderValue}
+                  onPointerDown={() => {
+                    setIsScrubbing(true);
+                    setScrubValue(currentTime);
+                  }}
+                  onChange={(e) => {
+                    setScrubValue(Number(e.target.value));
+                  }}
+                  onPointerUp={(e) => {
+                    const val = Number(e.currentTarget.value);
+                    setIsScrubbing(false);
+                    seekTo(val);
+                  }}
                   className="w-full h-1.5 bg-[#27272C] accent-[#C8A464] rounded-lg cursor-pointer"
                 />
                 <span className="text-[11px] text-[#8E8E96] tabular-nums w-9 shrink-0">
@@ -382,7 +396,7 @@ export default function GlobalMusicPlayer() {
           {/* Row 1: Full-Width Touch Seek Bar + Timestamps */}
           <div className="flex items-center gap-2">
             <span className="text-[10px] text-[#8E8E96] tabular-nums w-7 text-right shrink-0">
-              {formatSeconds(currentTime)}
+              {formatSeconds(displayTime)}
             </span>
             <input
               type="range"
@@ -390,8 +404,19 @@ export default function GlobalMusicPlayer() {
               min={0}
               max={safeMaxDuration}
               step={0.1}
-              value={safeCurrentTime}
-              onChange={(e) => seekTo(Number(e.target.value))}
+              value={currentSliderValue}
+              onPointerDown={() => {
+                setIsScrubbing(true);
+                setScrubValue(currentTime);
+              }}
+              onChange={(e) => {
+                setScrubValue(Number(e.target.value));
+              }}
+              onPointerUp={(e) => {
+                const val = Number(e.currentTarget.value);
+                setIsScrubbing(false);
+                seekTo(val);
+              }}
               className="w-full h-1.5 bg-[#27272C] accent-[#C8A464] rounded-lg cursor-pointer"
             />
             <span className="text-[10px] text-[#8E8E96] tabular-nums w-7 shrink-0">
