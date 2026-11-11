@@ -18,12 +18,12 @@ import {
   AlertCircle,
   X,
   Disc3,
-  PictureInPicture2,
+  Maximize2,
 } from 'lucide-react';
 import { usePlayer } from './PlayerContext.jsx';
 import { getPublicDownloadUrl } from '@/lib/storage/audio-delivery.js';
 import ShimmerImage from '@/components/ui/ShimmerImage.jsx';
-import FloatingMiniVisualizer from './FloatingMiniVisualizer.jsx';
+import FullScreenPlayer from './FullScreenPlayer.jsx';
 
 function formatSeconds(secs) {
   if (!secs || Number.isNaN(secs) || secs < 0) return '0:00';
@@ -34,8 +34,7 @@ function formatSeconds(secs) {
 }
 
 export default function GlobalMusicPlayer() {
-  const [showPip, setShowPip] = useState(false);
-  const [isPipExpanded, setIsPipExpanded] = useState(false);
+  const [isFullScreen, setIsFullScreen] = useState(false);
 
   const {
     playlist,
@@ -338,19 +337,12 @@ export default function GlobalMusicPlayer() {
 
               <button
                 type="button"
-                onClick={() => {
-                  setShowPip(true);
-                  setIsPipExpanded(true);
-                }}
-                aria-label="Floating Visualizer & PiP Player"
-                title="Floating Visualizer (PiP)"
-                className={`p-2 rounded transition-colors ${
-                  showPip
-                    ? 'text-[#C8A464] bg-[#1C1B18]'
-                    : 'text-[#A1A1AA] hover:text-[#C8A464]'
-                }`}
+                onClick={() => setIsFullScreen(true)}
+                aria-label="Open full screen immersive player"
+                title="Full Screen Player"
+                className="p-2 rounded text-[#A1A1AA] hover:text-[#C8A464] hover:bg-[#1C1B18] transition-colors"
               >
-                <PictureInPicture2 className="w-4 h-4" />
+                <Maximize2 className="w-4 h-4" />
               </button>
 
               <button
@@ -481,16 +473,11 @@ export default function GlobalMusicPlayer() {
 
               <button
                 type="button"
-                onClick={() => {
-                  setShowPip(true);
-                  setIsPipExpanded((prev) => !prev);
-                }}
-                aria-label="Floating PiP Player"
-                className={`p-1.5 rounded transition-colors ${
-                  showPip ? 'text-[#C8A464] bg-[#1C1B18]' : 'text-[#A1A1AA]'
-                }`}
+                onClick={() => setIsFullScreen(true)}
+                aria-label="Open full screen player"
+                className="p-1.5 rounded text-[#A1A1AA] hover:text-[#C8A464] transition-colors"
               >
-                <PictureInPicture2 className="w-3.5 h-3.5" />
+                <Maximize2 className="w-3.5 h-3.5" />
               </button>
 
               <button
@@ -517,24 +504,33 @@ export default function GlobalMusicPlayer() {
         </div>
       </motion.div>
 
-      {/* Floating Mini Visualizer & Picture-in-Picture Player */}
+      {/* Full Screen Immersive Music Player with Bottom-to-Top Animation & Audio-Responsive Visualizer */}
       <AnimatePresence>
-        {showPip && (
-          <FloatingMiniVisualizer
+        {isFullScreen && (
+          <FullScreenPlayer
+            isOpen={isFullScreen}
+            onClose={() => setIsFullScreen(false)}
             currentTrack={currentTrack}
+            playlist={playlist}
             isPlaying={isPlaying}
             isLoading={isLoading}
             currentTime={currentTime}
             duration={duration}
+            volume={volume}
+            isMuted={isMuted}
+            shuffle={shuffle}
+            repeatMode={repeatMode}
             togglePlay={togglePlay}
             playNext={playNext}
             playPrevious={playPrevious}
-            isPipExpanded={isPipExpanded}
-            setIsPipExpanded={setIsPipExpanded}
-            onClose={() => setShowPip(false)}
-            formatSeconds={formatSeconds}
-            isMuted={isMuted}
+            seekTo={seekTo}
+            setVolume={setVolume}
             toggleMute={toggleMute}
+            setShuffle={setShuffle}
+            cycleRepeatMode={cycleRepeatMode}
+            playTrack={playTrack}
+            formatSeconds={formatSeconds}
+            downloadUrl={downloadUrl}
           />
         )}
       </AnimatePresence>
