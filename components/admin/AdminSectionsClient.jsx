@@ -20,19 +20,156 @@ import {
 import DriveImageUpload from '@/components/admin/DriveImageUpload.jsx';
 
 const SECTION_TYPES = [
-  { value: 'HERO', label: 'Editorial Hero Section', defaultUrl: '/music' },
-  { value: 'HIGHLIGHTS_GRID', label: '4-Column Highlights & Stats Grid', defaultUrl: '/music' },
-  { value: 'FEATURED_MUSIC', label: 'Featured Music Repertoire', defaultUrl: '/music' },
-  { value: 'LATEST_RELEASES', label: 'Latest Releases Grid', defaultUrl: '/music' },
-  { value: 'POPULAR_MUSIC', label: 'Popular Tracks', defaultUrl: '/music' },
-  { value: 'ALBUMS', label: 'Official Releases & Discography', defaultUrl: '/releases' },
-  { value: 'BIOGRAPHY_PREVIEW', label: 'Artist Biography Monograph', defaultUrl: '/about' },
-  { value: 'ARTIST_INTRO', label: 'Artist Introduction', defaultUrl: '/about' },
-  { value: 'MUSIC_VIDEOS', label: 'Music Videos & Sessions', defaultUrl: '/videos' },
-  { value: 'GALLERY', label: 'Visual Artwork Gallery', defaultUrl: '/gallery' },
-  { value: 'SOCIAL_LINKS', label: 'Social Channels Bar', defaultUrl: '' },
-  { value: 'CONTACT_SECTION', label: 'Management & Inquiry Section', defaultUrl: '/contact' },
+  {
+    value: 'HERO',
+    label: 'Hero Banner & Portrait Section',
+    defaultHeading: 'Masud Hauqe',
+    defaultKicker: 'OFFICIAL ARTIST ARCHIVE',
+    defaultCtaText: 'Listen to Archive',
+    defaultUrl: '/music',
+    description:
+      'হোমপেজের একদম উপরের মেইন ব্যানার, আর্টিস্ট পোর্ট্রেট ছবি, বাটন এবং নিচের ৪টি হাইলাইট গ্রিড কার্ড।',
+  },
+  {
+    value: 'HIGHLIGHTS_GRID',
+    label: '4-Column Highlights & Stats Grid',
+    defaultHeading: 'Archive Highlights',
+    defaultKicker: 'QUICK OVERVIEW',
+    defaultCtaText: 'Explore Archive',
+    defaultUrl: '/music',
+    description:
+      '৪টি কলামে মোট গান, অ্যালবাম, ভিডিও সংখ্যা বা কাস্টম হাইলাইট কার্ড প্রদর্শনের আলাদা গ্রিড সেকশন।',
+  },
+  {
+    value: 'FEATURED_MUSIC',
+    label: 'Latest / Featured Music Tracks',
+    defaultHeading: 'Published Master Recordings',
+    defaultKicker: 'SELECTED REPERTOIRE',
+    defaultCtaText: 'Open Full Music Library',
+    defaultUrl: '/music',
+    description:
+      'Music Library-তে আপলোড করা নতুন এবং ফিচার্ড সিঙ্গেল গানগুলোর গ্রিড (সর্বশেষ প্রকাশিত গান আগে দেখাবে)।',
+  },
+  {
+    value: 'POPULAR_MUSIC',
+    label: 'Popular Music Tracks (Most Played)',
+    defaultHeading: 'Most Streamed Recordings',
+    defaultKicker: 'POPULAR REPERTOIRE',
+    defaultCtaText: 'Explore All Tracks',
+    defaultUrl: '/music',
+    description:
+      'শ্রোতারা সবচেয়ে বেশিবার প্লে করেছে এমন জনপ্রিয় (Most Played) গানগুলোর অটোমেটিক তালিকা।',
+  },
+  {
+    value: 'ALBUMS',
+    label: 'Official Releases & Discography (Albums / EPs)',
+    defaultHeading: 'Official Releases & Collections',
+    defaultKicker: 'DISCOGRAPHY',
+    defaultCtaText: 'View All Releases',
+    defaultUrl: '/releases',
+    description:
+      'আপনার প্রকাশিত অ্যালবাম, ইপি (EP) এবং মাল্টি-ট্র্যাক কালেকশনগুলোর ডিস্কোগ্রাফি গ্রিড।',
+  },
+  {
+    value: 'BIOGRAPHY_PREVIEW',
+    label: 'Artist Biography & Monograph',
+    defaultHeading: 'The Sonic Architecture of Masud Hauqe',
+    defaultKicker: 'ARTIST PORTRAIT',
+    defaultCtaText: 'Read Full Biography',
+    defaultUrl: '/about',
+    description:
+      'আর্টিস্টের সংক্ষিপ্ত জীবনী (Biography) এবং About পেজে যাওয়ার লিংক।',
+  },
+  {
+    value: 'ARTIST_CAREER',
+    label: 'Artist Career, Musical Background & Achievements',
+    defaultHeading: 'Career Journey & Musical Heritage',
+    defaultKicker: 'CAREER & MILESTONES',
+    defaultCtaText: 'Full Artist Profile',
+    defaultUrl: '/about',
+    description:
+      'আর্টিস্টের Career Information, Musical Background এবং অর্জিত সম্মাননা/মাইলফলক (Achievements) কার্ড আকারে প্রদর্শন করে।',
+  },
+  {
+    value: 'MUSIC_VIDEOS',
+    label: 'Official Music Videos (YouTube)',
+    defaultHeading: 'Official Video Performances',
+    defaultKicker: 'VISUAL ARCHIVE',
+    defaultCtaText: 'Open Video Gallery',
+    defaultUrl: '/videos',
+    description:
+      'গানের সাথে যুক্ত করা অফিসিয়াল YouTube মিউজিক ভিডিওগুলোর গ্রিড।',
+  },
+  {
+    value: 'GALLERY',
+    label: 'Visual Photo Gallery',
+    defaultHeading: 'Frames & Studio Moments',
+    defaultKicker: 'VISUAL GALLERY',
+    defaultCtaText: 'Open Full Gallery',
+    defaultUrl: '/gallery',
+    description:
+      'Gallery-তে আপলোড করা আর্টিস্টের ছবি, স্টুডিও সেশন ও লাইভ পারফরম্যান্সের ফটোগ্যালারি।',
+  },
+  {
+    value: 'SOCIAL_LINKS',
+    label: 'Official Social Media Channels Bar',
+    defaultHeading: 'Connect Across Platforms',
+    defaultKicker: 'OFFICIAL CHANNELS',
+    defaultCtaText: '',
+    defaultUrl: '',
+    description:
+      'Spotify, YouTube, Facebook, Instagram সহ সব অফিসিয়াল সোশ্যাল মিডিয়া লিংকের বার।',
+  },
+  {
+    value: 'CONTACT_SECTION',
+    label: 'Management, Booking & Contact Banner',
+    defaultHeading: 'Management, Licensing & Press Inquiries',
+    defaultKicker: 'CORRESPONDENCE',
+    defaultCtaText: 'Open Inquiry Desk',
+    defaultUrl: '/contact',
+    description:
+      'বুকিং, লাইসেন্সিং বা যোগাযোগের জন্য সরাসরি Contact পেজ ও ইমেইল বাটনসহ কল-টু-অ্যাকশন ব্যানার।',
+  },
 ];
+
+// Legacy alias lookup so existing DB sections with older type names still display clear info
+const LEGACY_TYPE_MAP = {
+  LATEST_RELEASES: {
+    canonicalType: 'FEATURED_MUSIC',
+    badgeNote: 'Same as Featured Music',
+  },
+  ARTIST_INTRO: {
+    canonicalType: 'BIOGRAPHY_PREVIEW',
+    badgeNote: 'Same as Artist Biography',
+  },
+};
+
+function getSectionTypeMeta(type) {
+  const direct = SECTION_TYPES.find((t) => t.value === type);
+  if (direct) return { ...direct, isLegacyAlias: false, badgeNote: '' };
+  const legacy = LEGACY_TYPE_MAP[type];
+  if (legacy) {
+    const target = SECTION_TYPES.find((t) => t.value === legacy.canonicalType);
+    if (target) {
+      return {
+        ...target,
+        isLegacyAlias: true,
+        badgeNote: legacy.badgeNote,
+      };
+    }
+  }
+  return {
+    value: type,
+    label: type,
+    defaultHeading: '',
+    defaultKicker: '',
+    defaultCtaText: 'Explore More',
+    defaultUrl: '/music',
+    description: '',
+    isLegacyAlias: false,
+    badgeNote: '',
+  };
+}
 
 const DEFAULT_HERO_GRID_ITEMS = [
   {
@@ -83,8 +220,8 @@ export default function AdminSectionsClient({ initialSections = [] }) {
     [...initialSections].sort((a, b) => a.position - b.position)
   );
   const [showAddForm, setShowAddForm] = useState(false);
+  const [newType, setNewType] = useState('ARTIST_CAREER');
   const [newName, setNewName] = useState('');
-  const [newType, setNewType] = useState('FEATURED_MUSIC');
   const [newHeading, setNewHeading] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [isRestoring, setIsRestoring] = useState(false);
@@ -96,6 +233,10 @@ export default function AdminSectionsClient({ initialSections = [] }) {
     heading: '',
     subheading: '',
     body: '',
+    // Career section specific fields
+    careerBody: '',
+    musicalBgBody: '',
+    showAchievements: true,
     // Buttons
     primaryCtaText: '',
     primaryCtaUrl: '',
@@ -124,23 +265,32 @@ export default function AdminSectionsClient({ initialSections = [] }) {
   function startEditing(sec) {
     setEditingId(sec.id);
     const content = sec.content || {};
+    const typeMeta = getSectionTypeMeta(sec.type);
     setEditDraft({
       name: sec.name || '',
       kicker: content.kicker || '',
       heading: content.heading || content.headline || '',
       subheading: content.subheading || content.subheadline || '',
       body: content.body || '',
-      primaryCtaText: content.primaryCtaText !== undefined ? content.primaryCtaText : 'Listen to Archive',
+      careerBody: content.careerBody || '',
+      musicalBgBody: content.musicalBgBody || '',
+      showAchievements: content.showAchievements !== false,
+      primaryCtaText:
+        content.primaryCtaText !== undefined ? content.primaryCtaText : 'Listen to Archive',
       primaryCtaUrl: content.primaryCtaUrl || '/music',
-      secondaryCtaText: content.secondaryCtaText !== undefined ? content.secondaryCtaText : 'Artist Monograph',
+      secondaryCtaText:
+        content.secondaryCtaText !== undefined ? content.secondaryCtaText : 'Artist Monograph',
       secondaryCtaUrl: content.secondaryCtaUrl || '/about',
       showLatestPlayButton: content.showLatestPlayButton !== false,
       latestPlayButtonText: content.latestPlayButtonText || 'Play Latest Release',
-      ctaText: content.ctaText !== undefined ? content.ctaText : (sec.type === 'ALBUMS' ? 'View All Releases' : 'Open Full Music Library'),
-      ctaUrl: content.ctaUrl || (sec.type === 'ALBUMS' ? '/releases' : sec.type === 'BIOGRAPHY_PREVIEW' ? '/about' : sec.type === 'MUSIC_VIDEOS' ? '/videos' : sec.type === 'GALLERY' ? '/gallery' : '/music'),
+      ctaText:
+        content.ctaText !== undefined
+          ? content.ctaText
+          : typeMeta.defaultCtaText || 'Open Full Music Library',
+      ctaUrl: content.ctaUrl || typeMeta.defaultUrl || '/music',
       showCtaButton: content.showCtaButton !== false,
       showEmailButton: content.showEmailButton !== false,
-      limit: Number(content.limit) > 0 ? Number(content.limit) : (sec.type === 'ALBUMS' ? 12 : 8),
+      limit: Number(content.limit) > 0 ? Number(content.limit) : sec.type === 'ALBUMS' ? 12 : 8,
       emptyHeading: content.emptyHeading || '',
       emptyText: content.emptyText || '',
       backgroundImage: content.backgroundImage || '',
@@ -167,6 +317,9 @@ export default function AdminSectionsClient({ initialSections = [] }) {
       subheading: editDraft.subheading.trim(),
       subheadline: editDraft.subheading.trim(),
       body: editDraft.body.trim(),
+      careerBody: (editDraft.careerBody || '').trim(),
+      musicalBgBody: (editDraft.musicalBgBody || '').trim(),
+      showAchievements: Boolean(editDraft.showAchievements),
       primaryCtaText: editDraft.primaryCtaText.trim(),
       primaryCtaUrl: editDraft.primaryCtaUrl.trim(),
       secondaryCtaText: editDraft.secondaryCtaText.trim(),
@@ -210,22 +363,26 @@ export default function AdminSectionsClient({ initialSections = [] }) {
 
   async function handleAddSection(e) {
     e.preventDefault();
-    if (!newName.trim()) return;
-    const typeDef = SECTION_TYPES.find((t) => t.value === newType);
-    const defaultUrl = typeDef?.defaultUrl || '/music';
+    const typeDef = SECTION_TYPES.find((t) => t.value === newType) || SECTION_TYPES[0];
+    const resolvedName = newName.trim() || typeDef.label;
+    const resolvedHeading = newHeading.trim() || typeDef.defaultHeading || resolvedName;
+    const defaultUrl = typeDef?.defaultUrl ?? '/music';
+    const defaultCtaText = typeDef?.defaultCtaText || 'Explore More';
 
     const res = await fetch('/api/sections', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        name: newName.trim(),
+        name: resolvedName,
         type: newType,
         isVisible: true,
         content: {
-          heading: newHeading.trim() || newName.trim(),
-          ctaText: 'Explore More',
+          kicker: typeDef.defaultKicker || '',
+          heading: resolvedHeading,
+          ctaText: defaultCtaText,
           ctaUrl: defaultUrl,
-          showCtaButton: true,
+          showCtaButton: Boolean(defaultUrl),
+          showAchievements: true,
         },
       }),
     });
@@ -272,7 +429,11 @@ export default function AdminSectionsClient({ initialSections = [] }) {
   }
 
   async function handleDelete(sec) {
-    if (!confirm(`Are you sure you want to delete "${sec.name}"? You can restore default sections anytime.`)) {
+    if (
+      !confirm(
+        `Are you sure you want to delete "${sec.name}"? You can restore default sections anytime.`
+      )
+    ) {
       return;
     }
     const res = await fetch(`/api/sections?id=${encodeURIComponent(sec.id)}`, {
@@ -287,7 +448,7 @@ export default function AdminSectionsClient({ initialSections = [] }) {
   async function handleRestoreDefaults() {
     if (
       !confirm(
-        'Restore the standard 6 homepage sections (Hero, Featured Music, Releases, Biography, Videos, Contact)? This will reset section orders and button links to pristine defaults.'
+        'Restore the standard homepage sections (Hero, Featured Music, Releases, Biography, Career, Videos, Contact)? This will reset section orders and button links to pristine defaults.'
       )
     ) {
       return;
@@ -303,12 +464,17 @@ export default function AdminSectionsClient({ initialSections = [] }) {
       if (res.ok && data.ok && data.sections) {
         setSections(data.sections);
         setEditingId(null);
-        setStatusMsg('Restored official standard sections. Frontend and Admin are now 100% in sync!');
+        setStatusMsg(
+          'Restored official standard sections. Frontend and Admin are now 100% in sync!'
+        );
       }
     } finally {
       setIsRestoring(false);
     }
   }
+
+  const selectedAddTypeMeta =
+    SECTION_TYPES.find((t) => t.value === newType) || SECTION_TYPES[0];
 
   return (
     <div className="space-y-6">
@@ -317,10 +483,10 @@ export default function AdminSectionsClient({ initialSections = [] }) {
         <div>
           <h2 className="text-base font-bold text-[#F4F1EA] flex items-center gap-2">
             <Layers className="w-4 h-4 text-[#C8A464]" />
-            <span>Homepage Architecture & Button Customizer</span>
+            <span>Homepage Section & Layout Manager</span>
           </h2>
           <p className="text-xs text-[#8E8E96] mt-1">
-            Every button, heading, kicker, item limit, and section order on the homepage can be managed here.
+            প্রতিটি সেকশন আলাদা এবং স্বতন্ত্র। সেকশনের ক্রম (Order), বাটন, শিরোনাম এবং কোন সেকশনটি দেখানো হবে তা এখান থেকে নিয়ন্ত্রণ করুন।
           </p>
         </div>
 
@@ -330,7 +496,7 @@ export default function AdminSectionsClient({ initialSections = [] }) {
             onClick={handleRestoreDefaults}
             disabled={isRestoring}
             className="px-3.5 py-2 rounded border border-[#C8A464]/30 hover:border-[#C8A464] text-xs font-semibold text-[#C8A464] hover:bg-[#C8A464]/10 transition-colors inline-flex items-center gap-1.5"
-            title="Reset to the 6 official standard sections"
+            title="Reset to the official standard sections"
           >
             <RotateCcw className={`w-3.5 h-3.5 ${isRestoring ? 'animate-spin' : ''}`} />
             <span>Restore Standard Sections</span>
@@ -367,7 +533,14 @@ export default function AdminSectionsClient({ initialSections = [] }) {
           className="bg-[#141419] border border-[#C8A464]/40 rounded-lg p-6 space-y-4 animate-in fade-in duration-200"
         >
           <div className="flex items-center justify-between border-b border-[#222228] pb-3">
-            <h3 className="text-sm font-bold text-[#F4F1EA]">Add New Dynamic Homepage Section</h3>
+            <div>
+              <h3 className="text-sm font-bold text-[#F4F1EA]">
+                Add New Dynamic Homepage Section
+              </h3>
+              <p className="text-[11px] text-[#8E8E96] mt-0.5">
+                যেকোনো সেকশন টাইপ সিলেক্ট করলে নিচে তার কাজ দেখা যাবে। নাম বা হেডিং ফাঁকা রাখলে অটোমেটিক ডিফল্ট নাম বসে যাবে।
+              </p>
+            </div>
             <button
               type="button"
               onClick={() => setShowAddForm(false)}
@@ -377,26 +550,16 @@ export default function AdminSectionsClient({ initialSections = [] }) {
             </button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-12 gap-3.5">
             <div className="sm:col-span-4 space-y-1">
-              <label className="text-[11px] text-[#8E8E96]">Internal Label</label>
-              <input
-                type="text"
-                required
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                placeholder="e.g. Selected Discography"
-                className="w-full bg-[#09090B] border border-[#27272E] rounded px-3 py-2 text-xs text-[#F4F1EA]"
-              />
-            </div>
-
-            <div className="sm:col-span-4 space-y-1">
-              <label className="text-[11px] text-[#8E8E96]">Section Type</label>
+              <label className="text-[11px] font-semibold text-[#C8A464]">
+                1. Choose Section Type
+              </label>
               <select
                 aria-label="Section Type"
                 value={newType}
                 onChange={(e) => setNewType(e.target.value)}
-                className="w-full bg-[#09090B] border border-[#27272E] rounded px-3 py-2 text-xs text-[#F4F1EA]"
+                className="w-full bg-[#09090B] border border-[#27272E] rounded px-3 py-2 text-xs text-[#F4F1EA] focus:border-[#C8A464] outline-none"
               >
                 {SECTION_TYPES.map((t) => (
                   <option key={t.value} value={t.value}>
@@ -407,15 +570,50 @@ export default function AdminSectionsClient({ initialSections = [] }) {
             </div>
 
             <div className="sm:col-span-4 space-y-1">
-              <label className="text-[11px] text-[#8E8E96]">Public Heading</label>
+              <label className="text-[11px] text-[#8E8E96]">
+                2. Admin Section Name (Optional)
+              </label>
+              <input
+                type="text"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                placeholder={selectedAddTypeMeta.label}
+                className="w-full bg-[#09090B] border border-[#27272E] rounded px-3 py-2 text-xs text-[#F4F1EA]"
+              />
+            </div>
+
+            <div className="sm:col-span-4 space-y-1">
+              <label className="text-[11px] text-[#8E8E96]">
+                3. Website Public Heading (Optional)
+              </label>
               <input
                 type="text"
                 value={newHeading}
                 onChange={(e) => setNewHeading(e.target.value)}
-                placeholder="e.g. Master Recordings"
+                placeholder={selectedAddTypeMeta.defaultHeading || selectedAddTypeMeta.label}
                 className="w-full bg-[#09090B] border border-[#27272E] rounded px-3 py-2 text-xs text-[#F4F1EA]"
               />
             </div>
+          </div>
+
+          {/* Selected Type Info Box */}
+          <div className="p-3.5 rounded-lg bg-[#0D0D11] border border-[#252530] flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="space-y-0.5">
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-bold text-[#C8A464] uppercase tracking-wider">
+                  {selectedAddTypeMeta.label}
+                </span>
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-[#181820] text-[#9A9AA2] border border-[#272732]">
+                  {selectedAddTypeMeta.value}
+                </span>
+              </div>
+              <p className="text-xs text-[#D4D4D8]">{selectedAddTypeMeta.description}</p>
+            </div>
+            {selectedAddTypeMeta.defaultUrl && (
+              <span className="text-[11px] font-mono text-[#8E8E96] shrink-0">
+                Default Link: <strong className="text-[#C8A464]">{selectedAddTypeMeta.defaultUrl}</strong>
+              </span>
+            )}
           </div>
 
           <div className="flex justify-end gap-2 pt-2">
@@ -443,6 +641,7 @@ export default function AdminSectionsClient({ initialSections = [] }) {
           const isHero = sec.type === 'HERO';
           const isHighlightsGrid = sec.type === 'HIGHLIGHTS_GRID';
           const isBio = sec.type === 'BIOGRAPHY_PREVIEW' || sec.type === 'ARTIST_INTRO';
+          const isCareer = sec.type === 'ARTIST_CAREER';
           const isMusicOrAlbums =
             sec.type === 'FEATURED_MUSIC' ||
             sec.type === 'LATEST_RELEASES' ||
@@ -450,6 +649,7 @@ export default function AdminSectionsClient({ initialSections = [] }) {
             sec.type === 'ALBUMS' ||
             sec.type === 'MUSIC_VIDEOS' ||
             sec.type === 'GALLERY';
+          const typeMeta = getSectionTypeMeta(sec.type);
 
           return (
             <div
@@ -460,27 +660,36 @@ export default function AdminSectionsClient({ initialSections = [] }) {
             >
               {/* Header Bar */}
               <div className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <span className="text-xs font-mono text-[#C8A464] tabular-nums bg-[#18181F] border border-[#27272E] w-7 h-7 rounded flex items-center justify-center font-bold">
+                <div className="flex items-start sm:items-center gap-3">
+                  <span className="text-xs font-mono text-[#C8A464] tabular-nums bg-[#18181F] border border-[#27272E] w-7 h-7 rounded flex items-center justify-center font-bold shrink-0">
                     #{idx + 1}
                   </span>
                   <div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <p className="text-sm font-bold text-[#F4F1EA]">{sec.name}</p>
-                      <span className="px-2 py-0.5 rounded text-[10px] font-mono tracking-wider bg-[#1A1A22] text-[#C8A464] border border-[#2A2A36]">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-semibold tracking-wide bg-[#1A1A22] text-[#C8A464] border border-[#2A2A36]">
+                        {typeMeta.label}
+                      </span>
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-[#14141A] text-[#7A7A85] border border-[#22222A]">
                         {sec.type}
                       </span>
                     </div>
-                    <p className="text-xs text-[#8E8E96] mt-0.5">
-                      Heading:{' '}
+                    {typeMeta.description && (
+                      <p className="text-[11px] text-[#9A9AA4] mt-1">{typeMeta.description}</p>
+                    )}
+                    <p className="text-xs text-[#8E8E96] mt-1">
+                      Website Heading:{' '}
                       <span className="text-[#D4D4D8]">
-                        {sec.content?.heading || sec.content?.headline || 'Default'}
+                        {sec.content?.heading ||
+                          sec.content?.headline ||
+                          typeMeta.defaultHeading ||
+                          'Default'}
                       </span>{' '}
                       · Button:{' '}
                       <span className="text-[#C8A464]">
                         {isHero
                           ? `${sec.content?.primaryCtaText || 'Listen'} (${sec.content?.primaryCtaUrl || '/music'})`
-                          : `${sec.content?.ctaText || 'Explore'} (${sec.content?.ctaUrl || '/music'})`}
+                          : `${sec.content?.ctaText || typeMeta.defaultCtaText || 'Explore'} (${sec.content?.ctaUrl || typeMeta.defaultUrl || '/music'})`}
                       </span>
                     </p>
                   </div>
@@ -561,7 +770,9 @@ export default function AdminSectionsClient({ initialSections = [] }) {
                     </h4>
                     <div className="grid grid-cols-1 sm:grid-cols-12 gap-3.5">
                       <div className="sm:col-span-4">
-                        <label className="block text-[11px] text-[#8E8E96] mb-1">Internal Name</label>
+                        <label className="block text-[11px] text-[#8E8E96] mb-1">
+                          Internal Name
+                        </label>
                         <input
                           type="text"
                           value={editDraft.name}
@@ -593,11 +804,15 @@ export default function AdminSectionsClient({ initialSections = [] }) {
                         />
                       </div>
                       <div className="sm:col-span-12">
-                        <label className="block text-[11px] text-[#8E8E96] mb-1">Subheading / Description</label>
+                        <label className="block text-[11px] text-[#8E8E96] mb-1">
+                          Subheading / Description
+                        </label>
                         <textarea
                           rows={2}
                           value={editDraft.subheading}
-                          onChange={(e) => setEditDraft({ ...editDraft, subheading: e.target.value })}
+                          onChange={(e) =>
+                            setEditDraft({ ...editDraft, subheading: e.target.value })
+                          }
                           className="w-full bg-[#09090B] border border-[#27272E] rounded px-3 py-2 text-xs text-[#F4F1EA] resize-none"
                         />
                       </div>
@@ -615,6 +830,57 @@ export default function AdminSectionsClient({ initialSections = [] }) {
                             className="w-full bg-[#09090B] border border-[#27272E] rounded px-3 py-2 text-xs text-[#F4F1EA]"
                           />
                         </div>
+                      )}
+
+                      {isCareer && (
+                        <>
+                          <div className="sm:col-span-6">
+                            <label className="block text-[11px] text-[#8E8E96] mb-1">
+                              Custom Career Information (ফাঁকা রাখলে Artist Profile-এর Career Information দেখাবে)
+                            </label>
+                            <textarea
+                              rows={4}
+                              value={editDraft.careerBody}
+                              onChange={(e) =>
+                                setEditDraft({ ...editDraft, careerBody: e.target.value })
+                              }
+                              placeholder="Leave blank to automatically use Career Information from Artist Profile."
+                              className="w-full bg-[#09090B] border border-[#27272E] rounded px-3 py-2 text-xs text-[#F4F1EA]"
+                            />
+                          </div>
+                          <div className="sm:col-span-6">
+                            <label className="block text-[11px] text-[#8E8E96] mb-1">
+                              Custom Musical Background (ফাঁকা রাখলে Artist Profile-এর Musical Background দেখাবে)
+                            </label>
+                            <textarea
+                              rows={4}
+                              value={editDraft.musicalBgBody}
+                              onChange={(e) =>
+                                setEditDraft({ ...editDraft, musicalBgBody: e.target.value })
+                              }
+                              placeholder="Leave blank to automatically use Musical Background from Artist Profile."
+                              className="w-full bg-[#09090B] border border-[#27272E] rounded px-3 py-2 text-xs text-[#F4F1EA]"
+                            />
+                          </div>
+                          <div className="sm:col-span-12">
+                            <label className="inline-flex items-center gap-2.5 text-xs text-[#F4F1EA] bg-[#131318] border border-[#22222A] px-3.5 py-2.5 rounded cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={editDraft.showAchievements}
+                                onChange={(e) =>
+                                  setEditDraft({
+                                    ...editDraft,
+                                    showAchievements: e.target.checked,
+                                  })
+                                }
+                                className="accent-[#C8A464] w-4 h-4 rounded"
+                              />
+                              <span>
+                                Show Career Milestones &amp; Achievements Grid (Artist Profile-এ যোগ করা সম্মাননা ও অর্জনের কার্ডগুলো দেখাবে)
+                              </span>
+                            </label>
+                          </div>
+                        </>
                       )}
                     </div>
                   </div>

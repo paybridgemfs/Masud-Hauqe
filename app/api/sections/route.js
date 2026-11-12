@@ -140,7 +140,7 @@ export async function PUT(request) {
       },
       {
         id: 'sec-bio-preview',
-        name: 'Artist Biography Preview',
+        name: 'Artist Biography & Monograph',
         type: 'BIOGRAPHY_PREVIEW',
         position: 4,
         isVisible: true,
@@ -157,10 +157,30 @@ export async function PUT(request) {
         updatedAt: now,
       },
       {
+        id: 'sec-artist-career',
+        name: 'Artist Career & Achievements',
+        type: 'ARTIST_CAREER',
+        position: 5,
+        isVisible: true,
+        content: {
+          kicker: 'CAREER & MILESTONES',
+          heading: 'Career Journey & Musical Heritage',
+          subheading:
+            'Professional musical background, sonic direction, and key milestones from the archive.',
+          ctaText: 'Full Artist Profile',
+          ctaUrl: '/about',
+          showCtaButton: true,
+          showAchievements: true,
+        },
+        settings: {},
+        createdAt: now,
+        updatedAt: now,
+      },
+      {
         id: 'sec-videos',
         name: 'Official YouTube Sessions',
         type: 'MUSIC_VIDEOS',
-        position: 5,
+        position: 6,
         isVisible: true,
         content: {
           kicker: 'VISUAL ARCHIVE',
@@ -183,7 +203,7 @@ export async function PUT(request) {
         id: 'sec-contact',
         name: 'Direct Management & Booking Inquiry',
         type: 'CONTACT_SECTION',
-        position: 6,
+        position: 7,
         isVisible: true,
         content: {
           kicker: 'CORRESPONDENCE',

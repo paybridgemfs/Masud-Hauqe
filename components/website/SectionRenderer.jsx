@@ -20,6 +20,8 @@ import {
   Image as ImageIcon,
   Share2,
   Headphones,
+  Award,
+  Briefcase,
 } from 'lucide-react';
 import MusicCard from '@/components/music/MusicCard.jsx';
 import AlbumCard from '@/components/music/AlbumCard.jsx';
@@ -704,6 +706,147 @@ export default function SectionRenderer({
                 </div>
               </div>
             </motion.div>
+          </div>
+        </section>
+      );
+    }
+
+    case 'ARTIST_CAREER': {
+      const careerText = (content.careerBody || artist?.careerInfo || '').trim();
+      const musicalBgText = (content.musicalBgBody || artist?.musicalBg || '').trim();
+      const showAchievements = content.showAchievements !== false;
+      const achievements = Array.isArray(artist?.achievements) ? artist.achievements : [];
+      const hasAnyCareerContent =
+        Boolean(careerText) ||
+        Boolean(musicalBgText) ||
+        (showAchievements && achievements.length > 0);
+
+      const ctaText = content.ctaText !== undefined ? content.ctaText : 'Explore Full Monograph';
+      const ctaUrl = content.ctaUrl || '/about';
+      const showCta = content.showCtaButton !== false && Boolean(ctaText);
+
+      return (
+        <section className="border-b border-[#222226] py-16 sm:py-20 bg-[#0B0B0E]">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
+            <motion.div
+              {...fadeUp}
+              className="flex flex-col sm:flex-row sm:items-end justify-between gap-4"
+            >
+              <div>
+                <p className="text-xs font-semibold tracking-[0.2em] text-[#C8A464] mb-2">
+                  {content.kicker || 'CAREER & MILESTONES'}
+                </p>
+                <h2 className="text-2xl sm:text-3xl font-bold text-[#F4F1EA]">
+                  {content.heading || section.name || 'Career Overview & Musical Journey'}
+                </h2>
+                {content.subheading && (
+                  <p className="text-sm text-[#9A9AA2] mt-1.5 max-w-2xl">{content.subheading}</p>
+                )}
+              </div>
+
+              {showCta && (
+                <Link
+                  href={ctaUrl}
+                  className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#C8A464] hover:text-[#D4B475] transition-colors whitespace-nowrap shrink-0 group"
+                >
+                  <span>{ctaText}</span>
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </Link>
+              )}
+            </motion.div>
+
+            {hasAnyCareerContent ? (
+              <div className="space-y-8">
+                {(careerText || musicalBgText) && (
+                  <div
+                    className={`grid grid-cols-1 ${
+                      careerText && musicalBgText ? 'lg:grid-cols-2' : 'lg:grid-cols-1'
+                    } gap-6`}
+                  >
+                    {careerText && (
+                      <motion.div
+                        {...fadeUp}
+                        className="bg-[#111115] border border-[#222228] hover:border-[#C8A464]/40 rounded-xl p-6 sm:p-8 space-y-3 shadow-lg transition-colors"
+                      >
+                        <div className="flex items-center gap-2 text-xs font-semibold tracking-[0.2em] text-[#C8A464]">
+                          <Briefcase className="w-4 h-4" />
+                          <span>CAREER INFORMATION</span>
+                        </div>
+                        <p className="text-sm sm:text-base text-[#E4E4E7] leading-relaxed whitespace-pre-line">
+                          {careerText}
+                        </p>
+                      </motion.div>
+                    )}
+
+                    {musicalBgText && (
+                      <motion.div
+                        {...fadeUp}
+                        className="bg-[#111115] border border-[#222228] hover:border-[#C8A464]/40 rounded-xl p-6 sm:p-8 space-y-3 shadow-lg transition-colors"
+                      >
+                        <div className="flex items-center gap-2 text-xs font-semibold tracking-[0.2em] text-[#C8A464]">
+                          <Music className="w-4 h-4" />
+                          <span>MUSICAL BACKGROUND</span>
+                        </div>
+                        <p className="text-sm sm:text-base text-[#E4E4E7] leading-relaxed whitespace-pre-line">
+                          {musicalBgText}
+                        </p>
+                      </motion.div>
+                    )}
+                  </div>
+                )}
+
+                {showAchievements && achievements.length > 0 && (
+                  <div className="space-y-4">
+                    <p className="text-xs font-semibold tracking-[0.2em] text-[#C8A464] uppercase">
+                      Key Career Achievements & Recognition
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                      {achievements.map((ach, idx) => (
+                        <motion.div
+                          key={ach.id || idx}
+                          initial={{ opacity: 0, y: 18 }}
+                          whileInView={{ opacity: 1, y: 0 }}
+                          viewport={{ once: true, margin: '-20px' }}
+                          whileHover={{ y: -4 }}
+                          transition={{
+                            duration: 0.42,
+                            delay: Math.min(idx * 0.06, 0.3),
+                            ease: [0.22, 1, 0.36, 1],
+                          }}
+                          className="bg-[#111115] border border-[#222228] hover:border-[#C8A464]/50 rounded-xl p-5 sm:p-6 space-y-2.5 shadow-md transition-colors"
+                        >
+                          <div className="flex items-center justify-between text-xs text-[#C8A464] tabular-nums">
+                            <Award className="w-4 h-4" />
+                            {ach.year && <span className="font-mono font-semibold">{ach.year}</span>}
+                          </div>
+                          {ach.title && (
+                            <h3 className="text-base font-bold text-[#F4F1EA]">{ach.title}</h3>
+                          )}
+                          {ach.description && (
+                            <p className="text-xs sm:text-sm text-[#9A9AA2] leading-relaxed">
+                              {ach.description}
+                            </p>
+                          )}
+                        </motion.div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="bg-[#111115] border border-[#222228] rounded-xl p-8 sm:p-12 text-center space-y-3">
+                <div className="w-12 h-12 rounded-full bg-[#18181F] border border-[#2E2E38] mx-auto flex items-center justify-center text-[#C8A464]">
+                  <Award className="w-5 h-5" />
+                </div>
+                <p className="text-sm sm:text-base text-[#F4F1EA] font-semibold">
+                  {content.emptyHeading || 'Career & Milestones Not Added Yet'}
+                </p>
+                <p className="text-xs sm:text-sm text-[#8E8E96] max-w-md mx-auto">
+                  {content.emptyText ||
+                    'Add Career Information, Musical Background, or Achievements in Artist Management (or customize this section) to display them here.'}
+                </p>
+              </div>
+            )}
           </div>
         </section>
       );
