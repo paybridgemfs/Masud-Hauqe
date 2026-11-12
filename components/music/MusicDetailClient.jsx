@@ -28,7 +28,10 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { usePlayer } from '@/components/player/PlayerContext.jsx';
-import { getPublicDownloadUrl } from '@/lib/storage/audio-delivery.js';
+import {
+  getPublicDownloadUrl,
+  getTrackDownloadFilename,
+} from '@/lib/storage/audio-delivery.js';
 import ShimmerImage from '@/components/ui/ShimmerImage.jsx';
 import StoryCardModal from '@/components/music/StoryCardModal.jsx';
 import MiniEqualizerBars from '@/components/ui/MiniEqualizerBars.jsx';
@@ -91,6 +94,7 @@ export default function MusicDetailClient({ track, relatedTracks = [], shareUrl:
   const isCurrent = currentTrack?.id === track.id;
   const activePlaying = isCurrent && isPlaying;
   const downloadUrl = getPublicDownloadUrl(track);
+  const downloadFilename = getTrackDownloadFilename(track);
 
   const publishedDate = track.createdAt
     ? new Date(track.createdAt).toLocaleDateString('en-US', {
@@ -390,7 +394,7 @@ export default function MusicDetailClient({ track, relatedTracks = [], shareUrl:
             {downloadUrl && (
               <a
                 href={downloadUrl}
-                download
+                download={downloadFilename}
                 className="px-5 py-3 rounded border border-[#2E2E38] text-[#F4F1EA] hover:border-[#C8A464] hover:text-[#C8A464] text-sm font-semibold flex items-center gap-2 transition-colors whitespace-nowrap"
               >
                 <Download className="w-4 h-4" />

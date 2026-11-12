@@ -21,7 +21,10 @@ import {
   Maximize2,
 } from 'lucide-react';
 import { usePlayer } from './PlayerContext.jsx';
-import { getPublicDownloadUrl } from '@/lib/storage/audio-delivery.js';
+import {
+  getPublicDownloadUrl,
+  getTrackDownloadFilename,
+} from '@/lib/storage/audio-delivery.js';
 import ShimmerImage from '@/components/ui/ShimmerImage.jsx';
 import FullScreenPlayer from './FullScreenPlayer.jsx';
 
@@ -211,6 +214,7 @@ export default function GlobalMusicPlayer() {
   }
 
   const downloadUrl = getPublicDownloadUrl(currentTrack);
+  const downloadFilename = getTrackDownloadFilename(currentTrack);
   const fallbackTrackDur = parseDurationToSeconds(currentTrack.duration);
   const safeMaxDuration = duration > 0 ? duration : fallbackTrackDur > 0 ? fallbackTrackDur : 100;
   const displayTime = isScrubbing ? scrubValue : Math.min(currentTime, safeMaxDuration);
@@ -449,7 +453,7 @@ export default function GlobalMusicPlayer() {
               {downloadUrl && (
                 <a
                   href={downloadUrl}
-                  download
+                  download={downloadFilename}
                   aria-label={`Download ${currentTrack.title} MP3`}
                   className="p-2 text-[#A1A1AA] hover:text-[#C8A464] transition-colors"
                   title="Download Authorized MP3"
@@ -587,7 +591,7 @@ export default function GlobalMusicPlayer() {
               {downloadUrl && (
                 <a
                   href={downloadUrl}
-                  download
+                  download={downloadFilename}
                   aria-label={`Download ${currentTrack.title} MP3`}
                   className="p-1.5 text-[#A1A1AA] hover:text-[#C8A464] transition-colors"
                 >
@@ -656,6 +660,7 @@ export default function GlobalMusicPlayer() {
             playTrack={playTrack}
             formatSeconds={formatSeconds}
             downloadUrl={downloadUrl}
+            downloadFilename={downloadFilename}
           />
         )}
       </AnimatePresence>

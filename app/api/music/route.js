@@ -1,7 +1,14 @@
 import { NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
 import { requireAdminSession } from '@/lib/auth.js';
-import { getDbState, updateDbState, appendAuditRecord, createUniqueSlug, cuid } from '@/lib/db.js';
+import {
+  getDbState,
+  updateDbState,
+  appendAuditRecord,
+  createUniqueSlug,
+  cuid,
+  sortAlbumTracks,
+} from '@/lib/db.js';
 import { musicSchema } from '@/lib/validation.js';
 import { sanitizeFilename, verifyMp3Signature } from '@/lib/security.js';
 import { getEnvConfig } from '@/lib/env.js';
@@ -55,6 +62,8 @@ export async function GET(request) {
 
   if (sort === 'popular') {
     items.sort((a, b) => (b.playCount || 0) - (a.playCount || 0));
+  } else if (albumId) {
+    items = sortAlbumTracks(items);
   } else {
     items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
@@ -212,12 +221,24 @@ export async function POST(request) {
     await updateDbState(async (state) => {
       const slug = await createUniqueSlug(state.music, parsed.data.title);
       const artistId = state.artists[0]?.id || 'masud-hauqe';
+      const targetAlbumId = parsed.data.albumId || null;
+      let nextTrackOrder = 0;
+      if (targetAlbumId) {
+        const albumTracks = (state.music || []).filter((m) => m.albumId === targetAlbumId);
+        const maxOrder = albumTracks.reduce(
+          (max, m) => Math.max(max, Number(m.trackOrder) || 0),
+          albumTracks.length
+        );
+        nextTrackOrder = maxOrder + 1;
+      }
+
       createdRecord = {
         id: cuid(),
         title: parsed.data.title,
         slug,
         artistId,
-        albumId: parsed.data.albumId || null,
+        albumId: targetAlbumId,
+        trackOrder: nextTrackOrder,
         thumbnail: parsed.data.thumbnail || '',
         thumbnailFileId: parsed.data.thumbnailFileId || '',
         youtubeUrl: parsed.data.youtubeUrl || '',

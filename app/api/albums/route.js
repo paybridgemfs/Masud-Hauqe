@@ -1,7 +1,14 @@
 import { NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
 import { requireAdminSession } from '@/lib/auth.js';
-import { getDbState, updateDbState, appendAuditRecord, createUniqueSlug, cuid } from '@/lib/db.js';
+import {
+  getDbState,
+  updateDbState,
+  appendAuditRecord,
+  createUniqueSlug,
+  cuid,
+  sortAlbumTracks,
+} from '@/lib/db.js';
 import { albumSchema } from '@/lib/validation.js';
 import { deleteFileFromGoogleDrive } from '@/lib/google-drive.js';
 
@@ -14,8 +21,10 @@ export async function GET(request) {
   const albums = (db.albums || [])
     .filter((a) => (scope === 'admin' ? true : a.isPublished))
     .map((album) => {
-      const tracks = (db.music || []).filter(
-        (m) => m.albumId === album.id && (scope === 'admin' ? true : m.isPublished)
+      const tracks = sortAlbumTracks(
+        (db.music || []).filter(
+          (m) => m.albumId === album.id && (scope === 'admin' ? true : m.isPublished)
+        )
       );
       return { ...album, artist, tracks, trackCount: tracks.length };
     });
@@ -86,19 +95,51 @@ export async function PUT(request) {
   }
 
   const body = await request.json();
-  const { id, title, description, coverImage, coverImageFileId, releaseDate, isPublished } = body;
+  const {
+    id,
+    title,
+    description,
+    coverImage,
+    coverImageFileId,
+    releaseDate,
+    isPublished,
+    orderedTrackIds,
+  } = body;
   let updated = null;
+  let updatedTracks = null;
   let oldCoverFileIdToDelete = null;
 
   await updateDbState(async (state) => {
     const target = state.albums.find((a) => a.id === id);
     if (!target) return;
+
+    // Support reordering tracks inside this Release via Drag & Drop
+    if (Array.isArray(orderedTrackIds)) {
+      const nowIso = new Date().toISOString();
+      orderedTrackIds.forEach((trackId, index) => {
+        const track = (state.music || []).find(
+          (m) => m.id === trackId && m.albumId === target.id
+        );
+        if (track) {
+          track.trackOrder = index + 1;
+          track.updatedAt = nowIso;
+        }
+      });
+    }
+
     if (typeof title === 'string' && title.trim()) {
       target.title = title.trim();
       target.slug = await createUniqueSlug(state.albums, target.title, target.id);
     }
     if (typeof description === 'string') target.description = description.trim();
-    if (typeof coverImage === 'string') target.coverImage = coverImage.trim();
+    if (typeof coverImage === 'string') {
+      target.coverImage = coverImage.trim();
+      for (const track of state.music || []) {
+        if (track.albumId === target.id && !track.thumbnailFileId) {
+          track.thumbnail = target.coverImage;
+        }
+      }
+    }
     if (typeof coverImageFileId === 'string') {
       const nextId = coverImageFileId.trim();
       if (target.coverImageFileId && target.coverImageFileId !== nextId) {
@@ -110,6 +151,9 @@ export async function PUT(request) {
     if (typeof isPublished === 'boolean') target.isPublished = isPublished;
     target.updatedAt = new Date().toISOString();
     updated = { ...target };
+    updatedTracks = sortAlbumTracks(
+      (state.music || []).filter((m) => m.albumId === target.id)
+    );
     appendAuditRecord(state, {
       adminId: admin.id,
       action: 'ALBUM_UPDATED',
@@ -130,8 +174,9 @@ export async function PUT(request) {
   revalidatePath('/');
   revalidatePath('/releases');
   revalidatePath(`/releases/${updated.slug}`);
+  revalidatePath('/music');
 
-  return NextResponse.json({ ok: true, album: updated });
+  return NextResponse.json({ ok: true, album: updated, tracks: updatedTracks });
 }
 
 export async function DELETE(request) {

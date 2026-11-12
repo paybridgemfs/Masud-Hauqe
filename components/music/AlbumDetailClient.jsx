@@ -30,7 +30,12 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { usePlayer } from '@/components/player/PlayerContext.jsx';
-import { getPublicDownloadUrl } from '@/lib/storage/audio-delivery.js';
+import {
+  getPublicDownloadUrl,
+  getTrackDownloadFilename,
+  getReleaseZipDownloadUrl,
+  getReleaseZipFilename,
+} from '@/lib/storage/audio-delivery.js';
 import ShimmerImage from '@/components/ui/ShimmerImage.jsx';
 import StoryCardModal from '@/components/music/StoryCardModal.jsx';
 import MiniEqualizerBars from '@/components/ui/MiniEqualizerBars.jsx';
@@ -84,6 +89,8 @@ export default function AlbumDetailClient({ album, shareUrl: initialShareUrl = '
   const [showStoryModal, setShowStoryModal] = useState(false);
   const headerRef = useRef(null);
   const shareUrl = initialShareUrl || `/releases/${album.slug}`;
+  const releaseZipUrl = getReleaseZipDownloadUrl(album);
+  const releaseZipFilename = getReleaseZipFilename(album);
 
   // Ambient Cursor Spotlight & Cover Parallax Depth
   const mouseX = useMotionValue(420);
@@ -479,7 +486,7 @@ export default function AlbumDetailClient({ album, shareUrl: initialShareUrl = '
           </div>
 
           {tracks.length > 0 && (
-            <div className="pt-4 border-t border-[#1E1E24]">
+            <div className="pt-4 border-t border-[#1E1E24] flex flex-wrap items-center gap-3 sm:gap-4">
               <button
                 type="button"
                 onClick={() => playAlbum(tracks, 0)}
@@ -488,6 +495,18 @@ export default function AlbumDetailClient({ album, shareUrl: initialShareUrl = '
                 <Play className="w-4 h-4 fill-current" />
                 <span>Play Complete Release</span>
               </button>
+
+              {releaseZipUrl && (
+                <a
+                  href={releaseZipUrl}
+                  download={releaseZipFilename}
+                  aria-label={`Download full release ${album.title} as ZIP`}
+                  className="px-5 py-3 rounded border border-[#2E2E38] bg-[#14141A] text-[#F4F1EA] hover:border-[#C8A464] hover:text-[#C8A464] text-sm font-semibold flex items-center gap-2 transition-all hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap"
+                >
+                  <Download className="w-4 h-4 text-[#C8A464]" />
+                  <span>Download Full Release (.ZIP)</span>
+                </a>
+              )}
             </div>
           )}
         </div>
@@ -501,7 +520,19 @@ export default function AlbumDetailClient({ album, shareUrl: initialShareUrl = '
         transition={{ duration: 0.4 }}
         className="space-y-4"
       >
-        <h2 className="text-xl font-bold text-[#F4F1EA]">Release Tracklist</h2>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <h2 className="text-xl font-bold text-[#F4F1EA]">Release Tracklist</h2>
+          {releaseZipUrl && (
+            <a
+              href={releaseZipUrl}
+              download={releaseZipFilename}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#C8A464] hover:text-[#D4B475] transition-colors self-start sm:self-auto"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Download All {tracks.length} Tracks (.ZIP)</span>
+            </a>
+          )}
+        </div>
 
         {tracks.length > 0 ? (
           <div className="bg-[#111115] border border-[#222228] rounded-lg divide-y divide-[#1E1E24] overflow-hidden">
@@ -509,6 +540,7 @@ export default function AlbumDetailClient({ album, shareUrl: initialShareUrl = '
               const active = currentTrack?.id === track.id;
               const activePlaying = active && isPlaying;
               const downloadUrl = getPublicDownloadUrl(track);
+              const downloadFilename = getTrackDownloadFilename(track);
 
               return (
                 <motion.div
@@ -569,7 +601,7 @@ export default function AlbumDetailClient({ album, shareUrl: initialShareUrl = '
                     {downloadUrl && (
                       <a
                         href={downloadUrl}
-                        download
+                        download={downloadFilename}
                         aria-label={`Download ${track.title} MP3`}
                         className="p-2 text-[#9A9AA2] hover:text-[#C8A464] transition-colors"
                       >

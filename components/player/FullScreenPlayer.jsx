@@ -274,6 +274,7 @@ export default function FullScreenPlayer({
   playTrack,
   formatSeconds,
   downloadUrl,
+  downloadFilename,
 }) {
   const [showQueue, setShowQueue] = useState(false);
   const [slideDirection, setSlideDirection] = useState(0);
@@ -632,7 +633,7 @@ export default function FullScreenPlayer({
                 {downloadUrl && (
                   <a
                     href={downloadUrl}
-                    download
+                    download={downloadFilename || `${currentTrack.title || 'track'}.mp3`}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#18181E] hover:bg-[#25252E] text-[#D4D4D8] hover:text-[#C8A464] border border-white/10 text-xs font-medium transition-colors"
                     aria-label={`Download ${currentTrack.title} MP3`}
                   >

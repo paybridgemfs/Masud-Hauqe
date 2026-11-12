@@ -2,7 +2,10 @@ import { NextResponse } from 'next/server';
 import { getDbState, updateDbState } from '@/lib/db.js';
 import { requireAdminSession } from '@/lib/auth.js';
 import { getAuthenticatedDriveClient } from '@/lib/google-drive.js';
-import { getGoogleDriveDirectDownloadUrl } from '@/lib/storage/audio-delivery.js';
+import {
+  getGoogleDriveDirectDownloadUrl,
+  getTrackDownloadFilename,
+} from '@/lib/storage/audio-delivery.js';
 
 const MAX_CACHE_ENTRIES = 8;
 const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
@@ -125,8 +128,16 @@ export async function GET(request, { params }) {
     headers.set('Cache-Control', 'public, max-age=3600');
 
     if (isDownload) {
-      const safeName = (track.audioFileName || `${track.slug}.mp3`).replace(/[^a-zA-Z0-9._-]/g, '_');
-      headers.set('Content-Disposition', `attachment; filename="${safeName}"`);
+      const downloadFileName = getTrackDownloadFilename(track);
+      const asciiFallback = downloadFileName
+        .replace(/[^\x20-\x7E]/g, '_')
+        .replace(/["\\]/g, '')
+        .trim() || `${track.slug || 'track'}.mp3`;
+      const encodedUtf8 = encodeURIComponent(downloadFileName);
+      headers.set(
+        'Content-Disposition',
+        `attachment; filename="${asciiFallback}"; filename*=UTF-8''${encodedUtf8}`
+      );
       headers.set('Content-Length', String(totalLength));
       return new NextResponse(fullBuffer, { status: 200, headers });
     }

@@ -5,7 +5,10 @@ import Link from 'next/link';
 import { motion } from 'motion/react';
 import { Play, Pause, Download, Disc3 } from 'lucide-react';
 import { usePlayer } from '@/components/player/PlayerContext.jsx';
-import { getPublicDownloadUrl } from '@/lib/storage/audio-delivery.js';
+import {
+  getPublicDownloadUrl,
+  getTrackDownloadFilename,
+} from '@/lib/storage/audio-delivery.js';
 import ShimmerImage from '@/components/ui/ShimmerImage.jsx';
 import MiniEqualizerBars from '@/components/ui/MiniEqualizerBars.jsx';
 
@@ -14,6 +17,7 @@ export default function MusicCard({ track, queue = [], index = 0 }) {
   const isCurrent = currentTrack?.id === track.id;
   const activePlaying = isCurrent && isPlaying;
   const downloadUrl = getPublicDownloadUrl(track);
+  const downloadFilename = getTrackDownloadFilename(track);
   const staggerDelay = Math.min((Number(index) % 8) * 0.06, 0.42);
 
   return (
@@ -139,7 +143,7 @@ export default function MusicCard({ track, queue = [], index = 0 }) {
           {downloadUrl ? (
             <a
               href={downloadUrl}
-              download
+              download={downloadFilename}
               aria-label={`Download ${track.title} MP3`}
               className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-medium text-[#C8A464] hover:text-[#D4B475] transition-colors whitespace-nowrap shrink-0"
             >

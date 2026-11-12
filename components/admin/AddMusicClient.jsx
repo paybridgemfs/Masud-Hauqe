@@ -25,12 +25,10 @@ function formatBytes(bytes) {
 
 export default function AddMusicClient({
   defaultArtistName = 'Masud Hauqe',
-  initialAlbums = [],
   googleConnected = false,
   youtubeConfigured = false,
 }) {
   const router = useRouter();
-  const [albums, setAlbums] = useState(initialAlbums);
   const [youtubeUrl, setYoutubeUrl] = useState('');
   const [fetchingYt, setFetchingYt] = useState(false);
   const [ytStatus, setYtStatus] = useState(null);
@@ -42,11 +40,6 @@ export default function AddMusicClient({
   const [duration, setDuration] = useState('0:00');
   const [youtubeVideoId, setYoutubeVideoId] = useState('');
   const [channelTitle, setChannelTitle] = useState('');
-
-  const [albumId, setAlbumId] = useState('');
-  const [showNewAlbumModal, setShowNewAlbumModal] = useState(false);
-  const [newAlbumTitle, setNewAlbumTitle] = useState('');
-  const [creatingAlbum, setCreatingAlbum] = useState(false);
 
   const [isPublished, setIsPublished] = useState(true);
   const [downloadEnabled, setDownloadEnabled] = useState(true);
@@ -107,6 +100,37 @@ export default function AddMusicClient({
     }
   }
 
+  function detectAudioDuration(file) {
+    return new Promise((resolve) => {
+      try {
+        const objectUrl = URL.createObjectURL(file);
+        const audio = new Audio();
+        audio.preload = 'metadata';
+        const cleanup = () => {
+          URL.revokeObjectURL(objectUrl);
+        };
+        audio.onloadedmetadata = () => {
+          const secs = Math.round(audio.duration || 0);
+          cleanup();
+          if (secs > 0 && Number.isFinite(secs)) {
+            const mins = Math.floor(secs / 60);
+            const rem = secs % 60;
+            resolve(`${mins}:${String(rem).padStart(2, '0')}`);
+          } else {
+            resolve('');
+          }
+        };
+        audio.onerror = () => {
+          cleanup();
+          resolve('');
+        };
+        audio.src = objectUrl;
+      } catch {
+        resolve('');
+      }
+    });
+  }
+
   async function validateAndSelectMp3(file) {
     setFileError('');
     if (!file) return;
@@ -143,27 +167,17 @@ export default function AddMusicClient({
 
     setMp3File(file);
     setUploadLifecycle('pending');
-  }
 
-  async function handleQuickCreateAlbum(e) {
-    e.preventDefault();
-    if (!newAlbumTitle.trim()) return;
-    setCreatingAlbum(true);
-    try {
-      const res = await fetch('/api/albums', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: newAlbumTitle.trim(), isPublished: true }),
-      });
-      const data = await res.json();
-      if (res.ok && data.ok && data.album) {
-        setAlbums((prev) => [data.album, ...prev]);
-        setAlbumId(data.album.id);
-        setNewAlbumTitle('');
-        setShowNewAlbumModal(false);
-      }
-    } finally {
-      setCreatingAlbum(false);
+    // Auto-fill song title from filename if title is currently blank
+    if (!title.trim()) {
+      const cleanName = file.name.replace(/\.mp3$/i, '').trim();
+      if (cleanName) setTitle(cleanName);
+    }
+
+    // Auto-detect duration if still 0:00
+    if (!duration || duration === '0:00') {
+      const detected = await detectAudioDuration(file);
+      if (detected) setDuration(detected);
     }
   }
 
@@ -198,7 +212,7 @@ export default function AddMusicClient({
     formData.append('mp3File', mp3File);
     formData.append('title', title.trim());
     formData.append('artistName', artistName.trim() || defaultArtistName);
-    formData.append('albumId', albumId || '');
+    formData.append('albumId', '');
     formData.append('thumbnail', thumbnail.trim());
     formData.append('thumbnailFileId', thumbnailFileId.trim());
     formData.append('youtubeUrl', youtubeUrl.trim());
@@ -231,7 +245,7 @@ export default function AddMusicClient({
           setUploadLifecycle(isPublished ? 'published' : 'uploaded');
           setSubmitStatus({
             type: 'success',
-            text: `Track "${res.music.title}" successfully uploaded to Google Drive ("Musics" folder) and saved in PostgreSQL.`,
+            text: `Single track "${res.music.title}" successfully uploaded to Google Drive ("Musics" folder) and saved in PostgreSQL.`,
           });
           router.refresh();
         } else {
@@ -307,9 +321,9 @@ export default function AddMusicClient({
       <section className="bg-[#111115] border border-[#222228] rounded-lg p-6 space-y-4">
         <div className="space-y-1">
           <p className="text-xs font-semibold tracking-[0.18em] text-[#C8A464]">STEP 1</p>
-          <h2 className="text-lg font-bold text-[#F4F1EA]">Fetch YouTube Video Information</h2>
+          <h2 className="text-lg font-bold text-[#F4F1EA]">Fetch YouTube Video Information (Optional)</h2>
           <p className="text-xs text-[#8E8E96]">
-            Paste an official YouTube video URL to automatically retrieve the song title, thumbnail, and duration via YouTube Data API v3.
+            Paste an official YouTube video URL to automatically retrieve the song title, thumbnail, and duration via YouTube Data API v3, or fill in the single track details below directly.
           </p>
         </div>
 
@@ -353,15 +367,15 @@ export default function AddMusicClient({
 
       {/* Main Upload & Metadata Form */}
       <form onSubmit={handleSubmit} className="space-y-8">
-        {/* Step 2: Automatic Metadata Preview & Editable Fields */}
+        {/* Step 2: Single Track Metadata Preview & Editable Fields */}
         <section className="bg-[#111115] border border-[#222228] rounded-lg p-6 space-y-5">
           <div className="space-y-1">
             <p className="text-xs font-semibold tracking-[0.18em] text-[#C8A464]">STEP 2</p>
             <h2 className="text-lg font-bold text-[#F4F1EA]">
-              Automatic Metadata Preview & Track Details
+              Single Track Metadata & Artwork
             </h2>
             <p className="text-xs text-[#8E8E96]">
-              Review or customize the populated track metadata before uploading your MP3 master.
+              Review or customize the single track metadata before uploading your MP3 master. (For multi-track Releases/Albums, use the &ldquo;Batch upload&rdquo; button in Release Management.)
             </p>
           </div>
 
@@ -554,116 +568,56 @@ export default function AddMusicClient({
           )}
         </section>
 
-        {/* Step 4 & Step 5: Release Selection & Publishing Options */}
-        <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-[#111115] border border-[#222228] rounded-lg p-6 space-y-4">
-            <p className="text-xs font-semibold tracking-[0.18em] text-[#C8A464]">STEP 4</p>
-            <h2 className="text-lg font-bold text-[#F4F1EA]">Release Assignment</h2>
-            <div className="space-y-3">
-              <select
-                aria-label="Select release"
-                value={albumId}
-                onChange={(e) => setAlbumId(e.target.value)}
-                className="w-full bg-[#09090B] border border-[#27272E] rounded px-3.5 py-2.5 text-sm text-[#F4F1EA] focus:outline-none focus:border-[#C8A464]"
-              >
-                <option value="">Single Track (No Release)</option>
-                {albums.map((alb) => (
-                  <option key={alb.id} value={alb.id}>
-                    {alb.title}
-                  </option>
-                ))}
-              </select>
+        {/* Step 4: Publishing & Download Controls */}
+        <section className="bg-[#111115] border border-[#222228] rounded-lg p-6 space-y-4">
+          <p className="text-xs font-semibold tracking-[0.18em] text-[#C8A464]">STEP 4</p>
+          <h2 className="text-lg font-bold text-[#F4F1EA]">Publishing & Download Controls</h2>
 
-              <button
-                type="button"
-                onClick={() => setShowNewAlbumModal(!showNewAlbumModal)}
-                className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#C8A464] hover:underline"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Create New Release Inline</span>
-              </button>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+            <label className="flex items-center justify-between p-3.5 rounded bg-[#09090B] border border-[#27272E] cursor-pointer">
+              <div>
+                <p className="font-semibold text-[#F4F1EA]">Publish Immediately</p>
+                <p className="text-xs text-[#8E8E96]">
+                  Uncheck to save as Draft in PostgreSQL
+                </p>
+              </div>
+              <input
+                type="checkbox"
+                checked={isPublished}
+                onChange={(e) => setIsPublished(e.target.checked)}
+                className="w-4 h-4 accent-[#C8A464]"
+              />
+            </label>
 
-              {showNewAlbumModal && (
-                <div className="p-3.5 rounded bg-[#09090B] border border-[#27272E] space-y-2.5">
-                  <input
-                    type="text"
-                    value={newAlbumTitle}
-                    onChange={(e) => setNewAlbumTitle(e.target.value)}
-                    placeholder="New Release Title"
-                    className="w-full bg-[#111115] border border-[#27272E] rounded px-3 py-1.5 text-xs text-[#F4F1EA]"
-                  />
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={handleQuickCreateAlbum}
-                      disabled={creatingAlbum}
-                      className="px-3 py-1.5 rounded bg-[#C8A464] text-[#09090B] text-xs font-semibold"
-                    >
-                      {creatingAlbum ? 'Creating...' : 'Save Release'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setShowNewAlbumModal(false)}
-                      className="px-3 py-1.5 rounded border border-[#2E2E38] text-xs text-[#9A9AA2]"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
+            <label className="flex items-center justify-between p-3.5 rounded bg-[#09090B] border border-[#27272E] cursor-pointer">
+              <div>
+                <p className="font-semibold text-[#F4F1EA]">Enable Public MP3 Download</p>
+                <p className="text-xs text-[#8E8E96]">
+                  Controls whether visitors see the MP3 download button
+                </p>
+              </div>
+              <input
+                type="checkbox"
+                checked={downloadEnabled}
+                onChange={(e) => setDownloadEnabled(e.target.checked)}
+                className="w-4 h-4 accent-[#C8A464]"
+              />
+            </label>
 
-          <div className="bg-[#111115] border border-[#222228] rounded-lg p-6 space-y-4">
-            <p className="text-xs font-semibold tracking-[0.18em] text-[#C8A464]">STEP 5</p>
-            <h2 className="text-lg font-bold text-[#F4F1EA]">Publishing & Download Controls</h2>
-
-            <div className="space-y-3 text-sm">
-              <label className="flex items-center justify-between p-3 rounded bg-[#09090B] border border-[#27272E] cursor-pointer">
-                <div>
-                  <p className="font-semibold text-[#F4F1EA]">Publish Immediately</p>
-                  <p className="text-xs text-[#8E8E96]">
-                    Uncheck to save as Draft in PostgreSQL
-                  </p>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={isPublished}
-                  onChange={(e) => setIsPublished(e.target.checked)}
-                  className="w-4 h-4 accent-[#C8A464]"
-                />
-              </label>
-
-              <label className="flex items-center justify-between p-3 rounded bg-[#09090B] border border-[#27272E] cursor-pointer">
-                <div>
-                  <p className="font-semibold text-[#F4F1EA]">Enable Public MP3 Download</p>
-                  <p className="text-xs text-[#8E8E96]">
-                    Controls whether visitors see the MP3 download button
-                  </p>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={downloadEnabled}
-                  onChange={(e) => setDownloadEnabled(e.target.checked)}
-                  className="w-4 h-4 accent-[#C8A464]"
-                />
-              </label>
-
-              <label className="flex items-center justify-between p-3 rounded bg-[#09090B] border border-[#27272E] cursor-pointer">
-                <div>
-                  <p className="font-semibold text-[#F4F1EA]">Add also YouTube video</p>
-                  <p className="text-xs text-[#8E8E96]">
-                    When checked, this track&apos;s YouTube video will appear in Official Video Performances
-                  </p>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={includeYoutubeVideo}
-                  onChange={(e) => setIncludeYoutubeVideo(e.target.checked)}
-                  className="w-4 h-4 accent-[#C8A464]"
-                />
-              </label>
-            </div>
+            <label className="flex items-center justify-between p-3.5 rounded bg-[#09090B] border border-[#27272E] cursor-pointer">
+              <div>
+                <p className="font-semibold text-[#F4F1EA]">Add also YouTube video</p>
+                <p className="text-xs text-[#8E8E96]">
+                  Show this track&apos;s YouTube video in Official Video Performances
+                </p>
+              </div>
+              <input
+                type="checkbox"
+                checked={includeYoutubeVideo}
+                onChange={(e) => setIncludeYoutubeVideo(e.target.checked)}
+                className="w-4 h-4 accent-[#C8A464]"
+              />
+            </label>
           </div>
         </section>
 

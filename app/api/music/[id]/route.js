@@ -106,12 +106,22 @@ export async function DELETE(request, { params }) {
   }
   const { id } = await params;
   let removedTrack = null;
+  let isThumbnailShared = false;
 
   await updateDbState((state) => {
     const idx = state.music.findIndex((m) => m.id === id);
     if (idx !== -1) {
       removedTrack = state.music[idx];
       state.music.splice(idx, 1);
+      if (removedTrack.thumbnailFileId) {
+        const usedByAlbum = (state.albums || []).some(
+          (a) => a.coverImageFileId === removedTrack.thumbnailFileId
+        );
+        const usedByOtherTrack = (state.music || []).some(
+          (m) => m.thumbnailFileId === removedTrack.thumbnailFileId
+        );
+        isThumbnailShared = usedByAlbum || usedByOtherTrack;
+      }
       appendAuditRecord(state, {
         adminId: admin.id,
         action: 'MUSIC_DELETED',
@@ -133,7 +143,7 @@ export async function DELETE(request, { params }) {
   if (removedTrack.audioFileId) {
     await deleteFileFromGoogleDrive(removedTrack.audioFileId);
   }
-  if (removedTrack.thumbnailFileId) {
+  if (removedTrack.thumbnailFileId && !isThumbnailShared) {
     await deleteFileFromGoogleDrive(removedTrack.thumbnailFileId);
   }
 
