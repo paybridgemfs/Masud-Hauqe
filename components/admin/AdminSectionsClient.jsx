@@ -21,6 +21,7 @@ import DriveImageUpload from '@/components/admin/DriveImageUpload.jsx';
 
 const SECTION_TYPES = [
   { value: 'HERO', label: 'Editorial Hero Section', defaultUrl: '/music' },
+  { value: 'HIGHLIGHTS_GRID', label: '4-Column Highlights & Stats Grid', defaultUrl: '/music' },
   { value: 'FEATURED_MUSIC', label: 'Featured Music Repertoire', defaultUrl: '/music' },
   { value: 'LATEST_RELEASES', label: 'Latest Releases Grid', defaultUrl: '/music' },
   { value: 'POPULAR_MUSIC', label: 'Popular Tracks', defaultUrl: '/music' },
@@ -32,6 +33,50 @@ const SECTION_TYPES = [
   { value: 'SOCIAL_LINKS', label: 'Social Channels Bar', defaultUrl: '' },
   { value: 'CONTACT_SECTION', label: 'Management & Inquiry Section', defaultUrl: '/contact' },
 ];
+
+const DEFAULT_HERO_GRID_ITEMS = [
+  {
+    kicker: 'MASTER REPERTOIRE',
+    title: '',
+    subtitle: 'Authorized studio recordings & stream',
+    url: '/music',
+    autoHint: 'Auto: Total Published Tracks',
+  },
+  {
+    kicker: 'OFFICIAL DISCOGRAPHY',
+    title: '',
+    subtitle: 'Curated albums, EPs & collections',
+    url: '/releases',
+    autoHint: 'Auto: Total Official Releases',
+  },
+  {
+    kicker: 'VISUAL SESSIONS',
+    title: '',
+    subtitle: 'Official YouTube performances',
+    url: '/videos',
+    autoHint: 'Auto: Total Linked Videos',
+  },
+  {
+    kicker: 'STUDIO FIDELITY',
+    title: '320kbps MP3',
+    subtitle: 'High-resolution direct audio archive',
+    url: '/about',
+    autoHint: 'Default: 320kbps MP3',
+  },
+];
+
+function normalizeGridItemsForDraft(rawItems) {
+  const list = Array.isArray(rawItems) ? rawItems : [];
+  return DEFAULT_HERO_GRID_ITEMS.map((def, idx) => {
+    const item = list[idx] || {};
+    return {
+      kicker: item.kicker !== undefined ? item.kicker : def.kicker,
+      title: item.title !== undefined ? item.title : def.title,
+      subtitle: item.subtitle !== undefined ? item.subtitle : def.subtitle,
+      url: item.url !== undefined ? item.url : def.url,
+    };
+  });
+}
 
 export default function AdminSectionsClient({ initialSections = [] }) {
   const [sections, setSections] = useState(
@@ -69,6 +114,9 @@ export default function AdminSectionsClient({ initialSections = [] }) {
     // Images
     backgroundImage: '',
     backgroundImageFileId: '',
+    // 4-Column Highlights Grid below Hero
+    showHeroGrid: true,
+    heroGridItems: normalizeGridItemsForDraft([]),
   });
 
   const [statusMsg, setStatusMsg] = useState('');
@@ -97,6 +145,16 @@ export default function AdminSectionsClient({ initialSections = [] }) {
       emptyText: content.emptyText || '',
       backgroundImage: content.backgroundImage || '',
       backgroundImageFileId: content.backgroundImageFileId || '',
+      showHeroGrid: content.showHeroGrid !== false,
+      heroGridItems: normalizeGridItemsForDraft(content.heroGridItems),
+    });
+  }
+
+  function updateGridCardField(idx, field, value) {
+    setEditDraft((prev) => {
+      const nextItems = [...(prev.heroGridItems || [])];
+      nextItems[idx] = { ...(nextItems[idx] || {}), [field]: value };
+      return { ...prev, heroGridItems: nextItems };
     });
   }
 
@@ -124,6 +182,13 @@ export default function AdminSectionsClient({ initialSections = [] }) {
       emptyText: editDraft.emptyText.trim(),
       backgroundImage: editDraft.backgroundImage || '',
       backgroundImageFileId: editDraft.backgroundImageFileId || '',
+      showHeroGrid: Boolean(editDraft.showHeroGrid),
+      heroGridItems: (editDraft.heroGridItems || []).map((item) => ({
+        kicker: (item.kicker || '').trim(),
+        title: (item.title || '').trim(),
+        subtitle: (item.subtitle || '').trim(),
+        url: (item.url || '').trim(),
+      })),
     };
 
     const res = await fetch('/api/sections', {
@@ -376,6 +441,7 @@ export default function AdminSectionsClient({ initialSections = [] }) {
         {sections.map((sec, idx) => {
           const isEditing = editingId === sec.id;
           const isHero = sec.type === 'HERO';
+          const isHighlightsGrid = sec.type === 'HIGHLIGHTS_GRID';
           const isBio = sec.type === 'BIOGRAPHY_PREVIEW' || sec.type === 'ARTIST_INTRO';
           const isMusicOrAlbums =
             sec.type === 'FEATURED_MUSIC' ||
@@ -708,7 +774,143 @@ export default function AdminSectionsClient({ initialSections = [] }) {
                     </div>
                   )}
 
-                  {/* Category 4: Hero Banner / Background Image */}
+                  {/* Category 4: 4-Column Highlights Grid below Hero Banner */}
+                  {(isHero || isHighlightsGrid) && (
+                    <div className="pt-4 border-t border-[#1C1C24] space-y-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div>
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-[#C8A464] flex items-center gap-1.5">
+                            <Layers className="w-3.5 h-3.5" />
+                            <span>
+                              {isHero
+                                ? 'Hero Bottom 4-Grid Layout (Banner-এর নিচের ৪টি গ্রিড বক্স)'
+                                : '4-Column Highlights Grid Cards'}
+                            </span>
+                          </h4>
+                          <p className="text-[11px] text-[#8E8E96] mt-0.5">
+                            Customize the 4 highlight cards shown right below the Hero banner. Leave &quot;Main Title / Value&quot; blank to automatically display live database counts.
+                          </p>
+                        </div>
+
+                        <div className="flex items-center gap-3 shrink-0">
+                          {isHero && (
+                            <label className="inline-flex items-center gap-2 text-xs text-[#F4F1EA] bg-[#14141A] border border-[#27272E] px-3 py-1.5 rounded cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={editDraft.showHeroGrid}
+                                onChange={(e) =>
+                                  setEditDraft({ ...editDraft, showHeroGrid: e.target.checked })
+                                }
+                                className="accent-[#C8A464] w-4 h-4 rounded"
+                              />
+                              <span>Show 4-Grid Below Hero</span>
+                            </label>
+                          )}
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setEditDraft((prev) => ({
+                                ...prev,
+                                showHeroGrid: true,
+                                heroGridItems: normalizeGridItemsForDraft([]),
+                              }))
+                            }
+                            className="px-2.5 py-1.5 rounded border border-[#2E2E38] hover:border-[#C8A464] text-[11px] text-[#C8A464] transition-colors"
+                          >
+                            Reset 4 Cards to Default
+                          </button>
+                        </div>
+                      </div>
+
+                      {(!isHero || editDraft.showHeroGrid) && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                          {(editDraft.heroGridItems || []).map((card, cardIdx) => {
+                            const defHint = DEFAULT_HERO_GRID_ITEMS[cardIdx]?.autoHint || 'Auto';
+                            return (
+                              <div
+                                key={cardIdx}
+                                className="p-3.5 rounded-lg bg-[#131318] border border-[#24242E] space-y-2.5"
+                              >
+                                <div className="flex items-center justify-between border-b border-[#20202A] pb-1.5">
+                                  <span className="text-[11px] font-bold text-[#C8A464] uppercase tracking-wider">
+                                    Grid Card #{cardIdx + 1}
+                                  </span>
+                                  <span className="text-[10px] text-[#8E8E96] font-mono">
+                                    {defHint}
+                                  </span>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                                  <div>
+                                    <label className="block text-[10px] text-[#8E8E96] mb-1">
+                                      Small Top Label (Kicker)
+                                    </label>
+                                    <input
+                                      type="text"
+                                      value={card.kicker}
+                                      onChange={(e) =>
+                                        updateGridCardField(cardIdx, 'kicker', e.target.value)
+                                      }
+                                      placeholder={DEFAULT_HERO_GRID_ITEMS[cardIdx]?.kicker}
+                                      className="w-full bg-[#09090B] border border-[#27272E] rounded px-2.5 py-1.5 text-xs text-[#F4F1EA]"
+                                    />
+                                  </div>
+
+                                  <div>
+                                    <label className="block text-[10px] text-[#8E8E96] mb-1">
+                                      Main Value / Heading
+                                    </label>
+                                    <input
+                                      type="text"
+                                      value={card.title}
+                                      onChange={(e) =>
+                                        updateGridCardField(cardIdx, 'title', e.target.value)
+                                      }
+                                      placeholder={defHint}
+                                      className="w-full bg-[#09090B] border border-[#27272E] rounded px-2.5 py-1.5 text-xs text-[#F4F1EA]"
+                                    />
+                                  </div>
+
+                                  <div>
+                                    <label className="block text-[10px] text-[#8E8E96] mb-1">
+                                      Subtitle / Description
+                                    </label>
+                                    <input
+                                      type="text"
+                                      value={card.subtitle}
+                                      onChange={(e) =>
+                                        updateGridCardField(cardIdx, 'subtitle', e.target.value)
+                                      }
+                                      placeholder={DEFAULT_HERO_GRID_ITEMS[cardIdx]?.subtitle}
+                                      className="w-full bg-[#09090B] border border-[#27272E] rounded px-2.5 py-1.5 text-xs text-[#F4F1EA]"
+                                    />
+                                  </div>
+
+                                  <div>
+                                    <label className="block text-[10px] text-[#8E8E96] mb-1">
+                                      Target Link URL
+                                    </label>
+                                    <input
+                                      type="text"
+                                      value={card.url}
+                                      onChange={(e) =>
+                                        updateGridCardField(cardIdx, 'url', e.target.value)
+                                      }
+                                      placeholder={DEFAULT_HERO_GRID_ITEMS[cardIdx]?.url}
+                                      className="w-full bg-[#09090B] border border-[#27272E] rounded px-2.5 py-1.5 text-xs text-[#F4F1EA]"
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Category 5: Hero Banner / Background Image */}
                   {isHero && (
                     <div className="pt-4 border-t border-[#1C1C24] space-y-2">
                       <div className="flex items-center justify-between">

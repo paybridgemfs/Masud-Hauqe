@@ -12,6 +12,7 @@ import {
   PlayCircle,
   Image as ImageIcon,
   Share2,
+  Headphones,
 } from 'lucide-react';
 import MusicCard from '@/components/music/MusicCard.jsx';
 import AlbumCard from '@/components/music/AlbumCard.jsx';
@@ -25,6 +26,55 @@ const fadeUp = {
   viewport: { once: true, margin: '-40px' },
   transition: { duration: 0.45, ease: [0.22, 1, 0.36, 1] },
 };
+
+function buildFourGridItems(rawItems, { publishedMusic = [], publishedAlbums = [] }) {
+  const videoCount = publishedMusic.filter(
+    (m) => Boolean(m.youtubeVideoId && m.includeYoutubeVideo)
+  ).length;
+
+  const defaults = [
+    {
+      kicker: 'MASTER REPERTOIRE',
+      title: `${publishedMusic.length} ${publishedMusic.length === 1 ? 'Track' : 'Tracks'}`,
+      subtitle: 'Authorized studio recordings & stream',
+      url: '/music',
+      Icon: Music,
+    },
+    {
+      kicker: 'OFFICIAL DISCOGRAPHY',
+      title: `${publishedAlbums.length} ${publishedAlbums.length === 1 ? 'Release' : 'Releases'}`,
+      subtitle: 'Curated albums, EPs & collections',
+      url: '/releases',
+      Icon: Disc,
+    },
+    {
+      kicker: 'VISUAL SESSIONS',
+      title: `${videoCount} ${videoCount === 1 ? 'Video' : 'Videos'}`,
+      subtitle: 'Official YouTube performances',
+      url: '/videos',
+      Icon: PlayCircle,
+    },
+    {
+      kicker: 'STUDIO FIDELITY',
+      title: '320kbps MP3',
+      subtitle: 'High-resolution direct audio archive',
+      url: '/about',
+      Icon: Headphones,
+    },
+  ];
+
+  const customList = Array.isArray(rawItems) ? rawItems : [];
+  return defaults.map((def, idx) => {
+    const item = customList[idx] || {};
+    return {
+      kicker: item.kicker && item.kicker.trim() ? item.kicker.trim() : def.kicker,
+      title: item.title && item.title.trim() ? item.title.trim() : def.title,
+      subtitle: item.subtitle && item.subtitle.trim() ? item.subtitle.trim() : def.subtitle,
+      url: item.url !== undefined ? item.url.trim() : def.url,
+      Icon: def.Icon,
+    };
+  });
+}
 
 export default function SectionRenderer({
   section,
@@ -61,6 +111,11 @@ export default function SectionRenderer({
       const primaryCtaUrl = content.primaryCtaUrl || '/music';
       const secondaryCtaText = content.secondaryCtaText !== undefined ? content.secondaryCtaText : 'Artist Monograph';
       const secondaryCtaUrl = content.secondaryCtaUrl || '/about';
+      const showHeroGrid = content.showHeroGrid !== false;
+      const heroGridItems = buildFourGridItems(content.heroGridItems, {
+        publishedMusic,
+        publishedAlbums,
+      });
 
       return (
         <section className="relative border-b border-[#222226] overflow-hidden bg-[#09090B]">
@@ -185,6 +240,120 @@ export default function SectionRenderer({
                 </motion.div>
               )}
             </div>
+
+            {/* 4-Column Highlights Grid Below Hero Banner */}
+            {showHeroGrid && (
+              <motion.div
+                initial={{ opacity: 0, y: 18 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.18, ease: [0.22, 1, 0.36, 1] }}
+                className="mt-12 sm:mt-16 pt-8 sm:pt-10 border-t border-[#22222A]/90 grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5"
+              >
+                {heroGridItems.map((item, idx) => {
+                  const IconComponent = item.Icon;
+                  const cardInner = (
+                    <div className="h-full rounded-xl bg-[#111116]/85 backdrop-blur-md border border-[#24242E] hover:border-[#C8A464]/50 p-4 sm:p-5 transition-all duration-300 flex flex-col justify-between group shadow-lg">
+                      <div className="flex items-center justify-between gap-2 mb-3">
+                        <span className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.18em] text-[#C8A464] truncate">
+                          {item.kicker}
+                        </span>
+                        <div className="w-7 h-7 rounded-lg bg-[#181820] border border-[#2A2A36] flex items-center justify-center text-[#C8A464] shrink-0 group-hover:bg-[#C8A464] group-hover:text-[#09090B] transition-colors">
+                          <IconComponent className="w-3.5 h-3.5" />
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-lg sm:text-2xl font-bold text-[#F4F1EA] tracking-tight tabular-nums">
+                          {item.title}
+                        </p>
+                        <p className="text-xs text-[#9A9AA2] mt-1 line-clamp-2 leading-relaxed">
+                          {item.subtitle}
+                        </p>
+                      </div>
+                    </div>
+                  );
+
+                  return item.url ? (
+                    <Link key={idx} href={item.url} className="block h-full">
+                      {cardInner}
+                    </Link>
+                  ) : (
+                    <div key={idx} className="h-full">
+                      {cardInner}
+                    </div>
+                  );
+                })}
+              </motion.div>
+            )}
+          </div>
+        </section>
+      );
+    }
+
+    case 'HIGHLIGHTS_GRID': {
+      const gridItems = buildFourGridItems(content.heroGridItems, {
+        publishedMusic,
+        publishedAlbums,
+      });
+
+      return (
+        <section className="border-b border-[#222226] py-12 sm:py-16 bg-[#0B0B0E]">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            {(content.kicker || content.heading || content.subheading) && (
+              <motion.div {...fadeUp} className="mb-8">
+                {content.kicker && (
+                  <p className="text-xs font-semibold tracking-[0.2em] text-[#C8A464] mb-1.5">
+                    {content.kicker}
+                  </p>
+                )}
+                {content.heading && (
+                  <h2 className="text-xl sm:text-2xl font-bold text-[#F4F1EA]">
+                    {content.heading}
+                  </h2>
+                )}
+                {content.subheading && (
+                  <p className="text-sm text-[#9A9AA2] mt-1 max-w-2xl">{content.subheading}</p>
+                )}
+              </motion.div>
+            )}
+
+            <motion.div
+              {...fadeUp}
+              className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5"
+            >
+              {gridItems.map((item, idx) => {
+                const IconComponent = item.Icon;
+                const cardInner = (
+                  <div className="h-full rounded-xl bg-[#111116] border border-[#24242E] hover:border-[#C8A464]/50 p-4 sm:p-5 transition-all duration-300 flex flex-col justify-between group shadow-lg">
+                    <div className="flex items-center justify-between gap-2 mb-3">
+                      <span className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.18em] text-[#C8A464] truncate">
+                        {item.kicker}
+                      </span>
+                      <div className="w-7 h-7 rounded-lg bg-[#181820] border border-[#2A2A36] flex items-center justify-center text-[#C8A464] shrink-0 group-hover:bg-[#C8A464] group-hover:text-[#09090B] transition-colors">
+                        <IconComponent className="w-3.5 h-3.5" />
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-lg sm:text-2xl font-bold text-[#F4F1EA] tracking-tight tabular-nums">
+                        {item.title}
+                      </p>
+                      <p className="text-xs text-[#9A9AA2] mt-1 line-clamp-2 leading-relaxed">
+                        {item.subtitle}
+                      </p>
+                    </div>
+                  </div>
+                );
+
+                return item.url ? (
+                  <Link key={idx} href={item.url} className="block h-full">
+                    {cardInner}
+                  </Link>
+                ) : (
+                  <div key={idx} className="h-full">
+                    {cardInner}
+                  </div>
+                );
+              })}
+            </motion.div>
           </div>
         </section>
       );
