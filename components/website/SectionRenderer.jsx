@@ -211,8 +211,8 @@ function HeroSpotlightSection({
         className="pointer-events-none absolute inset-0 z-[3] transition-opacity duration-300"
       />
 
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 sm:py-20 lg:py-24">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-stretch">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-12 lg:py-[40px]">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-stretch">
           {/* Left Column: Staggered Headline & Actions Reveal */}
           <motion.div
             variants={staggerContainer}
@@ -296,13 +296,13 @@ function HeroSpotlightSection({
             >
               <motion.div
                 style={{ x: portraitParallaxX, y: portraitParallaxY }}
-                className="w-full max-w-[310px] sm:max-w-[350px] md:max-w-[370px] lg:max-w-[410px] xl:max-w-[430px] aspect-[3/4] min-h-[410px] sm:min-h-[460px] lg:min-h-[490px] xl:min-h-[530px] rounded-xl bg-[#111116]/90 border border-[#24242C] hover:border-[#C8A464]/50 overflow-hidden relative flex flex-col justify-end p-6 sm:p-8 shadow-2xl transition-colors duration-300 will-change-transform"
+                className="w-full max-w-[290px] sm:max-w-[320px] md:max-w-[340px] lg:max-w-[310px] xl:max-w-[330px] aspect-[3/4] min-h-[370px] sm:min-h-[400px] lg:min-h-[380px] xl:min-h-[410px] rounded-xl bg-[#111116]/90 border border-[#24242C] hover:border-[#C8A464]/50 overflow-hidden relative flex flex-col justify-end p-5 sm:p-6 shadow-2xl transition-colors duration-300 will-change-transform"
               >
                 <ShimmerImage
                   src={portraitImage}
                   alt={headline}
                   fill
-                  sizes="(max-width: 1024px) 380px, 440px"
+                  sizes="(max-width: 1024px) 340px, 340px"
                   className="object-cover object-top"
                 />
                 <div className="absolute inset-0 z-[2] bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
