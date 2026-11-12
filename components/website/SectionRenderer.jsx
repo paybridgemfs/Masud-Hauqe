@@ -76,7 +76,6 @@ export default function SectionRenderer({
                 className="object-cover object-center"
               />
               <div className="absolute inset-0 z-[2] bg-black/75" />
-              <div className="absolute inset-0 z-[2] bg-gradient-to-r from-[#09090B]/95 via-[#09090B]/80 to-[#09090B]/65" />
               <div className="absolute inset-0 z-[2] bg-gradient-to-t from-[#09090B] via-transparent to-[#09090B]/50" />
             </div>
           )}
