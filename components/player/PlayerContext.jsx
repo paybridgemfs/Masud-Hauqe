@@ -69,9 +69,9 @@ export function PlayerProvider({ children }) {
       if (!analyserRef.current) {
         const analyser = audioCtxRef.current.createAnalyser();
         analyser.fftSize = 2048; // 1024 high-resolution frequency bins (~21.5Hz per bin)
-        analyser.minDecibels = -90;
+        analyser.minDecibels = -88;
         analyser.maxDecibels = -10;
-        analyser.smoothingTimeConstant = 0.35; // Ultra-low latency for real-time beat & transient accuracy
+        analyser.smoothingTimeConstant = 0.62; // Crisp, real-time beat response
         analyserRef.current = analyser;
       }
 
