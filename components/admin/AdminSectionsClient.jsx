@@ -708,15 +708,23 @@ export default function AdminSectionsClient({ initialSections = [] }) {
                     </div>
                   )}
 
-                  {/* Category 4: Hero Background Image */}
+                  {/* Category 4: Hero Banner / Background Image */}
                   {isHero && (
-                    <div className="pt-3 border-t border-[#1C1C24]">
+                    <div className="pt-4 border-t border-[#1C1C24] space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold tracking-wider uppercase text-[#C8A464]">
+                          Hero Banner & Background Image
+                        </span>
+                        <span className="text-[11px] text-[#9A9AA2]">
+                          Full-width Homepage Cinematic Backdrop
+                        </span>
+                      </div>
                       <DriveImageUpload
-                        label="Hero Section Background Image (Full Width with Dark Gradient)"
+                        label="Hero Section Banner / Background Image"
                         value={editDraft.backgroundImage}
                         fileId={editDraft.backgroundImageFileId}
                         aspectClass="aspect-video"
-                        helperText="Saves directly to your Google Drive 'Images' folder and displays behind the hero section."
+                        helperText="Saves directly to your Google Drive 'Images' folder. Displays as the full-width cinematic banner behind the hero title, portrait, and action buttons."
                         onChange={({ url, fileId }) =>
                           setEditDraft((prev) => ({
                             ...prev,

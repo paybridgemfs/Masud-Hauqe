@@ -212,13 +212,13 @@ export default function AdminArtistClient({ initialArtist, initialSocialLinks = 
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div>
             <DriveImageUpload
-              label="Profile Portrait Image (Hero Right Card & About Page)"
+              label="Artist Profile Portrait Photo (Hero Right Card & About Page)"
               value={artist.profileImage}
               fileId={artist.profileImageFileId}
               aspectClass="aspect-square"
-              helperText="Uploads to Google Drive 'Images' folder. Displayed on the right side of the Hero section and on the About page."
+              helperText="Uploads to Google Drive 'Images' folder. Displayed as the artist portrait on the right side of the Hero section and on the About page."
               onChange={({ url, fileId }) =>
                 setArtist((prev) => ({
                   ...prev,
@@ -227,21 +227,10 @@ export default function AdminArtistClient({ initialArtist, initialSocialLinks = 
                 }))
               }
             />
-
-            <DriveImageUpload
-              label="Hero Background / Cover Image (With Dark Overlay)"
-              value={artist.coverImage}
-              fileId={artist.coverImageFileId}
-              aspectClass="aspect-video"
-              helperText="Uploads to Google Drive 'Images' folder. Displayed as the full-width Hero background with a dark overlay."
-              onChange={({ url, fileId }) =>
-                setArtist((prev) => ({
-                  ...prev,
-                  coverImage: url,
-                  coverImageFileId: fileId,
-                }))
-              }
-            />
+            <p className="mt-2.5 text-xs text-[#8E8E98] flex items-center gap-1.5">
+              <span>💡</span>
+              <span>Home Hero Banner & Background Image is managed under <strong>Section Management → Hero Section</strong>.</span>
+            </p>
           </div>
 
           <div>
