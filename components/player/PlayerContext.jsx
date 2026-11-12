@@ -19,25 +19,26 @@ export function PlayerProvider({ children }) {
   const [repeatMode, setRepeatMode] = useState('off'); // 'off' | 'all' | 'one'
   const [error, setError] = useState(null);
   const [isPlaylistOpen, setIsPlaylistOpen] = useState(false);
-  const [audioMetrics, setAudioMetrics] = useState({
-    frequencyData: new Uint8Array(32),
-    volume: 0,
-    bassIntensity: 0,
-    spectralEnergy: 0,
-    transient: 0,
-    stereoWidth: 0.5,
-    beat: false,
-  });
 
   const howlRef = useRef(null);
+  const audioNodeRef = useRef(null);
   const rafRef = useRef(null);
   const audioCtxRef = useRef(null);
   const analyserRef = useRef(null);
-  const sourceNodeRef = useRef(null);
-  const connectedAudioElementRef = useRef(null);
-  const lastBassRef = useRef(0);
+  const freqBufferRef = useRef(null);
+  const timeBufferRef = useRef(null);
+  const connectedNodesMapRef = useRef(new WeakMap());
+  const attachedNodesSetRef = useRef(new WeakSet());
+
+  const isPlayingRef = useRef(false);
+  const isSeekingRef = useRef(false);
   const lastSeekTimeRef = useRef(0);
-  const currentTrack = currentIndex >= 0 && currentIndex < playlist.length ? playlist[currentIndex] : null;
+  const targetSeekValueRef = useRef(0);
+  const lastReportedTimeRef = useRef(-1);
+  const handleTrackEndedRef = useRef(() => {});
+
+  const currentTrack =
+    currentIndex >= 0 && currentIndex < playlist.length ? playlist[currentIndex] : null;
 
   const stopProgressLoop = useCallback(() => {
     if (rafRef.current) {
@@ -46,84 +47,92 @@ export function PlayerProvider({ children }) {
     }
   }, []);
 
-  const handleTrackEndedRef = useRef(() => {});
+  /**
+   * High-precision, zero-allocation real-time audio frame reader.
+   * Called directly by the 60fps canvas/DOM visualizer without triggering React state re-renders.
+   */
+  const getRealtimeAudioData = useCallback(() => {
+    const analyser = analyserRef.current;
+    const audioCtx = audioCtxRef.current;
+    if (!analyser || !audioCtx || audioCtx.state !== 'running') {
+      return null;
+    }
 
-  const updateProgress = useCallback(() => {
-    const freqArray = new Uint8Array(32);
-    let lastMetricUpdate = 0;
-    let lastSeekUpdate = 0;
+    try {
+      const binCount = analyser.frequencyBinCount; // 1024 for fftSize=2048
+      if (!freqBufferRef.current || freqBufferRef.current.length !== binCount) {
+        freqBufferRef.current = new Uint8Array(binCount);
+      }
+      if (!timeBufferRef.current || timeBufferRef.current.length !== binCount) {
+        timeBufferRef.current = new Uint8Array(binCount);
+      }
 
-    const step = () => {
-      if (howlRef.current && howlRef.current.playing()) {
-        const now = performance.now();
+      analyser.getByteFrequencyData(freqBufferRef.current);
+      analyser.getByteTimeDomainData(timeBufferRef.current);
 
-        // Update seek position every ~120ms, skipping if user just seeked in the last 400ms
-        if (now - lastSeekUpdate > 120 && now - lastSeekTimeRef.current > 400) {
-          lastSeekUpdate = now;
-          const seek = howlRef.current.seek();
-          if (typeof seek === 'number' && !isNaN(seek)) {
-            setCurrentTime(seek);
-          }
-        }
+      return {
+        freqData: freqBufferRef.current,
+        timeData: timeBufferRef.current,
+        binCount,
+        sampleRate: audioCtx.sampleRate || 44100,
+      };
+    } catch {
+      return null;
+    }
+  }, []);
 
-        // Throttle audio metrics to ~25fps for state listeners
-        if (now - lastMetricUpdate > 40) {
-          lastMetricUpdate = now;
+  const startProgressLoop = useCallback(() => {
+    stopProgressLoop();
+    let lastUiTick = 0;
 
-          if (analyserRef.current) {
-            try {
-              analyserRef.current.getByteFrequencyData(freqArray);
-              let sum = 0;
-              let bassSum = 0;
-              for (let i = 0; i < 32; i++) {
-                sum += freqArray[i];
-                if (i < 8) bassSum += freqArray[i];
+    const step = (now) => {
+      if (!howlRef.current) {
+        rafRef.current = null;
+        return;
+      }
+
+      // Keep RAF loop alive as long as track is loaded and in playing state (even while seeking/buffering)
+      if (isPlayingRef.current || howlRef.current.playing()) {
+        if (now - lastUiTick >= 80) {
+          lastUiTick = now;
+          const timeSinceManualSeek = now - lastSeekTimeRef.current;
+
+          if (!isSeekingRef.current && timeSinceManualSeek > 280) {
+            const node = audioNodeRef.current;
+            let pos = null;
+
+            if (node && !node.seeking && typeof node.currentTime === 'number' && !Number.isNaN(node.currentTime)) {
+              pos = node.currentTime;
+            } else {
+              const howlPos = howlRef.current.seek();
+              if (typeof howlPos === 'number' && !Number.isNaN(howlPos)) {
+                pos = howlPos;
               }
-              const avg = sum / 32 / 255;
-              const bass = bassSum / 8 / 255;
-              const transient = Math.max(0, bass - lastBassRef.current);
-              lastBassRef.current = bass * 0.85;
-              const isBeat = transient > 0.16 || bass > 0.65;
-
-              setAudioMetrics({
-                frequencyData: freqArray,
-                volume: avg,
-                bassIntensity: bass,
-                spectralEnergy: sum / (32 * 255),
-                transient: transient,
-                stereoWidth: Math.min(1, 0.4 + avg * 0.6),
-                beat: isBeat,
-              });
-            } catch {
-              // Audio node pass-through
             }
-          } else {
-            const seek = howlRef.current.seek();
-            const t = typeof seek === 'number' ? seek : 0;
-            const bassSynth = Math.max(0, Math.sin(t * 8.8) * 0.5 + Math.cos(t * 4.4) * 0.5);
-            const isBeat = Math.sin(t * 8.8) > 0.75;
-            setAudioMetrics({
-              frequencyData: freqArray,
-              volume: 0.65,
-              bassIntensity: bassSynth,
-              spectralEnergy: 0.6,
-              transient: isBeat ? 0.8 : 0.1,
-              stereoWidth: 0.8,
-              beat: isBeat,
-            });
+
+            if (pos !== null && Math.abs(pos - lastReportedTimeRef.current) >= 0.05) {
+              lastReportedTimeRef.current = pos;
+              setCurrentTime(pos);
+            }
+
+            if (node && typeof node.duration === 'number' && Number.isFinite(node.duration) && node.duration > 0) {
+              setDuration((prev) => (Math.abs(prev - node.duration) > 0.5 ? node.duration : prev));
+            }
           }
         }
 
         rafRef.current = requestAnimationFrame(step);
+      } else {
+        rafRef.current = null;
       }
     };
+
     rafRef.current = requestAnimationFrame(step);
-  }, []);
+  }, [stopProgressLoop]);
 
   const setupWebAudioAnalyser = useCallback((audioNode) => {
     try {
-      if (typeof window === 'undefined') return;
-      if (!audioNode || connectedAudioElementRef.current === audioNode) return;
+      if (typeof window === 'undefined' || !audioNode) return;
 
       const AudioContextClass = window.AudioContext || window.webkitAudioContext;
       if (!AudioContextClass) return;
@@ -138,25 +147,80 @@ export function PlayerProvider({ children }) {
 
       if (!analyserRef.current) {
         const analyser = audioCtxRef.current.createAnalyser();
-        analyser.fftSize = 64;
-        analyser.smoothingTimeConstant = 0.8;
+        analyser.fftSize = 2048; // 1024 high-resolution frequency bins (~21.5Hz per bin)
+        analyser.minDecibels = -88;
+        analyser.maxDecibels = -10;
+        analyser.smoothingTimeConstant = 0.62; // Crisp, real-time beat response
         analyserRef.current = analyser;
       }
 
-      // Create MediaElementSource and connect to analyser then destination
-      audioNode.crossOrigin = 'anonymous';
-      const source = audioCtxRef.current.createMediaElementSource(audioNode);
-      source.connect(analyserRef.current);
-      analyserRef.current.connect(audioCtxRef.current.destination);
-      sourceNodeRef.current = source;
-      connectedAudioElementRef.current = audioNode;
+      if (!connectedNodesMapRef.current.has(audioNode)) {
+        const source = audioCtxRef.current.createMediaElementSource(audioNode);
+        source.connect(analyserRef.current);
+        analyserRef.current.connect(audioCtxRef.current.destination);
+        connectedNodesMapRef.current.set(audioNode, source);
+      }
     } catch {
-      // If CORS or already connected, fallback smoothly to audioMetrics
+      // Fallback gracefully if MediaElementSource already bound
     }
   }, []);
 
+  const attachNativeAudioEvents = useCallback(
+    (audioNode, sound) => {
+      if (!audioNode || attachedNodesSetRef.current.has(audioNode)) return;
+      attachedNodesSetRef.current.add(audioNode);
+
+      audioNode.addEventListener('loadedmetadata', () => {
+        if (Number.isFinite(audioNode.duration) && audioNode.duration > 0) {
+          setDuration(audioNode.duration);
+        }
+      });
+
+      audioNode.addEventListener('durationchange', () => {
+        if (Number.isFinite(audioNode.duration) && audioNode.duration > 0) {
+          setDuration(audioNode.duration);
+        }
+      });
+
+      audioNode.addEventListener('seeking', () => {
+        isSeekingRef.current = true;
+      });
+
+      audioNode.addEventListener('seeked', () => {
+        isSeekingRef.current = false;
+        lastSeekTimeRef.current = performance.now();
+        if (typeof audioNode.currentTime === 'number' && !Number.isNaN(audioNode.currentTime)) {
+          lastReportedTimeRef.current = audioNode.currentTime;
+          setCurrentTime(audioNode.currentTime);
+        }
+        // Ensure playback and progress loop stay active after seeking if track was playing
+        if (isPlayingRef.current) {
+          if (audioNode.paused && sound && !sound.playing()) {
+            sound.play();
+          }
+          startProgressLoop();
+        }
+      });
+
+      audioNode.addEventListener('timeupdate', () => {
+        const now = performance.now();
+        if (!isSeekingRef.current && !audioNode.seeking && now - lastSeekTimeRef.current > 280) {
+          const t = audioNode.currentTime;
+          if (typeof t === 'number' && !Number.isNaN(t) && Math.abs(t - lastReportedTimeRef.current) >= 0.15) {
+            lastReportedTimeRef.current = t;
+            setCurrentTime(t);
+          }
+        }
+      });
+    },
+    [startProgressLoop]
+  );
+
   const destroyHowl = useCallback(() => {
     stopProgressLoop();
+    isPlayingRef.current = false;
+    isSeekingRef.current = false;
+    audioNodeRef.current = null;
     if (howlRef.current) {
       howlRef.current.unload();
       howlRef.current = null;
@@ -169,6 +233,7 @@ export function PlayerProvider({ children }) {
       setError(null);
       setCurrentTime(0);
       setDuration(0);
+      lastReportedTimeRef.current = 0;
 
       if (!track || !track.id) {
         setError('Selected music record is invalid or missing.');
@@ -191,54 +256,72 @@ export function PlayerProvider({ children }) {
       const sound = new Howl({
         src: [streamUrl],
         html5: true,
+        preload: true,
         format: ['mp3', 'mpeg'],
         volume: isMuted ? 0 : volume,
         onload: () => {
           setIsLoading(false);
-          setDuration(sound.duration() || 0);
+          const dur = sound.duration();
+          if (typeof dur === 'number' && Number.isFinite(dur) && dur > 0) {
+            setDuration(dur);
+          }
         },
         onplay: (soundId) => {
           setIsLoading(false);
           setIsPlaying(true);
-          setDuration(sound.duration() || 0);
+          isPlayingRef.current = true;
 
-          // Hook HTML5 Audio Element to Web Audio Analyser
+          const dur = sound.duration();
+          if (typeof dur === 'number' && Number.isFinite(dur) && dur > 0) {
+            setDuration(dur);
+          }
+
           try {
-            const html5AudioNode = sound._sounds?.find((s) => s._id === soundId)?._node;
+            const html5AudioNode =
+              sound._sounds?.find((s) => s._id === soundId)?._node ||
+              sound._sounds?.[0]?._node;
             if (html5AudioNode) {
+              audioNodeRef.current = html5AudioNode;
+              attachNativeAudioEvents(html5AudioNode, sound);
               setupWebAudioAnalyser(html5AudioNode);
             }
           } catch {
-            // Ignore if already connected
+            // Safe fallback
           }
 
-          stopProgressLoop();
-          rafRef.current = requestAnimationFrame(updateProgress);
+          startProgressLoop();
         },
         onpause: () => {
-          setIsPlaying(false);
-          stopProgressLoop();
+          if (!isSeekingRef.current) {
+            setIsPlaying(false);
+            isPlayingRef.current = false;
+            stopProgressLoop();
+          }
         },
         onstop: () => {
           setIsPlaying(false);
+          isPlayingRef.current = false;
           setCurrentTime(0);
+          lastReportedTimeRef.current = 0;
           stopProgressLoop();
         },
         onend: () => {
           stopProgressLoop();
           setIsPlaying(false);
+          isPlayingRef.current = false;
           setCurrentTime(0);
+          lastReportedTimeRef.current = 0;
           handleTrackEndedRef.current();
         },
         onseek: () => {
-          // Allow progress updates once Howler confirms seeking is complete
-          setTimeout(() => {
-            lastSeekTimeRef.current = 0;
-          }, 150);
+          if (isPlayingRef.current) {
+            startProgressLoop();
+          }
         },
         onloaderror: (_id, errCode) => {
           setIsLoading(false);
           setIsPlaying(false);
+          isPlayingRef.current = false;
           setError(
             `Unable to load MP3 stream from Google Drive (code ${errCode}). Verify that the Google Drive file exists and has public reader permission.`
           );
@@ -246,16 +329,41 @@ export function PlayerProvider({ children }) {
         onplayerror: (_id, errCode) => {
           setIsLoading(false);
           setIsPlaying(false);
+          isPlayingRef.current = false;
           setError(`Audio playback interrupted (code ${errCode}). Click play to retry.`);
         },
       });
 
+      // Set crossOrigin="anonymous" on the underlying HTML5 Audio node immediately BEFORE network fetch completes
+      try {
+        const initialNode = sound._sounds?.[0]?._node;
+        if (initialNode) {
+          initialNode.crossOrigin = 'anonymous';
+          initialNode.preload = 'auto';
+          audioNodeRef.current = initialNode;
+          attachNativeAudioEvents(initialNode, sound);
+        }
+      } catch {
+        // Ignore
+      }
+
       howlRef.current = sound;
       if (autoPlay) {
+        if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
+          audioCtxRef.current.resume().catch(() => {});
+        }
         sound.play();
       }
     },
-    [destroyHowl, isMuted, setupWebAudioAnalyser, stopProgressLoop, updateProgress, volume]
+    [
+      attachNativeAudioEvents,
+      destroyHowl,
+      isMuted,
+      setupWebAudioAnalyser,
+      startProgressLoop,
+      stopProgressLoop,
+      volume,
+    ]
   );
 
   const handleTrackEnded = useCallback(() => {
@@ -295,7 +403,8 @@ export function PlayerProvider({ children }) {
   const playTrack = useCallback(
     (track, customQueue = null) => {
       if (!track || !track.id) return;
-      const targetQueue = Array.isArray(customQueue) && customQueue.length > 0 ? customQueue : playlist;
+      const targetQueue =
+        Array.isArray(customQueue) && customQueue.length > 0 ? customQueue : playlist;
       const existingIdx = targetQueue.findIndex((t) => t.id === track.id);
 
       if (existingIdx !== -1) {
@@ -304,6 +413,9 @@ export function PlayerProvider({ children }) {
           if (howlRef.current.playing()) {
             howlRef.current.pause();
           } else {
+            if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
+              audioCtxRef.current.resume().catch(() => {});
+            }
             howlRef.current.play();
           }
           return;
@@ -340,6 +452,9 @@ export function PlayerProvider({ children }) {
     if (howlRef.current.playing()) {
       howlRef.current.pause();
     } else {
+      if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
+        audioCtxRef.current.resume().catch(() => {});
+      }
       howlRef.current.play();
     }
   }, [currentTrack, loadAndPlayTrack]);
@@ -354,30 +469,48 @@ export function PlayerProvider({ children }) {
     loadAndPlayTrack(playlist[nextIdx], true);
   }, [currentIndex, loadAndPlayTrack, playlist, shuffle]);
 
+  const seekTo = useCallback(
+    (seconds) => {
+      const howl = howlRef.current;
+      if (!howl) return;
+      const howlDur = howl.duration();
+      const rawDur = (typeof howlDur === 'number' && howlDur > 0 ? howlDur : duration) || 0;
+
+      const target = Math.max(
+        0,
+        Math.min(Number(seconds) || 0, rawDur > 0 ? Math.max(0, rawDur - 0.05) : Number(seconds) || 0)
+      );
+
+      lastSeekTimeRef.current = performance.now();
+      targetSeekValueRef.current = target;
+      lastReportedTimeRef.current = target;
+      setCurrentTime(target);
+
+      try {
+        if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
+          audioCtxRef.current.resume().catch(() => {});
+        }
+        howl.seek(target);
+        if (isPlayingRef.current) {
+          startProgressLoop();
+        }
+      } catch {
+        // Safe fallback
+      }
+    },
+    [duration, startProgressLoop]
+  );
+
   const playPrevious = useCallback(() => {
     if (playlist.length === 0) return;
     if (currentTime > 3 && howlRef.current) {
-      howlRef.current.seek(0);
-      setCurrentTime(0);
+      seekTo(0);
       return;
     }
     const prevIdx = (currentIndex - 1 + playlist.length) % playlist.length;
     setCurrentIndex(prevIdx);
     loadAndPlayTrack(playlist[prevIdx], true);
-  }, [currentIndex, currentTime, loadAndPlayTrack, playlist]);
-
-  const seekTo = useCallback((seconds) => {
-    if (!howlRef.current) return;
-    const dur = howlRef.current.duration() || 0;
-    const clamped = Math.max(0, Math.min(seconds, dur > 0 ? dur : seconds));
-    lastSeekTimeRef.current = performance.now();
-    setCurrentTime(clamped);
-    try {
-      howlRef.current.seek(clamped);
-    } catch {
-      // Audio element seeking safe fallback
-    }
-  }, []);
+  }, [currentIndex, currentTime, loadAndPlayTrack, playlist, seekTo]);
 
   const setVolume = useCallback(
     (val) => {
@@ -440,7 +573,7 @@ export function PlayerProvider({ children }) {
         repeatMode,
         error,
         isPlaylistOpen,
-        audioMetrics,
+        getRealtimeAudioData,
         setIsPlaylistOpen,
         setShuffle,
         cycleRepeatMode,

@@ -33,6 +33,15 @@ function formatSeconds(secs) {
   return `${mins}:${String(rem).padStart(2, '0')}`;
 }
 
+function parseDurationToSeconds(durationStr) {
+  if (!durationStr || typeof durationStr !== 'string') return 0;
+  const parts = durationStr.trim().split(':').map(Number);
+  if (parts.some((n) => Number.isNaN(n))) return 0;
+  if (parts.length === 2) return parts[0] * 60 + parts[1];
+  if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+  return 0;
+}
+
 export default function GlobalMusicPlayer() {
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [isScrubbing, setIsScrubbing] = useState(false);
@@ -51,7 +60,7 @@ export default function GlobalMusicPlayer() {
     repeatMode,
     error,
     isPlaylistOpen,
-    audioMetrics,
+    getRealtimeAudioData,
     setIsPlaylistOpen,
     setShuffle,
     cycleRepeatMode,
@@ -65,6 +74,19 @@ export default function GlobalMusicPlayer() {
     closePlayer,
     clearError,
   } = usePlayer();
+
+  useEffect(() => {
+    if (!isScrubbing) return;
+    const handleRelease = () => {
+      setIsScrubbing(false);
+    };
+    window.addEventListener('pointerup', handleRelease);
+    window.addEventListener('pointercancel', handleRelease);
+    return () => {
+      window.removeEventListener('pointerup', handleRelease);
+      window.removeEventListener('pointercancel', handleRelease);
+    };
+  }, [isScrubbing]);
 
   useEffect(() => {
     function handleKeyDown(e) {
@@ -93,11 +115,12 @@ export default function GlobalMusicPlayer() {
   }
 
   const downloadUrl = getPublicDownloadUrl(currentTrack);
-  const safeMaxDuration = duration > 0 ? duration : 100;
+  const fallbackTrackDur = parseDurationToSeconds(currentTrack.duration);
+  const safeMaxDuration = duration > 0 ? duration : fallbackTrackDur > 0 ? fallbackTrackDur : 100;
   const currentSliderValue = isScrubbing ? scrubValue : Math.min(currentTime, safeMaxDuration);
   const displayTime = isScrubbing ? scrubValue : currentTime;
   const formattedTotalDuration =
-    duration > 0 ? formatSeconds(duration) : currentTrack.duration || '0:00';
+    duration > 0 ? formatSeconds(duration) : currentTrack.duration || formatSeconds(safeMaxDuration);
 
   return (
     <>
@@ -295,10 +318,11 @@ export default function GlobalMusicPlayer() {
                   value={currentSliderValue}
                   onPointerDown={() => {
                     setIsScrubbing(true);
-                    setScrubValue(currentTime);
                   }}
                   onChange={(e) => {
-                    setScrubValue(Number(e.target.value));
+                    const val = Number(e.target.value);
+                    setScrubValue(val);
+                    seekTo(val);
                   }}
                   onPointerUp={(e) => {
                     const val = Number(e.currentTarget.value);
@@ -407,10 +431,11 @@ export default function GlobalMusicPlayer() {
               value={currentSliderValue}
               onPointerDown={() => {
                 setIsScrubbing(true);
-                setScrubValue(currentTime);
               }}
               onChange={(e) => {
-                setScrubValue(Number(e.target.value));
+                const val = Number(e.target.value);
+                setScrubValue(val);
+                seekTo(val);
               }}
               onPointerUp={(e) => {
                 const val = Number(e.currentTarget.value);
@@ -550,7 +575,7 @@ export default function GlobalMusicPlayer() {
             isMuted={isMuted}
             shuffle={shuffle}
             repeatMode={repeatMode}
-            audioMetrics={audioMetrics}
+            getRealtimeAudioData={getRealtimeAudioData}
             togglePlay={togglePlay}
             playNext={playNext}
             playPrevious={playPrevious}

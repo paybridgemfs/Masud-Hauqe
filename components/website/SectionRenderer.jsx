@@ -150,17 +150,17 @@ export default function SectionRenderer({
                   initial={{ opacity: 0, scale: 0.97, y: 18 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
-                  className="lg:col-span-5 flex"
+                  className="lg:col-span-5 flex justify-center lg:justify-end"
                 >
-                  <div className="w-full min-h-[340px] lg:h-full rounded-lg bg-[#111116]/90 border border-[#24242C] overflow-hidden relative flex flex-col justify-end p-6 sm:p-8 shadow-2xl">
+                  <div className="w-full max-w-[310px] sm:max-w-[350px] md:max-w-[370px] lg:max-w-[410px] xl:max-w-[430px] aspect-[3/4] min-h-[410px] sm:min-h-[460px] lg:min-h-[490px] xl:min-h-[530px] rounded-xl bg-[#111116]/90 border border-[#24242C] overflow-hidden relative flex flex-col justify-end p-6 sm:p-8 shadow-2xl">
                     <ShimmerImage
                       src={portraitImage}
                       alt={headline}
                       fill
-                      sizes="(max-width: 1024px) 100vw, 480px"
-                      className="object-cover object-center"
+                      sizes="(max-width: 1024px) 380px, 440px"
+                      className="object-cover object-top"
                     />
-                    <div className="absolute inset-0 z-[2] bg-gradient-to-t from-black/90 via-black/25 to-transparent" />
+                    <div className="absolute inset-0 z-[2] bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
 
                     <div className="relative z-10 border-t border-white/15 pt-4 flex items-center justify-between text-xs text-[#D4D4D8]">
                       <div>

@@ -17,97 +17,195 @@ import {
   ListMusic,
   Download,
   Disc3,
-  Activity,
 } from 'lucide-react';
 import ShimmerImage from '@/components/ui/ShimmerImage.jsx';
 
+function parseDurationToSeconds(durationStr) {
+  if (!durationStr || typeof durationStr !== 'string') return 0;
+  const parts = durationStr.trim().split(':').map(Number);
+  if (parts.some((n) => Number.isNaN(n))) return 0;
+  if (parts.length === 2) return parts[0] * 60 + parts[1];
+  if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+  return 0;
+}
+
 /**
- * High-Performance Audio Spectrum Visualizer
- * Runs in its own 60fps requestAnimationFrame loop updating DOM heights directly.
- * Zero React re-renders during playback, completely eliminating stutter/freeze.
+ * Real-Time 60/120fps Web Audio Spectrum & Transient Visualizer
+ * Reads 1024-bin FFT frequency data + time-domain RMS waveform directly from Web Audio AnalyserNode
+ * on every animation frame with zero React state re-renders.
  */
-function AudioSpectrumVisualizer({ isPlaying, audioMetrics }) {
+function AudioSpectrumVisualizer({ isPlaying, getRealtimeAudioData }) {
   const barsRef = useRef([]);
   const animFrameRef = useRef(null);
-  const heightsRef = useRef(new Array(32).fill(12));
-  const metricsRef = useRef(audioMetrics);
+  const heightsRef = useRef(new Array(32).fill(10));
+  const prevBandsRef = useRef(new Array(32).fill(0));
+  const bandFloorRef = useRef(new Array(32).fill(0.15));
+  const rmsHistoryRef = useRef(0.15);
+  const getAudioRef = useRef(getRealtimeAudioData);
 
   useEffect(() => {
-    metricsRef.current = audioMetrics;
-  }, [audioMetrics]);
+    getAudioRef.current = getRealtimeAudioData;
+  }, [getRealtimeAudioData]);
 
   useEffect(() => {
     let lastTime = performance.now();
 
+    // Precompute logarithmic frequency bin ranges for 32 bars (from ~35 Hz to ~13,500 Hz)
+    const minFreq = 35;
+    const maxFreq = 13500;
+    const logRatio = Math.log(maxFreq / minFreq);
+
     const animate = (time) => {
-      const dt = Math.min(0.05, (time - lastTime) * 0.001);
+      const dt = Math.min(0.05, Math.max(0.001, (time - lastTime) * 0.001));
       lastTime = time;
-      const t = time * 0.001; // Continuous elapsed seconds (smooth float)
+      const t = time * 0.001;
 
-      const freqData = metricsRef.current?.frequencyData;
-      const hasRealAudio = Boolean(freqData && freqData.some((b) => b > 10));
+      const audioFrame = isPlaying && getAudioRef.current ? getAudioRef.current() : null;
+      const freqData = audioFrame?.freqData;
+      const timeData = audioFrame?.timeData;
+      const binCount = audioFrame?.binCount || 1024;
+      const sampleRate = audioFrame?.sampleRate || 44100;
+      const nyquist = sampleRate / 2;
 
-      // Musical beat and tempo simulation (~124 BPM rhythm)
-      const kick = Math.pow(Math.max(0, Math.sin(t * 4.3)), 4);
-      const snare = Math.pow(Math.max(0, Math.sin((t + 0.35) * 4.3)), 6);
-      const hihat = Math.pow(Math.max(0, Math.sin(t * 8.6)), 2);
+      // Check if Web Audio Analyser has active signal
+      let maxSignal = 0;
+      if (freqData) {
+        for (let k = 1; k < 128; k++) {
+          if (freqData[k] > maxSignal) maxSignal = freqData[k];
+        }
+      }
+      const hasLiveSignal = isPlaying && maxSignal > 2;
+
+      // Compute real-time Time-Domain RMS Volume & Beat Envelope
+      let rms = 0;
+      if (hasLiveSignal && timeData) {
+        let sumSq = 0;
+        const step = 4;
+        let count = 0;
+        for (let k = 0; k < timeData.length; k += step) {
+          const centered = (timeData[k] - 128) / 128;
+          sumSq += centered * centered;
+          count++;
+        }
+        rms = Math.sqrt(sumSq / Math.max(1, count));
+      }
+
+      const prevRmsAvg = rmsHistoryRef.current;
+      rmsHistoryRef.current = prevRmsAvg * 0.92 + rms * 0.08;
+      const globalTransient = Math.max(0, rms - prevRmsAvg * 1.12);
 
       for (let i = 0; i < 32; i++) {
         let target = 8;
 
         if (isPlaying) {
-          if (hasRealAudio) {
-            // Map 32 bands across frequency bins
-            const byteIdx = Math.floor((i / 32) * (freqData.length - 1));
-            const raw = freqData[byteIdx] || 0;
-            const norm = raw / 255;
+          if (hasLiveSignal && freqData) {
+            // Logarithmic frequency mapping for bar i
+            const fracStart = i / 32;
+            const fracEnd = (i + 1) / 32;
+            const fLow = minFreq * Math.exp(logRatio * fracStart);
+            const fHigh = minFreq * Math.exp(logRatio * fracEnd);
+
+            const exactBinLow = Math.max(1, (fLow / nyquist) * binCount);
+            const exactBinHigh = Math.min(
+              binCount - 1,
+              Math.max(exactBinLow + 0.65, (fHigh / nyquist) * binCount)
+            );
+
+            // Interpolated sampling across the bin window
+            let bandSum = 0;
+            let weightSum = 0;
+            const startIdx = Math.floor(exactBinLow);
+            const endIdx = Math.ceil(exactBinHigh);
+
+            for (let b = startIdx; b <= endIdx; b++) {
+              const safeBin = Math.min(binCount - 1, Math.max(1, b));
+              const nextBin = Math.min(binCount - 1, safeBin + 1);
+              const frac = exactBinLow - startIdx;
+              const val =
+                startIdx === endIdx
+                  ? freqData[safeBin] * (1 - frac) + freqData[nextBin] * frac
+                  : freqData[safeBin];
+              bandSum += val;
+              weightSum += 1;
+            }
+
+            const rawNorm = (bandSum / Math.max(1, weightSum)) / 255;
+
+            // Track adaptive floor per band so continuous bass hum doesn't peg the left 8 bars at 100%
+            const prevFloor = bandFloorRef.current[i];
+            bandFloorRef.current[i] =
+              rawNorm < prevFloor
+                ? prevFloor * 0.93 + rawNorm * 0.07
+                : prevFloor * 0.985 + rawNorm * 0.015;
+
+            // Instantaneous band transient (sudden sound / drum / note attack)
+            const prevBand = prevBandsRef.current[i];
+            const bandTransient = Math.max(0, rawNorm - prevBand);
+            prevBandsRef.current[i] = rawNorm * 0.65 + prevBand * 0.35;
+
             if (i < 8) {
-              target = Math.min(94, Math.max(14, norm * 78 + kick * 22));
+              // Left 8 Bars: Sub-Bass & Kick Drum (35Hz - 220Hz)
+              // Subtract adaptive bass floor and expand contrast so bars bounce sharply on every beat
+              const dynamicFloor = Math.min(0.42, bandFloorRef.current[i] * 0.72);
+              const cleanBass = Math.max(0, (rawNorm - dynamicFloor) / Math.max(0.35, 1 - dynamicFloor));
+              const shapedBass = Math.pow(cleanBass, 1.85);
+              const punch = bandTransient * 2.6 + globalTransient * 1.4;
+              // Slight spatial phase across the 8 bass bars so they don't move as one flat block
+              const barSpread = 0.88 + Math.sin(i * 0.65 + t * 3.2) * 0.12;
+
+              target = Math.min(
+                96,
+                Math.max(10, (10 + shapedBass * 68 + punch * 34) * barSpread)
+              );
+            } else if (i < 20) {
+              // Mid-Range, Snare, Instruments & Vocals (220Hz - 2,400Hz)
+              const tiltGain = 1.05 + ((i - 8) / 12) * 0.35;
+              const dynamicFloor = Math.min(0.28, bandFloorRef.current[i] * 0.55);
+              const cleanMid = Math.max(0, (rawNorm - dynamicFloor) / Math.max(0.45, 1 - dynamicFloor));
+              const shapedMid = Math.pow(cleanMid, 1.45) * tiltGain;
+              const snarePunch = bandTransient * 2.8 + globalTransient * 1.1;
+
+              target = Math.min(95, Math.max(10, 10 + shapedMid * 72 + snarePunch * 28));
             } else {
-              target = Math.min(92, Math.max(12, norm * 86));
+              // Highs, Presence, Hi-Hats & Brilliance (2,400Hz - 13,500Hz)
+              const highTilt = 1.45 + ((i - 20) / 12) * 0.75;
+              const shapedHigh = Math.pow(rawNorm, 1.25) * highTilt;
+              const crispTransient = bandTransient * 3.2;
+
+              target = Math.min(92, Math.max(9, 9 + shapedHigh * 70 + crispTransient * 26));
             }
           } else {
-            // Highly dynamic, organic sound wave synthesis with dancing bass, mids & highs
+            // Fallback rhythm envelope only when browser blocks WebAudio or signal is silent
+            const kick = Math.pow(Math.max(0, Math.sin(t * 4.3)), 4);
+            const snare = Math.pow(Math.max(0, Math.sin((t + 0.35) * 4.3)), 6);
+            const hihat = Math.pow(Math.max(0, Math.sin(t * 8.6)), 2);
+
             if (i < 8) {
-              // Bass & Sub-Bass (0 - 7): Bounces hard on kick, rolls with dynamic bassline (18% - 88%)
               const bassRoll = Math.sin(t * 6.0 + i * 0.45) * 0.35 + 0.55;
-              const subThump = Math.cos(t * 8.5 + i * 0.3) * 0.2;
-              target = Math.min(
-                92,
-                Math.max(14, 18 + kick * 54 + bassRoll * 22 + subThump * 10)
-              );
+              target = Math.min(92, Math.max(12, 16 + kick * 54 + bassRoll * 22));
             } else if (i < 22) {
-              // Mid-Range & Vocals (8 - 21): Melodic sweeps, snare cracks, fluid oscillations
               const midWave =
                 Math.sin(t * 8.2 + i * 0.7) * 0.35 +
                 Math.cos(t * 12.4 + i * 0.5) * 0.25 +
                 0.5;
-              target = Math.min(
-                90,
-                Math.max(12, 14 + snare * 46 + midWave * 32)
-              );
+              target = Math.min(90, Math.max(10, 14 + snare * 46 + midWave * 30));
             } else {
-              // Highs & Treble (22 - 31): Crisp hi-hat sizzle, shimmer & air
               const highSizzle = Math.sin(t * 16.0 + i * 1.1) * 0.35 + 0.5;
-              const flutter = (Math.sin(t * 22.0 + i * 2.0) + 1) * 0.5;
-              target = Math.min(
-                85,
-                Math.max(10, 12 + hihat * 38 + highSizzle * 24 + flutter * 12)
-              );
+              target = Math.min(85, Math.max(9, 11 + hihat * 38 + highSizzle * 24));
             }
           }
         } else {
-          // Paused / idle state: gentle breathing wave
-          target = 8 + Math.sin(t * 1.8 + i * 0.25) * 4;
+          // Paused idle state
+          target = 8 + Math.sin(t * 1.8 + i * 0.25) * 3.5;
         }
 
-        // Physical spring / lerp smoothing - instantaneous attack, smooth natural decay
+        // Frame-rate independent physics smoothing (snappy attack, smooth gravity decay)
         const current = heightsRef.current[i];
-        const lerpFactor = target > current ? 0.42 : 0.22; // snappy rise, smooth fall
-        const nextHeight = current + (target - current) * lerpFactor;
+        const speed = target > current ? 30 : 12;
+        const alpha = 1 - Math.exp(-speed * dt);
+        const nextHeight = current + (target - current) * alpha;
         heightsRef.current[i] = nextHeight;
 
-        // Direct DOM update (ZERO React re-renders, silky smooth 60/120 FPS!)
         const barEl = barsRef.current[i];
         if (barEl) {
           barEl.style.height = `${nextHeight.toFixed(1)}%`;
@@ -137,7 +235,7 @@ function AudioSpectrumVisualizer({ isPlaying, audioMetrics }) {
           >
             <div
               ref={(el) => (barsRef.current[idx] = el)}
-              style={{ height: '14%' }}
+              style={{ height: '12%' }}
               className={`w-full rounded-full will-change-[height] ${
                 isBass
                   ? 'bg-gradient-to-t from-[#B45309] via-[#C8A464] to-[#FDE047] shadow-[0_0_12px_rgba(200,164,100,0.6)]'
@@ -164,7 +262,7 @@ export default function FullScreenPlayer({
   isMuted,
   shuffle,
   repeatMode,
-  audioMetrics = {},
+  getRealtimeAudioData,
   togglePlay,
   playNext,
   playPrevious,
@@ -178,19 +276,34 @@ export default function FullScreenPlayer({
   downloadUrl,
 }) {
   const [showQueue, setShowQueue] = useState(false);
-  const [slideDirection, setSlideDirection] = useState(0); // 1 = slide from right (next), -1 = slide from left (prev)
+  const [slideDirection, setSlideDirection] = useState(0);
   const [isScrubbing, setIsScrubbing] = useState(false);
   const [scrubValue, setScrubValue] = useState(0);
 
+  // Guarantee scrubbing state is released even if user releases pointer outside the slider
+  useEffect(() => {
+    if (!isScrubbing) return;
+    const handleRelease = () => {
+      setIsScrubbing(false);
+    };
+    window.addEventListener('pointerup', handleRelease);
+    window.addEventListener('pointercancel', handleRelease);
+    return () => {
+      window.removeEventListener('pointerup', handleRelease);
+      window.removeEventListener('pointercancel', handleRelease);
+    };
+  }, [isScrubbing]);
+
   if (!isOpen || !currentTrack) return null;
 
-  const safeMaxDuration = duration > 0 ? duration : 100;
-  const currentSliderValue = isScrubbing ? scrubValue : Math.min(currentTime, safeMaxDuration);
+  const fallbackTrackDur = parseDurationToSeconds(currentTrack.duration);
+  const effectiveDuration = duration > 0 ? duration : fallbackTrackDur > 0 ? fallbackTrackDur : 100;
+  const currentSliderValue = isScrubbing ? scrubValue : Math.min(currentTime, effectiveDuration);
   const displayTime = isScrubbing ? scrubValue : currentTime;
   const formattedTotalDuration =
-    duration > 0 ? formatSeconds(duration) : currentTrack.duration || '0:00';
-
-  const isBeat = Boolean(audioMetrics?.beat);
+    duration > 0
+      ? formatSeconds(duration)
+      : currentTrack.duration || formatSeconds(effectiveDuration);
 
   function handleSwipeNext() {
     setSlideDirection(1);
@@ -219,7 +332,6 @@ export default function FullScreenPlayer({
       <div className="absolute inset-0 pointer-events-none overflow-hidden select-none">
         {currentTrack.thumbnail ? (
           <>
-            {/* Real high-res artwork dynamically blurred and scaled */}
             <div className="absolute -inset-12 filter blur-2xl scale-110 opacity-55 transition-opacity duration-700 ease-out">
               <Image
                 key={currentTrack.id || currentTrack.thumbnail}
@@ -232,9 +344,7 @@ export default function FullScreenPlayer({
                 className="object-cover object-center pointer-events-none"
               />
             </div>
-            {/* Radial vignette for cinematic depth */}
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(7,7,9,0.55)_65%,rgba(7,7,9,0.92)_100%)]" />
-            {/* Soft vertical gradient to preserve contrast for player controls */}
             <div className="absolute inset-0 bg-gradient-to-b from-[#070709]/65 via-[#070709]/30 to-[#070709]/85" />
           </>
         ) : (
@@ -255,7 +365,7 @@ export default function FullScreenPlayer({
           <ChevronDown className="w-5 h-5 sm:w-5 sm:h-5" />
           <span className="hidden sm:inline text-xs font-semibold">Minimize</span>
         </button>
-        
+
         <button
           type="button"
           onClick={() => setShowQueue(!showQueue)}
@@ -272,15 +382,10 @@ export default function FullScreenPlayer({
 
       {/* ============================================================
           MAIN BODY (FITS 100vh / 100dvh STRICTLY WITH NO SCROLLBAR)
-          Desktop: Split-View (Thumbnail LEFT, Controls & Tall Visualizer RIGHT)
-          Mobile: Vertical Balanced Stack (Swipeable Thumbnail + Tall Visualizer + Controls)
       ============================================================ */}
       <main className="relative z-10 flex-1 min-h-0 px-4 sm:px-8 py-2 sm:py-4 flex items-center justify-center overflow-hidden">
         <div className="max-w-5xl w-full h-full flex flex-col lg:flex-row items-center justify-center lg:justify-between gap-4 lg:gap-12 py-1">
-          {/* ============================================================
-              THUMBNAIL (LEFT ON DESKTOP, CENTER ON MOBILE)
-              Includes smooth drag/swipe gesture: Swipe left -> Next, Swipe right -> Prev
-          ============================================================ */}
+          {/* THUMBNAIL (LEFT ON DESKTOP, CENTER ON MOBILE) */}
           <div className="shrink-0 flex items-center justify-center my-auto lg:my-0">
             <div className="relative">
               <AnimatePresence mode="wait" initial={false}>
@@ -327,7 +432,6 @@ export default function FullScreenPlayer({
                 </motion.div>
               </AnimatePresence>
 
-              {/* Subtle Swipe Guidance Hint on Mobile */}
               <div className="lg:hidden text-center mt-1">
                 <span className="text-[9px] text-[#8E8E96] tracking-wider uppercase">
                   ← Swipe to change track →
@@ -336,10 +440,7 @@ export default function FullScreenPlayer({
             </div>
           </div>
 
-          {/* ============================================================
-              RIGHT ON DESKTOP / BOTTOM ON MOBILE:
-              Title, Subtitle, Tall Audio-Reactive Visualizer & Controls
-          ============================================================ */}
+          {/* RIGHT ON DESKTOP / BOTTOM ON MOBILE */}
           <div className="min-w-0 w-full max-w-xl flex flex-col justify-center space-y-3 sm:space-y-4">
             {/* Track Info */}
             <div className="text-center lg:text-left space-y-0.5 sm:space-y-1">
@@ -354,13 +455,10 @@ export default function FullScreenPlayer({
               )}
             </div>
 
-            {/* ============================================================
-                TALL AUDIO-REACTIVE SPECTRUM VISUALIZER (ENHANCED HEIGHT)
-                32 Dynamic Dancing Bars: Bass, Mids, Highs animated at 60 FPS
-            ============================================================ */}
+            {/* TALL REAL-TIME AUDIO-REACTIVE SPECTRUM VISUALIZER */}
             <AudioSpectrumVisualizer
               isPlaying={isPlaying}
-              audioMetrics={audioMetrics}
+              getRealtimeAudioData={getRealtimeAudioData}
             />
 
             {/* Seek Slider + Timestamps */}
@@ -369,15 +467,16 @@ export default function FullScreenPlayer({
                 type="range"
                 aria-label="Seek timeline"
                 min={0}
-                max={safeMaxDuration}
+                max={effectiveDuration}
                 step={0.1}
                 value={currentSliderValue}
                 onPointerDown={() => {
                   setIsScrubbing(true);
-                  setScrubValue(currentTime);
                 }}
                 onChange={(e) => {
-                  setScrubValue(Number(e.target.value));
+                  const val = Number(e.target.value);
+                  setScrubValue(val);
+                  seekTo(val);
                 }}
                 onPointerUp={(e) => {
                   const val = Number(e.currentTarget.value);
@@ -457,7 +556,7 @@ export default function FullScreenPlayer({
               </button>
             </div>
 
-            {/* Bottom Utilities (Volume Slider on Desktop, MP3 Download Button) */}
+            {/* Bottom Utilities */}
             <div className="pt-2 flex items-center justify-between gap-3 text-xs">
               <div className="hidden sm:flex items-center gap-2 flex-1 max-w-[220px]">
                 <button
@@ -484,7 +583,6 @@ export default function FullScreenPlayer({
                 />
               </div>
 
-              {/* Download MP3 */}
               <div className="flex items-center gap-2 ml-auto">
                 {downloadUrl && (
                   <a
@@ -503,9 +601,7 @@ export default function FullScreenPlayer({
         </div>
       </main>
 
-      {/* ============================================================
-          QUEUE DRAWER MODAL
-      ============================================================ */}
+      {/* QUEUE DRAWER MODAL */}
       <AnimatePresence>
         {showQueue && (
           <motion.div

@@ -82,15 +82,15 @@ export default async function AboutPage() {
         </div>
 
         {(artist?.profileImage || artist?.coverImage) && (
-          <div className="lg:col-span-5">
-            <div className="h-full min-h-[280px] rounded-lg bg-[#111115] border border-[#24242C] overflow-hidden relative flex items-center justify-center p-8">
+          <div className="lg:col-span-5 flex justify-center lg:justify-end">
+            <div className="w-full max-w-[310px] sm:max-w-[350px] md:max-w-[370px] lg:max-w-[410px] aspect-[3/4] min-h-[410px] sm:min-h-[460px] lg:min-h-[480px] rounded-xl bg-[#111115] border border-[#24242C] overflow-hidden relative flex items-center justify-center p-8 shadow-2xl">
               <ShimmerImage
                 src={artist.profileImage || artist.coverImage}
                 alt={artist?.name || ''}
                 fill
-                sizes="(max-width: 1024px) 100vw, 480px"
+                sizes="(max-width: 1024px) 380px, 440px"
                 referrerPolicy="no-referrer"
-                className="object-cover"
+                className="object-cover object-top"
               />
             </div>
           </div>
