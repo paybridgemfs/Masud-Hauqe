@@ -333,7 +333,7 @@ function HeroSpotlightSection({
 
         {/* 4-Column Highlights Grid Below Hero Banner with Staggered Cascade Reveal */}
         {showHeroGrid && (
-          <div className="mt-12 sm:mt-16 pt-8 sm:pt-10 border-t border-[#22222A]/90 grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
+          <div className="pt-8 sm:pt-10 grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
             {heroGridItems.map((item, idx) => {
               const IconComponent = item.Icon;
               const cardInner = (
