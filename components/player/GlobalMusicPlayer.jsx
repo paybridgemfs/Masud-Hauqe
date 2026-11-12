@@ -42,6 +42,102 @@ function parseDurationToSeconds(durationStr) {
   return 0;
 }
 
+function PrecisionSeekBar({
+  currentTime,
+  maxDuration,
+  isScrubbing,
+  scrubValue,
+  setIsScrubbing,
+  setScrubValue,
+  seekTo,
+}) {
+  const barRef = React.useRef(null);
+  const displayTime = isScrubbing ? scrubValue : Math.min(currentTime, maxDuration);
+  const progressPercent =
+    maxDuration > 0 ? Math.max(0, Math.min(100, (displayTime / maxDuration) * 100)) : 0;
+
+  function calcTime(clientX) {
+    const el = barRef.current;
+    if (!el) return displayTime;
+    const rect = el.getBoundingClientRect();
+    if (!rect.width) return displayTime;
+    const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    return ratio * maxDuration;
+  }
+
+  function handlePointerDown(e) {
+    if (e.button !== undefined && e.button !== 0) return;
+    e.stopPropagation();
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      // Ignore
+    }
+    const nextTime = calcTime(e.clientX);
+    setIsScrubbing(true);
+    setScrubValue(nextTime);
+  }
+
+  function handlePointerMove(e) {
+    if (!isScrubbing) return;
+    setScrubValue(calcTime(e.clientX));
+  }
+
+  function handlePointerUp(e) {
+    if (!isScrubbing) return;
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {
+      // Ignore
+    }
+    const finalTime = calcTime(e.clientX);
+    setIsScrubbing(false);
+    seekTo(finalTime);
+  }
+
+  return (
+    <div
+      ref={barRef}
+      role="slider"
+      tabIndex={0}
+      aria-label="Seek timeline"
+      aria-valuemin={0}
+      aria-valuemax={Math.round(maxDuration)}
+      aria-valuenow={Math.round(displayTime)}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
+      onKeyDown={(e) => {
+        if (e.key === 'ArrowRight') {
+          e.preventDefault();
+          seekTo(Math.min(maxDuration, displayTime + 5));
+        } else if (e.key === 'ArrowLeft') {
+          e.preventDefault();
+          seekTo(Math.max(0, displayTime - 5));
+        }
+      }}
+      className="w-full py-2 cursor-pointer touch-none select-none group"
+    >
+      <div className="relative w-full h-1.5 bg-[#27272C] rounded-full overflow-visible">
+        <div
+          style={{ width: `${progressPercent}%` }}
+          className="h-full bg-gradient-to-r from-[#9E7B3B] to-[#C8A464] rounded-full"
+        />
+        <div
+          style={{ left: `${progressPercent}%` }}
+          className="
+            absolute top-1/2 -translate-x-1/2 -translate-y-1/2
+            w-3 h-3 rounded-full bg-[#F4F1EA] border-2 border-[#C8A464]
+            shadow-[0_0_8px_rgba(200,164,100,0.85)]
+            transition-transform duration-100 group-hover:scale-125
+          "
+        />
+      </div>
+    </div>
+  );
+}
+
 export default function GlobalMusicPlayer() {
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [isScrubbing, setIsScrubbing] = useState(false);
@@ -117,8 +213,7 @@ export default function GlobalMusicPlayer() {
   const downloadUrl = getPublicDownloadUrl(currentTrack);
   const fallbackTrackDur = parseDurationToSeconds(currentTrack.duration);
   const safeMaxDuration = duration > 0 ? duration : fallbackTrackDur > 0 ? fallbackTrackDur : 100;
-  const currentSliderValue = isScrubbing ? scrubValue : Math.min(currentTime, safeMaxDuration);
-  const displayTime = isScrubbing ? scrubValue : currentTime;
+  const displayTime = isScrubbing ? scrubValue : Math.min(currentTime, safeMaxDuration);
   const formattedTotalDuration =
     duration > 0 ? formatSeconds(duration) : currentTrack.duration || formatSeconds(safeMaxDuration);
 
@@ -305,31 +400,18 @@ export default function GlobalMusicPlayer() {
                 </button>
               </div>
 
-              <div className="w-full flex items-center gap-3 mt-1.5">
+              <div className="w-full flex items-center gap-3 mt-1">
                 <span className="text-[11px] text-[#8E8E96] tabular-nums w-9 text-right shrink-0">
                   {formatSeconds(displayTime)}
                 </span>
-                <input
-                  type="range"
-                  aria-label="Seek timeline"
-                  min={0}
-                  max={safeMaxDuration}
-                  step={0.1}
-                  value={currentSliderValue}
-                  onPointerDown={() => {
-                    setIsScrubbing(true);
-                  }}
-                  onChange={(e) => {
-                    const val = Number(e.target.value);
-                    setScrubValue(val);
-                    seekTo(val);
-                  }}
-                  onPointerUp={(e) => {
-                    const val = Number(e.currentTarget.value);
-                    setIsScrubbing(false);
-                    seekTo(val);
-                  }}
-                  className="w-full h-1.5 bg-[#27272C] accent-[#C8A464] rounded-lg cursor-pointer"
+                <PrecisionSeekBar
+                  currentTime={currentTime}
+                  maxDuration={safeMaxDuration}
+                  isScrubbing={isScrubbing}
+                  scrubValue={scrubValue}
+                  setIsScrubbing={setIsScrubbing}
+                  setScrubValue={setScrubValue}
+                  seekTo={seekTo}
                 />
                 <span className="text-[11px] text-[#8E8E96] tabular-nums w-9 shrink-0">
                   {formattedTotalDuration}
@@ -422,27 +504,14 @@ export default function GlobalMusicPlayer() {
             <span className="text-[10px] text-[#8E8E96] tabular-nums w-7 text-right shrink-0">
               {formatSeconds(displayTime)}
             </span>
-            <input
-              type="range"
-              aria-label="Seek timeline"
-              min={0}
-              max={safeMaxDuration}
-              step={0.1}
-              value={currentSliderValue}
-              onPointerDown={() => {
-                setIsScrubbing(true);
-              }}
-              onChange={(e) => {
-                const val = Number(e.target.value);
-                setScrubValue(val);
-                seekTo(val);
-              }}
-              onPointerUp={(e) => {
-                const val = Number(e.currentTarget.value);
-                setIsScrubbing(false);
-                seekTo(val);
-              }}
-              className="w-full h-1.5 bg-[#27272C] accent-[#C8A464] rounded-lg cursor-pointer"
+            <PrecisionSeekBar
+              currentTime={currentTime}
+              maxDuration={safeMaxDuration}
+              isScrubbing={isScrubbing}
+              scrubValue={scrubValue}
+              setIsScrubbing={setIsScrubbing}
+              setScrubValue={setScrubValue}
+              seekTo={seekTo}
             />
             <span className="text-[10px] text-[#8E8E96] tabular-nums w-7 shrink-0">
               {formattedTotalDuration}
