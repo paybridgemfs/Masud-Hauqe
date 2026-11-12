@@ -1,8 +1,15 @@
 'use client';
 
-import React from 'react';
+import React, { useRef } from 'react';
 import Link from 'next/link';
-import { motion } from 'motion/react';
+import {
+  motion,
+  useScroll,
+  useTransform,
+  useMotionValue,
+  useSpring,
+  useMotionTemplate,
+} from 'motion/react';
 import {
   ArrowRight,
   Play,
@@ -24,7 +31,27 @@ const fadeUp = {
   initial: { opacity: 0, y: 20 },
   whileInView: { opacity: 1, y: 0 },
   viewport: { once: true, margin: '-40px' },
-  transition: { duration: 0.45, ease: [0.22, 1, 0.36, 1] },
+  transition: { duration: 0.48, ease: [0.22, 1, 0.36, 1] },
+};
+
+const staggerContainer = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.085,
+      delayChildren: 0.04,
+    },
+  },
+};
+
+const staggerItem = {
+  hidden: { opacity: 0, y: 18 },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.52, ease: [0.22, 1, 0.36, 1] },
+  },
 };
 
 function buildFourGridItems(rawItems, { publishedMusic = [], publishedAlbums = [] }) {
@@ -76,6 +103,287 @@ function buildFourGridItems(rawItems, { publishedMusic = [], publishedAlbums = [
   });
 }
 
+function HeroSpotlightSection({
+  content,
+  artist,
+  publishedMusic,
+  publishedAlbums,
+  playTrack,
+}) {
+  const sectionRef = useRef(null);
+
+  // Scroll Parallax for Hero background and portrait
+  const { scrollYProgress } = useScroll({
+    target: sectionRef,
+    offset: ['start start', 'end start'],
+  });
+  const bgScrollY = useTransform(scrollYProgress, [0, 1], ['0%', '14%']);
+  const portraitScrollY = useTransform(scrollYProgress, [0, 1], [0, -24]);
+
+  // Cursor Spotlight & Mouse Parallax
+  const mouseX = useMotionValue(600);
+  const mouseY = useMotionValue(320);
+  const normX = useMotionValue(0);
+  const normY = useMotionValue(0);
+
+  const springX = useSpring(mouseX, { stiffness: 120, damping: 24 });
+  const springY = useSpring(mouseY, { stiffness: 120, damping: 24 });
+  const smoothNormX = useSpring(normX, { stiffness: 90, damping: 22 });
+  const smoothNormY = useSpring(normY, { stiffness: 90, damping: 22 });
+
+  const bgParallaxX = useTransform(smoothNormX, [-0.5, 0.5], [12, -12]);
+  const bgParallaxY = useTransform(smoothNormY, [-0.5, 0.5], [10, -10]);
+  const portraitParallaxX = useTransform(smoothNormX, [-0.5, 0.5], [-10, 10]);
+  const portraitParallaxY = useTransform(smoothNormY, [-0.5, 0.5], [-8, 8]);
+
+  const spotlightBg = useMotionTemplate`radial-gradient(620px circle at ${springX}px ${springY}px, rgba(200, 164, 100, 0.14), rgba(200, 164, 100, 0.03) 45%, transparent 75%)`;
+
+  function handleMouseMove(e) {
+    const rect = sectionRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    mouseX.set(x);
+    mouseY.set(y);
+    normX.set(x / Math.max(rect.width, 1) - 0.5);
+    normY.set(y / Math.max(rect.height, 1) - 0.5);
+  }
+
+  function handleMouseLeave() {
+    normX.set(0);
+    normY.set(0);
+  }
+
+  const latestTrack = publishedMusic[0] || null;
+  const heroBgImage = content.backgroundImage || artist?.coverImage || '';
+  const portraitImage = artist?.profileImage || '';
+  const headline = content.headline || content.heading || artist?.name || 'Masud Hauqe';
+  const subheadline =
+    content.subheadline ||
+    content.subheading ||
+    artist?.shortBiography ||
+    artist?.biography ||
+    'Official musical archive, original studio recordings, and authorized audio releases.';
+
+  const showLatestPlay = content.showLatestPlayButton !== false;
+  const latestPlayText = content.latestPlayButtonText || 'Play Latest Release';
+  const primaryCtaText = content.primaryCtaText !== undefined ? content.primaryCtaText : 'Listen to Archive';
+  const primaryCtaUrl = content.primaryCtaUrl || '/music';
+  const secondaryCtaText = content.secondaryCtaText !== undefined ? content.secondaryCtaText : 'Artist Monograph';
+  const secondaryCtaUrl = content.secondaryCtaUrl || '/about';
+  const showHeroGrid = content.showHeroGrid !== false;
+  const heroGridItems = buildFourGridItems(content.heroGridItems, {
+    publishedMusic,
+    publishedAlbums,
+  });
+
+  return (
+    <section
+      ref={sectionRef}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+      className="relative border-b border-[#222226] overflow-hidden bg-[#09090B]"
+    >
+      {/* Hero Background Image with Smooth Parallax Depth */}
+      {heroBgImage && (
+        <motion.div
+          style={{ x: bgParallaxX, y: bgScrollY, scale: 1.06 }}
+          className="absolute inset-0 z-0 pointer-events-none will-change-transform"
+        >
+          <motion.div style={{ y: bgParallaxY }} className="relative w-full h-full">
+            <ShimmerImage
+              src={heroBgImage}
+              alt={headline}
+              fill
+              priority
+              sizes="100vw"
+              className="object-cover object-center"
+            />
+          </motion.div>
+          <div className="absolute inset-0 z-[2] bg-black/75" />
+          <div className="absolute inset-0 z-[2] bg-gradient-to-t from-[#09090B] via-transparent to-[#09090B]/50" />
+        </motion.div>
+      )}
+
+      {/* Subtle Ambient Golden Cursor Spotlight */}
+      <motion.div
+        style={{ background: spotlightBg }}
+        className="pointer-events-none absolute inset-0 z-[3] transition-opacity duration-300"
+      />
+
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 sm:py-20 lg:py-24">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-stretch">
+          {/* Left Column: Staggered Headline & Actions Reveal */}
+          <motion.div
+            variants={staggerContainer}
+            initial="hidden"
+            animate="show"
+            className={`${
+              portraitImage ? 'lg:col-span-7' : 'lg:col-span-12'
+            } flex flex-col justify-center items-center text-center lg:items-start lg:text-left space-y-6`}
+          >
+            {content.kicker && (
+              <motion.p
+                variants={staggerItem}
+                className="text-xs font-semibold tracking-[0.22em] text-[#C8A464]"
+              >
+                {content.kicker}
+              </motion.p>
+            )}
+
+            {headline && (
+              <motion.h1
+                variants={staggerItem}
+                className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-[#F4F1EA] leading-[1.08]"
+                style={{ textWrap: 'balance' }}
+              >
+                {headline}
+              </motion.h1>
+            )}
+
+            {subheadline && (
+              <motion.p
+                variants={staggerItem}
+                className="text-base sm:text-lg text-[#D4D4D8] max-w-2xl mx-auto lg:mx-0 leading-relaxed"
+              >
+                {subheadline}
+              </motion.p>
+            )}
+
+            <motion.div
+              variants={staggerItem}
+              className="flex flex-wrap items-center justify-center lg:justify-start gap-3.5 pt-2 w-full"
+            >
+              {latestTrack && showLatestPlay && (
+                <button
+                  type="button"
+                  onClick={() => playTrack(latestTrack, publishedMusic)}
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded bg-[#C8A464] text-[#09090B] hover:bg-[#D4B475] text-sm font-semibold tracking-wide transition-all hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap shrink-0 shadow-md"
+                >
+                  <Play className="w-4 h-4 fill-current" />
+                  <span>{latestPlayText}</span>
+                </button>
+              )}
+
+              {primaryCtaText && (
+                <Link
+                  href={primaryCtaUrl}
+                  className="px-6 py-3 rounded bg-[#C8A464] text-[#09090B] hover:bg-[#D4B475] text-sm font-semibold tracking-wide transition-all hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap shrink-0 shadow-md"
+                >
+                  {primaryCtaText}
+                </Link>
+              )}
+
+              {secondaryCtaText && (
+                <Link
+                  href={secondaryCtaUrl}
+                  className="px-6 py-3 rounded border border-[#32323C] bg-[#09090B]/60 backdrop-blur-sm text-[#F4F1EA] hover:border-[#C8A464] hover:text-[#C8A464] text-sm font-medium transition-all hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap shrink-0"
+                >
+                  {secondaryCtaText}
+                </Link>
+              )}
+            </motion.div>
+          </motion.div>
+
+          {/* Right Column: Editorial Portrait Card with Subtle Parallax Depth */}
+          {portraitImage && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 22 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              transition={{ duration: 0.58, delay: 0.14, ease: [0.22, 1, 0.36, 1] }}
+              style={{ y: portraitScrollY }}
+              className="lg:col-span-5 flex justify-center lg:justify-end"
+            >
+              <motion.div
+                style={{ x: portraitParallaxX, y: portraitParallaxY }}
+                className="w-full max-w-[310px] sm:max-w-[350px] md:max-w-[370px] lg:max-w-[410px] xl:max-w-[430px] aspect-[3/4] min-h-[410px] sm:min-h-[460px] lg:min-h-[490px] xl:min-h-[530px] rounded-xl bg-[#111116]/90 border border-[#24242C] hover:border-[#C8A464]/50 overflow-hidden relative flex flex-col justify-end p-6 sm:p-8 shadow-2xl transition-colors duration-300 will-change-transform"
+              >
+                <ShimmerImage
+                  src={portraitImage}
+                  alt={headline}
+                  fill
+                  sizes="(max-width: 1024px) 380px, 440px"
+                  className="object-cover object-top"
+                />
+                <div className="absolute inset-0 z-[2] bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
+
+                <div className="relative z-10 border-t border-white/15 pt-4 flex items-center justify-between text-xs text-[#D4D4D8]">
+                  <div>
+                    {artist?.name && (
+                      <p className="font-semibold text-[#F4F1EA]">{artist.name}</p>
+                    )}
+                    {artist?.location && (
+                      <p className="text-[#A1A1AA]">{artist.location}</p>
+                    )}
+                  </div>
+                  <div className="text-right tabular-nums text-[#D4D4D8]">
+                    {publishedMusic.length > 0 && <span>{publishedMusic.length} Works</span>}
+                    {publishedMusic.length > 0 && publishedAlbums.length > 0 && (
+                      <span aria-hidden="true"> · </span>
+                    )}
+                    {publishedAlbums.length > 0 && (
+                      <span>{publishedAlbums.length} Releases</span>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </div>
+
+        {/* 4-Column Highlights Grid Below Hero Banner with Staggered Cascade Reveal */}
+        {showHeroGrid && (
+          <div className="mt-12 sm:mt-16 pt-8 sm:pt-10 border-t border-[#22222A]/90 grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
+            {heroGridItems.map((item, idx) => {
+              const IconComponent = item.Icon;
+              const cardInner = (
+                <motion.div
+                  initial={{ opacity: 0, y: 20, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  whileHover={{ y: -4 }}
+                  transition={{
+                    duration: 0.48,
+                    delay: 0.22 + idx * 0.075,
+                    ease: [0.22, 1, 0.36, 1],
+                  }}
+                  className="h-full rounded-xl bg-[#111116]/85 backdrop-blur-md border border-[#24242E] hover:border-[#C8A464]/50 p-4 sm:p-5 transition-colors duration-300 flex flex-col justify-between group shadow-lg"
+                >
+                  <div className="flex items-center justify-between gap-2 mb-3">
+                    <span className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.18em] text-[#C8A464] truncate">
+                      {item.kicker}
+                    </span>
+                    <div className="w-7 h-7 rounded-lg bg-[#181820] border border-[#2A2A36] flex items-center justify-center text-[#C8A464] shrink-0 group-hover:bg-[#C8A464] group-hover:text-[#09090B] transition-colors">
+                      <IconComponent className="w-3.5 h-3.5" />
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-lg sm:text-2xl font-bold text-[#F4F1EA] tracking-tight tabular-nums">
+                      {item.title}
+                    </p>
+                    <p className="text-xs text-[#9A9AA2] mt-1 line-clamp-2 leading-relaxed">
+                      {item.subtitle}
+                    </p>
+                  </div>
+                </motion.div>
+              );
+
+              return item.url ? (
+                <Link key={idx} href={item.url} className="block h-full">
+                  {cardInner}
+                </Link>
+              ) : (
+                <div key={idx} className="h-full">
+                  {cardInner}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
 export default function SectionRenderer({
   section,
   artist,
@@ -94,198 +402,14 @@ export default function SectionRenderer({
 
   switch (type) {
     case 'HERO': {
-      const latestTrack = publishedMusic[0] || null;
-      const heroBgImage = content.backgroundImage || artist?.coverImage || '';
-      const portraitImage = artist?.profileImage || '';
-      const headline = content.headline || content.heading || artist?.name || 'Masud Hauqe';
-      const subheadline =
-        content.subheadline ||
-        content.subheading ||
-        artist?.shortBiography ||
-        artist?.biography ||
-        'Official musical archive, original studio recordings, and authorized audio releases.';
-
-      const showLatestPlay = content.showLatestPlayButton !== false;
-      const latestPlayText = content.latestPlayButtonText || 'Play Latest Release';
-      const primaryCtaText = content.primaryCtaText !== undefined ? content.primaryCtaText : 'Listen to Archive';
-      const primaryCtaUrl = content.primaryCtaUrl || '/music';
-      const secondaryCtaText = content.secondaryCtaText !== undefined ? content.secondaryCtaText : 'Artist Monograph';
-      const secondaryCtaUrl = content.secondaryCtaUrl || '/about';
-      const showHeroGrid = content.showHeroGrid !== false;
-      const heroGridItems = buildFourGridItems(content.heroGridItems, {
-        publishedMusic,
-        publishedAlbums,
-      });
-
       return (
-        <section className="relative border-b border-[#222226] overflow-hidden bg-[#09090B]">
-          {/* Hero Background Image */}
-          {heroBgImage && (
-            <div className="absolute inset-0 z-0 pointer-events-none">
-              <ShimmerImage
-                src={heroBgImage}
-                alt={headline}
-                fill
-                priority
-                sizes="100vw"
-                className="object-cover object-center"
-              />
-              <div className="absolute inset-0 z-[2] bg-black/75" />
-              <div className="absolute inset-0 z-[2] bg-gradient-to-t from-[#09090B] via-transparent to-[#09090B]/50" />
-            </div>
-          )}
-
-          <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 sm:py-20 lg:py-24">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-stretch">
-              {/* Left Column: Headline and actions */}
-              <motion.div
-                initial={{ opacity: 0, y: 18 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-                className={`${
-                  portraitImage ? 'lg:col-span-7' : 'lg:col-span-12'
-                } flex flex-col justify-center items-center text-center lg:items-start lg:text-left space-y-6`}
-              >
-                {content.kicker && (
-                  <p className="text-xs font-semibold tracking-[0.22em] text-[#C8A464]">
-                    {content.kicker}
-                  </p>
-                )}
-
-                {headline && (
-                  <h1
-                    className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-[#F4F1EA] leading-[1.08]"
-                    style={{ textWrap: 'balance' }}
-                  >
-                    {headline}
-                  </h1>
-                )}
-
-                {subheadline && (
-                  <p className="text-base sm:text-lg text-[#D4D4D8] max-w-2xl mx-auto lg:mx-0 leading-relaxed">
-                    {subheadline}
-                  </p>
-                )}
-
-                <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3.5 pt-2 w-full">
-                  {latestTrack && showLatestPlay && (
-                    <button
-                      type="button"
-                      onClick={() => playTrack(latestTrack, publishedMusic)}
-                      className="inline-flex items-center gap-2 px-6 py-3 rounded bg-[#C8A464] text-[#09090B] hover:bg-[#D4B475] text-sm font-semibold tracking-wide transition-all hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap shrink-0 shadow-md"
-                    >
-                      <Play className="w-4 h-4 fill-current" />
-                      <span>{latestPlayText}</span>
-                    </button>
-                  )}
-
-                  {primaryCtaText && (
-                    <Link
-                      href={primaryCtaUrl}
-                      className="px-6 py-3 rounded bg-[#C8A464] text-[#09090B] hover:bg-[#D4B475] text-sm font-semibold tracking-wide transition-all hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap shrink-0 shadow-md"
-                    >
-                      {primaryCtaText}
-                    </Link>
-                  )}
-
-                  {secondaryCtaText && (
-                    <Link
-                      href={secondaryCtaUrl}
-                      className="px-6 py-3 rounded border border-[#32323C] bg-[#09090B]/60 backdrop-blur-sm text-[#F4F1EA] hover:border-[#C8A464] hover:text-[#C8A464] text-sm font-medium transition-all hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap shrink-0"
-                    >
-                      {secondaryCtaText}
-                    </Link>
-                  )}
-                </div>
-              </motion.div>
-
-              {/* Right Column: Editorial Portrait Card (ONLY shown if database actually has profileImage) */}
-              {portraitImage && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.97, y: 18 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
-                  className="lg:col-span-5 flex justify-center lg:justify-end"
-                >
-                  <div className="w-full max-w-[310px] sm:max-w-[350px] md:max-w-[370px] lg:max-w-[410px] xl:max-w-[430px] aspect-[3/4] min-h-[410px] sm:min-h-[460px] lg:min-h-[490px] xl:min-h-[530px] rounded-xl bg-[#111116]/90 border border-[#24242C] overflow-hidden relative flex flex-col justify-end p-6 sm:p-8 shadow-2xl">
-                    <ShimmerImage
-                      src={portraitImage}
-                      alt={headline}
-                      fill
-                      sizes="(max-width: 1024px) 380px, 440px"
-                      className="object-cover object-top"
-                    />
-                    <div className="absolute inset-0 z-[2] bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
-
-                    <div className="relative z-10 border-t border-white/15 pt-4 flex items-center justify-between text-xs text-[#D4D4D8]">
-                      <div>
-                        {artist?.name && (
-                          <p className="font-semibold text-[#F4F1EA]">{artist.name}</p>
-                        )}
-                        {artist?.location && (
-                          <p className="text-[#A1A1AA]">{artist.location}</p>
-                        )}
-                      </div>
-                      <div className="text-right tabular-nums text-[#D4D4D8]">
-                        {publishedMusic.length > 0 && <span>{publishedMusic.length} Works</span>}
-                        {publishedMusic.length > 0 && publishedAlbums.length > 0 && (
-                          <span aria-hidden="true"> · </span>
-                        )}
-                        {publishedAlbums.length > 0 && (
-                          <span>{publishedAlbums.length} Releases</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </div>
-
-            {/* 4-Column Highlights Grid Below Hero Banner */}
-            {showHeroGrid && (
-              <motion.div
-                initial={{ opacity: 0, y: 18 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.18, ease: [0.22, 1, 0.36, 1] }}
-                className="mt-12 sm:mt-16 pt-8 sm:pt-10 border-t border-[#22222A]/90 grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5"
-              >
-                {heroGridItems.map((item, idx) => {
-                  const IconComponent = item.Icon;
-                  const cardInner = (
-                    <div className="h-full rounded-xl bg-[#111116]/85 backdrop-blur-md border border-[#24242E] hover:border-[#C8A464]/50 p-4 sm:p-5 transition-all duration-300 flex flex-col justify-between group shadow-lg">
-                      <div className="flex items-center justify-between gap-2 mb-3">
-                        <span className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.18em] text-[#C8A464] truncate">
-                          {item.kicker}
-                        </span>
-                        <div className="w-7 h-7 rounded-lg bg-[#181820] border border-[#2A2A36] flex items-center justify-center text-[#C8A464] shrink-0 group-hover:bg-[#C8A464] group-hover:text-[#09090B] transition-colors">
-                          <IconComponent className="w-3.5 h-3.5" />
-                        </div>
-                      </div>
-                      <div>
-                        <p className="text-lg sm:text-2xl font-bold text-[#F4F1EA] tracking-tight tabular-nums">
-                          {item.title}
-                        </p>
-                        <p className="text-xs text-[#9A9AA2] mt-1 line-clamp-2 leading-relaxed">
-                          {item.subtitle}
-                        </p>
-                      </div>
-                    </div>
-                  );
-
-                  return item.url ? (
-                    <Link key={idx} href={item.url} className="block h-full">
-                      {cardInner}
-                    </Link>
-                  ) : (
-                    <div key={idx} className="h-full">
-                      {cardInner}
-                    </div>
-                  );
-                })}
-              </motion.div>
-            )}
-          </div>
-        </section>
+        <HeroSpotlightSection
+          content={content}
+          artist={artist}
+          publishedMusic={publishedMusic}
+          publishedAlbums={publishedAlbums}
+          playTrack={playTrack}
+        />
       );
     }
 
@@ -409,8 +533,8 @@ export default function SectionRenderer({
 
             {tracksToShow.length > 0 ? (
               <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-5">
-                {tracksToShow.map((track) => (
-                  <MusicCard key={track.id} track={track} queue={tracksToShow} />
+                {tracksToShow.map((track, idx) => (
+                  <MusicCard key={track.id} track={track} queue={tracksToShow} index={idx} />
                 ))}
               </div>
             ) : (
@@ -485,8 +609,8 @@ export default function SectionRenderer({
 
             {publishedAlbums.length > 0 ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2.5 sm:gap-4">
-                {publishedAlbums.slice(0, displayLimit).map((album) => (
-                  <AlbumCard key={album.id} album={album} />
+                {publishedAlbums.slice(0, displayLimit).map((album, idx) => (
+                  <AlbumCard key={album.id} album={album} index={idx} />
                 ))}
               </div>
             ) : (

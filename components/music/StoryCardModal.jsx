@@ -11,6 +11,7 @@ export default function StoryCardModal({
   track = null,
   album = null,
   artistName = 'Masud Hauqe',
+  shareUrl = '',
 }) {
   const [downloading, setDownloading] = useState(false);
   const [downloadSuccess, setDownloadSuccess] = useState(false);
@@ -22,6 +23,31 @@ export default function StoryCardModal({
   const subtitle = track?.album?.title || (album ? `${(album.tracks || []).length} Master Tracks` : 'Official Single Master');
   const duration = track?.duration || (album ? 'Official Release' : '3:45');
   const imageUrl = track?.thumbnail || album?.coverImage || '';
+
+  // Resolve clean display domain/URL from APP_URL-backed shareUrl or window.location.origin
+  const resolvedSiteLabel = (() => {
+    const rawCandidate =
+      shareUrl && (shareUrl.startsWith('http://') || shareUrl.startsWith('https://'))
+        ? shareUrl
+        : typeof window !== 'undefined'
+          ? window.location.origin
+          : shareUrl || '';
+    try {
+      if (rawCandidate) {
+        const parsed = new URL(rawCandidate);
+        return parsed.host.replace(/^www\./i, '').toUpperCase();
+      }
+    } catch {
+      // Fallback string cleanup
+    }
+    return (
+      rawCandidate
+        .replace(/^https?:\/\//i, '')
+        .replace(/^www\./i, '')
+        .split('/')[0]
+        .toUpperCase() || 'OFFICIAL ARCHIVE'
+    );
+  })();
 
   async function generateAndDownloadStory() {
     setDownloading(true);
@@ -118,7 +144,7 @@ export default function StoryCardModal({
           ctx.fillStyle = '#C8A464';
           ctx.font = 'bold 64px sans-serif';
           ctx.textAlign = 'center';
-          ctx.fillText('MASUD HAUQE', width / 2, artY + artSize / 2);
+          ctx.fillText(artistName.toUpperCase(), width / 2, artY + artSize / 2);
         }
       } else {
         ctx.fillStyle = '#17171C';
@@ -126,7 +152,7 @@ export default function StoryCardModal({
         ctx.fillStyle = '#C8A464';
         ctx.font = 'bold 64px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText('MASUD HAUQE', width / 2, artY + artSize / 2);
+        ctx.fillText(artistName.toUpperCase(), width / 2, artY + artSize / 2);
       }
       ctx.restore();
 
@@ -214,9 +240,9 @@ export default function StoryCardModal({
       ctx.fillText('NOW STREAMING IN STUDIO MASTER AUDIO', width / 2, 1680);
 
       ctx.fillStyle = '#C8A464';
-      ctx.font = 'bold 32px sans-serif';
+      ctx.font = 'bold 30px sans-serif';
       ctx.letterSpacing = '2px';
-      ctx.fillText('LISTEN AT MASUDHAUQE.COM', width / 2, 1740);
+      ctx.fillText(`LISTEN AT ${resolvedSiteLabel}`, width / 2, 1740);
 
       // Trigger automatic PNG download
       const dataUrl = canvas.toDataURL('image/png');
@@ -314,8 +340,8 @@ export default function StoryCardModal({
 
             {/* Bottom Footer */}
             <div className="pt-2 border-t border-white/5">
-              <p className="text-[8px] tracking-widest text-[#C8A464] font-bold">
-                LISTEN AT MASUDHAUQE.COM
+              <p className="text-[8px] tracking-widest text-[#C8A464] font-bold truncate px-1">
+                LISTEN AT {resolvedSiteLabel}
               </p>
             </div>
           </div>

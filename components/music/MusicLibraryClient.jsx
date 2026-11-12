@@ -131,8 +131,8 @@ export default function MusicLibraryClient({ initialMusic = [], albums = [] }) {
       {displayedMusic.length > 0 ? (
         <>
           <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-5">
-            {displayedMusic.map((track) => (
-              <MusicCard key={track.id} track={track} queue={filteredMusic} />
+            {displayedMusic.map((track, idx) => (
+              <MusicCard key={track.id} track={track} queue={filteredMusic} index={idx} />
             ))}
           </div>
 

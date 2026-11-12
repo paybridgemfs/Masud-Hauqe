@@ -7,23 +7,33 @@ import { Play, Pause, Download, Disc3 } from 'lucide-react';
 import { usePlayer } from '@/components/player/PlayerContext.jsx';
 import { getPublicDownloadUrl } from '@/lib/storage/audio-delivery.js';
 import ShimmerImage from '@/components/ui/ShimmerImage.jsx';
+import MiniEqualizerBars from '@/components/ui/MiniEqualizerBars.jsx';
 
-export default function MusicCard({ track, queue = [] }) {
+export default function MusicCard({ track, queue = [], index = 0 }) {
   const { currentTrack, isPlaying, playTrack } = usePlayer();
   const isCurrent = currentTrack?.id === track.id;
   const activePlaying = isCurrent && isPlaying;
   const downloadUrl = getPublicDownloadUrl(track);
+  const staggerDelay = Math.min((Number(index) % 8) * 0.06, 0.42);
 
   return (
     <motion.article
-      initial={{ opacity: 0, y: 16 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: '-20px' }}
-      whileHover={{ y: -4 }}
-      transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-      className="group bg-[#111115] border border-[#222228] hover:border-[#C8A464]/50 rounded-lg overflow-hidden transition-colors flex flex-col shadow-sm hover:shadow-xl hover:shadow-black/40"
+      initial={{ opacity: 0, y: 22, scale: 0.985 }}
+      whileInView={{ opacity: 1, y: 0, scale: 1 }}
+      viewport={{ once: true, margin: '-25px' }}
+      whileHover={{ y: -5 }}
+      transition={{
+        duration: 0.48,
+        delay: staggerDelay,
+        ease: [0.22, 1, 0.36, 1],
+      }}
+      className={`group bg-[#111115] border rounded-lg overflow-hidden transition-all duration-300 flex flex-col ${
+        isCurrent
+          ? 'border-[#C8A464]/80 shadow-[0_0_28px_rgba(200,164,100,0.14)]'
+          : 'border-[#222228] hover:border-[#C8A464]/50 shadow-sm hover:shadow-xl hover:shadow-black/40'
+      }`}
     >
-      {/* Artwork / Thumbnail with Centered Play Button */}
+      {/* Artwork / Thumbnail with Centered Play Button & Active Mini Equalizer */}
       <div className="relative aspect-[16/10] bg-[#17171C] overflow-hidden border-b border-[#1E1E24]">
         {track.thumbnail ? (
           <ShimmerImage
@@ -31,13 +41,30 @@ export default function MusicCard({ track, queue = [] }) {
             alt={track.title}
             fill
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-            className="object-cover group-hover:scale-[1.04] transition-transform duration-500 ease-out"
+            className={`object-cover transition-transform duration-700 ease-out ${
+              activePlaying ? 'scale-[1.04]' : 'group-hover:scale-[1.05]'
+            }`}
           />
         ) : (
           <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-[#17171C] via-[#111115] to-[#1F1B14] p-3 sm:p-4 text-center">
-            <Disc3 className="w-6 h-6 sm:w-8 sm:h-8 text-[#C8A464]/70 mb-1" />
+            <Disc3
+              className={`w-6 h-6 sm:w-8 sm:h-8 text-[#C8A464]/70 mb-1 ${
+                activePlaying ? 'animate-spin' : ''
+              }`}
+              style={activePlaying ? { animationDuration: '6s' } : undefined}
+            />
             <span className="text-[9px] sm:text-[10px] tracking-[0.14em] text-[#8E8E96]">
               MASTER
+            </span>
+          </div>
+        )}
+
+        {/* Active Track Top-Left Mini Equalizer Badge */}
+        {isCurrent && (
+          <div className="absolute top-2 left-2 sm:top-2.5 sm:left-2.5 z-[3] inline-flex items-center gap-1.5 px-2 py-1 rounded bg-[#09090B]/85 backdrop-blur-md border border-[#C8A464]/50 shadow-md">
+            <MiniEqualizerBars isPlaying={activePlaying} size="sm" />
+            <span className="text-[9px] sm:text-[10px] font-bold tracking-wider uppercase text-[#C8A464]">
+              {activePlaying ? 'Playing' : 'Paused'}
             </span>
           </div>
         )}
@@ -47,7 +74,9 @@ export default function MusicCard({ track, queue = [] }) {
             type="button"
             onClick={() => playTrack(track, queue)}
             aria-label={activePlaying ? `Pause ${track.title}` : `Play ${track.title}`}
-            className="w-8 h-8 sm:w-11 sm:h-11 rounded-full bg-[#C8A464] text-[#09090B] hover:bg-[#D4B475] flex items-center justify-center shadow-lg transition-transform duration-200 hover:scale-110 active:scale-95"
+            className={`w-8 h-8 sm:w-11 sm:h-11 rounded-full bg-[#C8A464] text-[#09090B] hover:bg-[#D4B475] flex items-center justify-center shadow-lg transition-transform duration-200 hover:scale-110 active:scale-95 ${
+              activePlaying ? 'ring-4 ring-[#C8A464]/25' : ''
+            }`}
           >
             {activePlaying ? (
               <Pause className="w-3.5 h-3.5 sm:w-5 sm:h-5 fill-current" />
@@ -82,8 +111,16 @@ export default function MusicCard({ track, queue = [] }) {
             )}
           </div>
 
-          <h3 className="text-xs sm:text-sm font-semibold text-[#F4F1EA] group-hover:text-[#C8A464] transition-colors leading-snug line-clamp-2 sm:line-clamp-1 break-words">
-            <Link href={`/music/${track.slug}`}>{track.title}</Link>
+          <h3
+            className={`text-xs sm:text-sm font-semibold transition-colors leading-snug line-clamp-2 sm:line-clamp-1 break-words flex items-center gap-1.5 ${
+              isCurrent
+                ? 'text-[#C8A464]'
+                : 'text-[#F4F1EA] group-hover:text-[#C8A464]'
+            }`}
+          >
+            <Link href={`/music/${track.slug}`} className="truncate">
+              {track.title}
+            </Link>
           </h3>
         </div>
 
@@ -117,3 +154,4 @@ export default function MusicCard({ track, queue = [] }) {
     </motion.article>
   );
 }
+

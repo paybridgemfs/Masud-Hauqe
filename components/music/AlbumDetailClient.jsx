@@ -1,8 +1,14 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import Link from 'next/link';
-import { motion } from 'motion/react';
+import {
+  motion,
+  useMotionValue,
+  useSpring,
+  useTransform,
+  useMotionTemplate,
+} from 'motion/react';
 import {
   Play,
   Pause,
@@ -27,6 +33,7 @@ import { usePlayer } from '@/components/player/PlayerContext.jsx';
 import { getPublicDownloadUrl } from '@/lib/storage/audio-delivery.js';
 import ShimmerImage from '@/components/ui/ShimmerImage.jsx';
 import StoryCardModal from '@/components/music/StoryCardModal.jsx';
+import MiniEqualizerBars from '@/components/ui/MiniEqualizerBars.jsx';
 
 function parseDurationToSeconds(durationStr) {
   if (!durationStr || typeof durationStr !== 'string') return 0;
@@ -75,7 +82,39 @@ export default function AlbumDetailClient({ album, shareUrl: initialShareUrl = '
 
   const [copied, setCopied] = useState(false);
   const [showStoryModal, setShowStoryModal] = useState(false);
+  const headerRef = useRef(null);
   const shareUrl = initialShareUrl || `/releases/${album.slug}`;
+
+  // Ambient Cursor Spotlight & Cover Parallax Depth
+  const mouseX = useMotionValue(420);
+  const mouseY = useMotionValue(220);
+  const normX = useMotionValue(0);
+  const normY = useMotionValue(0);
+
+  const springX = useSpring(mouseX, { stiffness: 120, damping: 24 });
+  const springY = useSpring(mouseY, { stiffness: 120, damping: 24 });
+  const smoothNormX = useSpring(normX, { stiffness: 90, damping: 22 });
+  const smoothNormY = useSpring(normY, { stiffness: 90, damping: 22 });
+
+  const coverParallaxX = useTransform(smoothNormX, [-0.5, 0.5], [-10, 10]);
+  const coverParallaxY = useTransform(smoothNormY, [-0.5, 0.5], [-10, 10]);
+  const spotlightBg = useMotionTemplate`radial-gradient(560px circle at ${springX}px ${springY}px, rgba(200, 164, 100, 0.13), rgba(200, 164, 100, 0.03) 45%, transparent 75%)`;
+
+  function handleHeaderMouseMove(e) {
+    const rect = headerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    mouseX.set(x);
+    mouseY.set(y);
+    normX.set(x / Math.max(rect.width, 1) - 0.5);
+    normY.set(y / Math.max(rect.height, 1) - 0.5);
+  }
+
+  function handleHeaderMouseLeave() {
+    normX.set(0);
+    normY.set(0);
+  }
 
   const tracks = album.tracks || [];
   const releaseDateStr = album.releaseDate
@@ -159,22 +198,34 @@ export default function AlbumDetailClient({ album, shareUrl: initialShareUrl = '
         </Link>
       </motion.div>
 
-      {/* Release Header */}
+      {/* Release Header with Ambient Cursor Spotlight & Cover Parallax */}
       <motion.section
+        ref={headerRef}
+        onMouseMove={handleHeaderMouseMove}
+        onMouseLeave={handleHeaderMouseLeave}
         initial={{ opacity: 0, y: 18 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-        className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-stretch bg-[#111115] border border-[#222228] rounded-lg p-5 sm:p-8 lg:p-10 shadow-xl"
+        transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+        className="relative overflow-hidden grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-stretch bg-[#111115] border border-[#222228] rounded-lg p-5 sm:p-8 lg:p-10 shadow-xl"
       >
-        <div className="lg:col-span-4 flex">
-          <div className="relative w-full aspect-square rounded-lg bg-[#16161C] border border-[#26262E] overflow-hidden flex items-center justify-center shadow-lg">
+        {/* Subtle Ambient Golden Cursor Spotlight */}
+        <motion.div
+          style={{ background: spotlightBg }}
+          className="pointer-events-none absolute inset-0 z-0 transition-opacity duration-300"
+        />
+
+        <div className="relative z-10 lg:col-span-4 flex">
+          <motion.div
+            style={{ x: coverParallaxX, y: coverParallaxY }}
+            className="relative w-full aspect-square rounded-lg bg-[#16161C] border border-[#26262E] overflow-hidden flex items-center justify-center shadow-2xl will-change-transform"
+          >
             {album.coverImage ? (
               <ShimmerImage
                 src={album.coverImage}
                 alt={album.title}
                 fill
                 sizes="(max-width: 1024px) 100vw, 400px"
-                className="object-cover"
+                className="object-cover scale-[1.03]"
               />
             ) : (
               <div className="text-center p-8">
@@ -182,12 +233,17 @@ export default function AlbumDetailClient({ album, shareUrl: initialShareUrl = '
                 <span className="text-xs tracking-[0.2em] text-[#8E8E96]">OFFICIAL RELEASE</span>
               </div>
             )}
-          </div>
+          </motion.div>
         </div>
 
-        <div className="lg:col-span-8 flex flex-col justify-between space-y-5">
+        <div className="relative z-10 lg:col-span-8 flex flex-col justify-between space-y-5">
           <div className="space-y-4">
-            <div className="space-y-2">
+            <motion.div
+              initial={{ opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.45, delay: 0.08, ease: [0.22, 1, 0.36, 1] }}
+              className="space-y-2"
+            >
               <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-[#C8A464] tracking-wider uppercase tabular-nums">
                 {album.artist?.name && (
                   <>
@@ -207,7 +263,7 @@ export default function AlbumDetailClient({ album, shareUrl: initialShareUrl = '
                   {album.description}
                 </p>
               )}
-            </div>
+            </motion.div>
 
             {/* Release Studio Specifications Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -418,6 +474,7 @@ export default function AlbumDetailClient({ album, shareUrl: initialShareUrl = '
               onClose={() => setShowStoryModal(false)}
               album={album}
               artistName={album.artist?.name || ''}
+              shareUrl={shareUrl}
             />
           </div>
 
@@ -465,14 +522,22 @@ export default function AlbumDetailClient({ album, shareUrl: initialShareUrl = '
                   }`}
                 >
                   <div className="flex items-center gap-4 min-w-0">
-                    <span className="text-xs text-[#8E8E96] tabular-nums w-6">
-                      {String(idx + 1).padStart(2, '0')}
+                    <span className="text-xs text-[#8E8E96] tabular-nums w-6 flex items-center justify-center">
+                      {active ? (
+                        <MiniEqualizerBars isPlaying={activePlaying} size="sm" />
+                      ) : (
+                        String(idx + 1).padStart(2, '0')
+                      )}
                     </span>
                     <button
                       type="button"
                       onClick={() => playTrack(track, tracks)}
                       aria-label={activePlaying ? `Pause ${track.title}` : `Play ${track.title}`}
-                      className="w-9 h-9 rounded-full bg-[#1E1E24] hover:bg-[#C8A464] text-[#F4F1EA] hover:text-[#09090B] flex items-center justify-center transition-all hover:scale-105 shrink-0"
+                      className={`w-9 h-9 rounded-full flex items-center justify-center transition-all hover:scale-105 shrink-0 ${
+                        active
+                          ? 'bg-[#C8A464] text-[#09090B]'
+                          : 'bg-[#1E1E24] hover:bg-[#C8A464] text-[#F4F1EA] hover:text-[#09090B]'
+                      }`}
                     >
                       {activePlaying ? (
                         <Pause className="w-4 h-4 fill-current" />
@@ -483,7 +548,9 @@ export default function AlbumDetailClient({ album, shareUrl: initialShareUrl = '
                     <div className="min-w-0">
                       <Link
                         href={`/music/${track.slug}`}
-                        className="text-sm sm:text-base font-semibold text-[#F4F1EA] hover:text-[#C8A464] truncate block transition-colors"
+                        className={`text-sm sm:text-base font-semibold truncate block transition-colors ${
+                          active ? 'text-[#C8A464]' : 'text-[#F4F1EA] hover:text-[#C8A464]'
+                        }`}
                       >
                         {track.title}
                       </Link>

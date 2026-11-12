@@ -7,15 +7,27 @@ import AlbumDetailClient from "@/components/music/AlbumDetailClient.jsx";
 export const revalidate = 60;
 
 async function resolveOrigin() {
+  const configuredAppUrl = (process.env.APP_URL || "").trim().replace(/\/+$/, "");
+  if (
+    configuredAppUrl &&
+    !configuredAppUrl.includes("localhost") &&
+    !configuredAppUrl.includes("127.0.0.1")
+  ) {
+    return configuredAppUrl;
+  }
   try {
     const h = await headers();
     const host = h.get("x-forwarded-host") || h.get("host");
     const proto = h.get("x-forwarded-proto") || "https";
+    if (host && !host.includes("localhost") && !host.includes("127.0.0.1")) {
+      return `${proto}://${host}`;
+    }
+    if (configuredAppUrl) return configuredAppUrl;
     if (host) return `${proto}://${host}`;
   } catch {
     // Fallback to APP_URL
   }
-  return (process.env.APP_URL || "http://localhost:3000").replace(/\/+$/, "");
+  return configuredAppUrl || "http://localhost:3000";
 }
 
 function toAbsoluteUrl(url, origin) {

@@ -33,8 +33,8 @@ export default async function AlbumsPage() {
 
       {publishedAlbums.length > 0 ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2.5 sm:gap-4">
-          {publishedAlbums.map((album) => (
-            <AlbumCard key={album.id} album={album} />
+          {publishedAlbums.map((album, idx) => (
+            <AlbumCard key={album.id} album={album} index={idx} />
           ))}
         </div>
       ) : (
