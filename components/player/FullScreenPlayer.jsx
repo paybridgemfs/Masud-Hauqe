@@ -284,6 +284,104 @@ export default function FullScreenPlayer({
   const [scrubValue, setScrubValue] = useState(0);
   const [isDownloading, setIsDownloading] = useState(false);
   const seekBarRef = useRef(null);
+  const beatThumbRef = useRef(null);
+  const getAudioRef = useRef(getRealtimeAudioData);
+
+  useEffect(() => {
+    getAudioRef.current = getRealtimeAudioData;
+  }, [getRealtimeAudioData]);
+
+  // Real-time Bass & Beat-Reactive Scale ("Bounce / Zoom In-Out") for Full-Screen Thumbnail
+  useEffect(() => {
+    if (!isOpen || !currentTrack) return;
+
+    let animId = null;
+    let lastTime = performance.now();
+    let currentScale = 1;
+    let prevBass = 0;
+    let bassFloor = 0.18;
+
+    const animateBeat = (now) => {
+      const dt = Math.min(0.05, Math.max(0.001, (now - lastTime) * 0.001));
+      lastTime = now;
+      const t = now * 0.001;
+
+      let targetScale = 1;
+      let glowAlpha = 0;
+
+      if (isPlaying) {
+        const audioFrame = getAudioRef.current ? getAudioRef.current() : null;
+        const freqData = audioFrame?.freqData;
+
+        let maxSignal = 0;
+        if (freqData) {
+          for (let k = 1; k < 64; k++) {
+            if (freqData[k] > maxSignal) maxSignal = freqData[k];
+          }
+        }
+
+        if (freqData && maxSignal > 2) {
+          // Sample Sub-Bass & Kick Drum fundamental bins (~35Hz to ~170Hz)
+          let weightedSum = 0;
+          let weightTotal = 0;
+          for (let bin = 1; bin <= 8; bin++) {
+            const weight = bin >= 2 && bin <= 5 ? 1.85 : 1.0;
+            weightedSum += (freqData[bin] / 255) * weight;
+            weightTotal += weight;
+          }
+          const rawBass = weightedSum / weightTotal;
+
+          bassFloor =
+            rawBass < bassFloor
+              ? bassFloor * 0.92 + rawBass * 0.08
+              : bassFloor * 0.985 + rawBass * 0.015;
+
+          const dynamicFloor = Math.min(0.45, bassFloor * 0.72);
+          const cleanBass = Math.max(
+            0,
+            (rawBass - dynamicFloor) / Math.max(0.32, 1 - dynamicFloor)
+          );
+          const bassTransient = Math.max(0, rawBass - prevBass);
+          prevBass = rawBass * 0.6 + prevBass * 0.4;
+
+          const beatImpulse = Math.min(
+            1,
+            Math.pow(cleanBass, 1.55) * 0.85 + bassTransient * 3.4
+          );
+
+          targetScale = 1 + beatImpulse * 0.16; // Scales up to 1.16x on bass/kick hits
+          glowAlpha = Math.min(0.85, beatImpulse * 0.85);
+        } else {
+          // Fallback rhythmic beat bounce if WebAudio signal is not yet active
+          const pulse = Math.pow(Math.max(0, Math.sin(t * 4.5)), 4);
+          targetScale = 1 + pulse * 0.12;
+          glowAlpha = pulse * 0.45;
+        }
+      }
+
+      const speed = targetScale > currentScale ? 36 : 13;
+      const alpha = 1 - Math.exp(-speed * dt);
+      currentScale = currentScale + (targetScale - currentScale) * alpha;
+      if (!isPlaying && Math.abs(currentScale - 1) < 0.002) {
+        currentScale = 1;
+      }
+
+      if (beatThumbRef.current) {
+        beatThumbRef.current.style.transform = `scale(${currentScale.toFixed(3)})`;
+        beatThumbRef.current.style.boxShadow =
+          glowAlpha > 0.04
+            ? `0 20px 60px rgba(0,0,0,0.9), 0 0 ${(18 + glowAlpha * 32).toFixed(1)}px rgba(200, 164, 100, ${(0.2 + glowAlpha * 0.55).toFixed(2)})`
+            : '0 20px 60px rgba(0,0,0,0.9)';
+      }
+
+      animId = requestAnimationFrame(animateBeat);
+    };
+
+    animId = requestAnimationFrame(animateBeat);
+    return () => {
+      if (animId) cancelAnimationFrame(animId);
+    };
+  }, [isOpen, isPlaying, currentTrack]);
 
   if (!isOpen || !currentTrack) return null;
 
@@ -369,15 +467,15 @@ export default function FullScreenPlayer({
       role="dialog"
       aria-modal="true"
       aria-label="Full screen immersive music player"
-      className="fixed inset-0 z-50 h-[100dvh] max-h-[100dvh] w-screen bg-[#070709] text-[#F4F1EA] flex flex-col justify-between overflow-hidden select-none"
+      className="fixed inset-0 z-50 h-[100dvh] max-h-[100dvh] w-screen bg-[#040406] text-[#F4F1EA] flex flex-col justify-between overflow-hidden select-none"
     >
       {/* ============================================================
-          FULL-SCREEN BLURRED THUMBNAIL BACKGROUND (DYNAMIC & VIBRANT)
+          FULL-SCREEN BLURRED THUMBNAIL BACKGROUND (DEEP, DARK & RICH)
       ============================================================ */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden select-none">
+      <div className="absolute inset-0 pointer-events-none overflow-hidden select-none bg-[#040406]">
         {currentTrack.thumbnail ? (
           <>
-            <div className="absolute -inset-12 filter blur-2xl scale-110 opacity-55 transition-opacity duration-700 ease-out">
+            <div className="absolute -inset-14 filter blur-3xl scale-115 opacity-25 brightness-50 saturate-150 transition-opacity duration-700 ease-out">
               <Image
                 key={currentTrack.id || currentTrack.thumbnail}
                 src={currentTrack.thumbnail}
@@ -389,11 +487,11 @@ export default function FullScreenPlayer({
                 className="object-cover object-center pointer-events-none"
               />
             </div>
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(7,7,9,0.55)_65%,rgba(7,7,9,0.92)_100%)]" />
-            <div className="absolute inset-0 bg-gradient-to-b from-[#070709]/65 via-[#070709]/30 to-[#070709]/85" />
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(4,4,6,0.58)_0%,rgba(4,4,6,0.86)_58%,rgba(4,4,6,0.98)_100%)]" />
+            <div className="absolute inset-0 bg-gradient-to-b from-[#040406]/88 via-[#040406]/72 to-[#040406]/96" />
           </>
         ) : (
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_40%,rgba(200,164,100,0.25)_0%,rgba(7,7,9,0.98)_75%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_40%,rgba(200,164,100,0.14)_0%,rgba(4,4,6,0.98)_70%)]" />
         )}
       </div>
 
@@ -431,7 +529,7 @@ export default function FullScreenPlayer({
       <main className="relative z-10 flex-1 min-h-0 px-4 sm:px-8 py-2 sm:py-4 flex items-center justify-center overflow-hidden">
         <div className="max-w-5xl w-full h-full flex flex-col lg:flex-row items-center justify-center lg:justify-between gap-4 lg:gap-12 py-1">
           {/* THUMBNAIL (LEFT ON DESKTOP, CENTER ON MOBILE) */}
-          <div className="shrink-0 flex items-center justify-center my-auto lg:my-0">
+          <div className="shrink-0 flex items-center justify-center my-auto lg:my-0 p-3 sm:p-5">
             <div className="relative">
               <AnimatePresence mode="wait" initial={false}>
                 <motion.div
@@ -459,25 +557,30 @@ export default function FullScreenPlayer({
                       handleSwipePrev();
                     }
                   }}
-                  className="relative aspect-square h-[28vh] sm:h-[36vh] lg:h-[46vh] max-h-[400px] rounded-2xl overflow-hidden bg-[#121217] border border-[#C8A464]/40 shadow-[0_20px_60px_rgba(0,0,0,0.85)] flex items-center justify-center cursor-grab active:cursor-grabbing touch-pan-y"
+                  className="cursor-grab active:cursor-grabbing touch-pan-y"
                 >
-                  {currentTrack.thumbnail ? (
-                    <ShimmerImage
-                      src={currentTrack.thumbnail}
-                      alt={currentTrack.title}
-                      fill
-                      sizes="(max-width: 1024px) 340px, 420px"
-                      className="object-cover pointer-events-none"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-[#1C1A14] via-[#111115] to-[#09090B] text-center p-4">
-                      <Disc3 className="w-16 h-16 text-[#C8A464] animate-[spin_10s_linear_infinite]" />
-                    </div>
-                  )}
+                  <div
+                    ref={beatThumbRef}
+                    className="relative aspect-square h-[26vh] sm:h-[34vh] lg:h-[44vh] max-h-[380px] rounded-2xl overflow-hidden bg-[#121217] border border-[#C8A464]/45 shadow-[0_20px_60px_rgba(0,0,0,0.9)] flex items-center justify-center will-change-transform origin-center"
+                  >
+                    {currentTrack.thumbnail ? (
+                      <ShimmerImage
+                        src={currentTrack.thumbnail}
+                        alt={currentTrack.title}
+                        fill
+                        sizes="(max-width: 1024px) 340px, 420px"
+                        className="object-cover pointer-events-none"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-[#1C1A14] via-[#111115] to-[#09090B] text-center p-4">
+                        <Disc3 className="w-16 h-16 text-[#C8A464] animate-[spin_10s_linear_infinite]" />
+                      </div>
+                    )}
+                  </div>
                 </motion.div>
               </AnimatePresence>
 
-              <div className="lg:hidden text-center mt-1">
+              <div className="lg:hidden text-center mt-2">
                 <span className="text-[9px] text-[#8E8E96] tracking-wider uppercase">
                   ← Swipe to change track →
                 </span>
