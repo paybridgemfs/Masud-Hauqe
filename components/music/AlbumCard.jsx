@@ -3,13 +3,13 @@
 import React from 'react';
 import Link from 'next/link';
 import { motion } from 'motion/react';
-import { Play, Pause, Disc } from 'lucide-react';
+import { Play, Pause, Disc, Loader2 } from 'lucide-react';
 import { usePlayer } from '@/components/player/PlayerContext.jsx';
 import ShimmerImage from '@/components/ui/ShimmerImage.jsx';
 import MiniEqualizerBars from '@/components/ui/MiniEqualizerBars.jsx';
 
 export default function AlbumCard({ album, index = 0 }) {
-  const { currentTrack, isPlaying, playAlbum, togglePlay } = usePlayer();
+  const { currentTrack, isPlaying, isLoading, playAlbum, togglePlay } = usePlayer();
   const tracks = album.tracks || [];
   const releaseYear = album.releaseDate ? new Date(album.releaseDate).getFullYear() : null;
   const isReleaseCurrent = Boolean(
@@ -17,6 +17,7 @@ export default function AlbumCard({ album, index = 0 }) {
       (currentTrack.albumId === album.id || tracks.some((t) => t.id === currentTrack.id))
   );
   const activePlaying = isReleaseCurrent && isPlaying;
+  const activeLoading = isReleaseCurrent && isLoading;
   const staggerDelay = Math.min((Number(index) % 8) * 0.06, 0.42);
 
   return (
@@ -70,11 +71,14 @@ export default function AlbumCard({ album, index = 0 }) {
           <div className="absolute inset-0 z-[2] bg-black/30 group-hover:bg-black/45 transition-colors flex items-center justify-center">
             <button
               type="button"
+              disabled={activeLoading}
               onClick={() => (isReleaseCurrent ? togglePlay() : playAlbum(tracks, 0))}
               aria-label={`Play release ${album.title}`}
-              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#C8A464] text-[#09090B] hover:bg-[#D4B475] flex items-center justify-center shadow-lg transition-transform duration-200 hover:scale-110 active:scale-95"
+              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#C8A464] text-[#09090B] hover:bg-[#D4B475] flex items-center justify-center shadow-lg transition-transform duration-200 hover:scale-110 active:scale-95 disabled:opacity-75 disabled:cursor-wait"
             >
-              {activePlaying ? (
+              {activeLoading ? (
+                <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin" />
+              ) : activePlaying ? (
                 <Pause className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-current" />
               ) : (
                 <Play className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-current ml-0.5" />

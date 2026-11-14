@@ -1,70 +1,89 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Save, Plus, Trash2 } from 'lucide-react';
+import { Save, Plus, Trash2, Loader2 } from 'lucide-react';
 
 export function AdminPagesManager({ initialPages = [] }) {
   const [pages, setPages] = useState(initialPages);
   const [selectedId, setSelectedId] = useState(initialPages[0]?.id || '');
   const [statusMsg, setStatusMsg] = useState('');
   const [newPage, setNewPage] = useState({ title: '', slug: '', content: '' });
+  const [savingPage, setSavingPage] = useState(false);
+  const [creatingPage, setCreatingPage] = useState(false);
+  const [deletingPageId, setDeletingPageId] = useState(null);
 
   const currentPage = pages.find((p) => p.id === selectedId) || null;
 
   async function handleSavePage(e) {
     e.preventDefault();
-    if (!currentPage) return;
-    const res = await fetch('/api/settings', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        group: 'pages',
-        action: 'update',
-        page: currentPage,
-      }),
-    });
-    if (res.ok) {
-      setStatusMsg(`Saved legal/CMS page "${currentPage.title}".`);
+    if (!currentPage || savingPage) return;
+    setSavingPage(true);
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          group: 'pages',
+          action: 'update',
+          page: currentPage,
+        }),
+      });
+      if (res.ok) {
+        setStatusMsg(`Saved legal/CMS page "${currentPage.title}".`);
+      }
+    } finally {
+      setSavingPage(false);
     }
   }
 
   async function handleCreatePage(e) {
     e.preventDefault();
-    if (!newPage.title.trim() || !newPage.content.trim()) return;
-    const res = await fetch('/api/settings', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        group: 'pages',
-        action: 'create',
-        page: newPage,
-      }),
-    });
-    if (res.ok) {
-      const refreshed = await fetch('/api/settings').then((r) => r.json());
-      if (refreshed.pages) {
-        setPages(refreshed.pages);
-        setSelectedId(refreshed.pages[refreshed.pages.length - 1]?.id || '');
+    if (!newPage.title.trim() || !newPage.content.trim() || creatingPage) return;
+    setCreatingPage(true);
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          group: 'pages',
+          action: 'create',
+          page: newPage,
+        }),
+      });
+      if (res.ok) {
+        const refreshed = await fetch('/api/settings').then((r) => r.json());
+        if (refreshed.pages) {
+          setPages(refreshed.pages);
+          setSelectedId(refreshed.pages[refreshed.pages.length - 1]?.id || '');
+        }
+        setNewPage({ title: '', slug: '', content: '' });
+        setStatusMsg('Created new CMS page.');
       }
-      setNewPage({ title: '', slug: '', content: '' });
-      setStatusMsg('Created new CMS page.');
+    } finally {
+      setCreatingPage(false);
     }
   }
 
   async function handleDeletePage(id) {
-    const res = await fetch('/api/settings', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        group: 'pages',
-        action: 'delete',
-        page: { id },
-      }),
-    });
-    if (res.ok) {
-      const next = pages.filter((p) => p.id !== id);
-      setPages(next);
-      setSelectedId(next[0]?.id || '');
+    if (deletingPageId === id) return;
+    setDeletingPageId(id);
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          group: 'pages',
+          action: 'delete',
+          page: { id },
+        }),
+      });
+      if (res.ok) {
+        const next = pages.filter((p) => p.id !== id);
+        setPages(next);
+        setSelectedId(next[0]?.id || '');
+      }
+    } finally {
+      setDeletingPageId(null);
     }
   }
 
@@ -106,11 +125,16 @@ export function AdminPagesManager({ initialPages = [] }) {
                 <h2 className="text-lg font-bold text-[#F4F1EA]">Edit Page: {currentPage.title}</h2>
                 <button
                   type="button"
+                  disabled={deletingPageId === currentPage.id}
                   onClick={() => handleDeletePage(currentPage.id)}
-                  className="text-xs text-[#FCA5A5] hover:underline inline-flex items-center gap-1"
+                  className="text-xs text-[#FCA5A5] hover:underline inline-flex items-center gap-1 disabled:opacity-50"
                 >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  <span>Delete</span>
+                  {deletingPageId === currentPage.id ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Trash2 className="w-3.5 h-3.5" />
+                  )}
+                  <span>{deletingPageId === currentPage.id ? 'Deleting...' : 'Delete'}</span>
                 </button>
               </div>
 
@@ -173,10 +197,15 @@ export function AdminPagesManager({ initialPages = [] }) {
               <div className="flex justify-end">
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded bg-[#C8A464] text-[#09090B] hover:bg-[#D4B475] text-xs font-semibold inline-flex items-center gap-1.5"
+                  disabled={savingPage}
+                  className="px-5 py-2 rounded bg-[#C8A464] text-[#09090B] hover:bg-[#D4B475] text-xs font-semibold inline-flex items-center gap-1.5 disabled:opacity-50"
                 >
-                  <Save className="w-4 h-4" />
-                  <span>Save Page Changes</span>
+                  {savingPage ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Save className="w-4 h-4" />
+                  )}
+                  <span>{savingPage ? 'Saving Page...' : 'Save Page Changes'}</span>
                 </button>
               </div>
             </form>
@@ -215,10 +244,15 @@ export function AdminPagesManager({ initialPages = [] }) {
         />
         <button
           type="submit"
-          className="px-4 py-2 rounded border border-[#2E2E38] hover:border-[#C8A464] text-xs font-semibold text-[#C8A464] inline-flex items-center gap-1.5"
+          disabled={creatingPage}
+          className="px-4 py-2 rounded border border-[#2E2E38] hover:border-[#C8A464] text-xs font-semibold text-[#C8A464] inline-flex items-center gap-1.5 disabled:opacity-50"
         >
-          <Plus className="w-3.5 h-3.5" />
-          <span>Create Page</span>
+          {creatingPage ? (
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          ) : (
+            <Plus className="w-3.5 h-3.5" />
+          )}
+          <span>{creatingPage ? 'Creating Page...' : 'Create Page'}</span>
         </button>
       </form>
     </div>

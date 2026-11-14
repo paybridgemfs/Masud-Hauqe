@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Send, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Send, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 
 export default function ContactFormClient() {
   const [formData, setFormData] = useState({
@@ -140,7 +140,11 @@ export default function ContactFormClient() {
         disabled={submitting}
         className="px-6 py-3 rounded bg-[#C8A464] text-[#09090B] hover:bg-[#D4B475] text-sm font-semibold inline-flex items-center gap-2 transition-colors disabled:opacity-50"
       >
-        <Send className="w-4 h-4" />
+        {submitting ? (
+          <Loader2 className="w-4 h-4 animate-spin" />
+        ) : (
+          <Send className="w-4 h-4" />
+        )}
         <span>{submitting ? 'Sending Message...' : 'Submit Inquiry'}</span>
       </button>
     </form>

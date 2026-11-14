@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Plus, Trash2, Save, Eye, EyeOff } from 'lucide-react';
+import { Plus, Trash2, Save, Eye, EyeOff, Loader2 } from 'lucide-react';
 
 export default function AdminNavigationClient({ initialSettings = {}, initialNavItems = [] }) {
   const [navItems, setNavItems] = useState(initialNavItems);
@@ -16,81 +16,108 @@ export default function AdminNavigationClient({ initialSettings = {}, initialNav
     contactLocation: initialSettings.contactLocation || '',
   });
   const [newNav, setNewNav] = useState({ label: '', url: '', location: 'header' });
+  const [savingHeaderFooter, setSavingHeaderFooter] = useState(false);
+  const [addingNav, setAddingNav] = useState(false);
+  const [togglingNavId, setTogglingNavId] = useState(null);
+  const [deletingNavId, setDeletingNavId] = useState(null);
   const [statusMsg, setStatusMsg] = useState('');
 
   async function handleSaveHeaderFooter(e) {
     e.preventDefault();
-    const res = await fetch('/api/settings', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        group: 'websiteSettings',
-        values: {
-          ...headerFooter,
-          stickyHeader: String(headerFooter.stickyHeader),
-        },
-      }),
-    });
-    if (res.ok) {
-      setStatusMsg('Header and Footer configuration saved.');
+    if (savingHeaderFooter) return;
+    setSavingHeaderFooter(true);
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          group: 'websiteSettings',
+          values: {
+            ...headerFooter,
+            stickyHeader: String(headerFooter.stickyHeader),
+          },
+        }),
+      });
+      if (res.ok) {
+        setStatusMsg('Header and Footer configuration saved.');
+      }
+    } finally {
+      setSavingHeaderFooter(false);
     }
   }
 
   async function handleAddNav(e) {
     e.preventDefault();
-    if (!newNav.label.trim() || !newNav.url.trim()) return;
-    const res = await fetch('/api/settings', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        group: 'navigationItems',
-        action: 'create',
-        item: {
-          label: newNav.label.trim(),
-          url: newNav.url.trim(),
-          location: newNav.location,
-          position: navItems.length + 1,
-          isVisible: true,
-        },
-      }),
-    });
-    if (res.ok) {
-      const refreshed = await fetch('/api/settings').then((r) => r.json());
-      if (refreshed.navigationItems) setNavItems(refreshed.navigationItems);
-      setNewNav({ label: '', url: '', location: 'header' });
-      setStatusMsg('Navigation item added.');
+    if (!newNav.label.trim() || !newNav.url.trim() || addingNav) return;
+    setAddingNav(true);
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          group: 'navigationItems',
+          action: 'create',
+          item: {
+            label: newNav.label.trim(),
+            url: newNav.url.trim(),
+            location: newNav.location,
+            position: navItems.length + 1,
+            isVisible: true,
+          },
+        }),
+      });
+      if (res.ok) {
+        const refreshed = await fetch('/api/settings').then((r) => r.json());
+        if (refreshed.navigationItems) setNavItems(refreshed.navigationItems);
+        setNewNav({ label: '', url: '', location: 'header' });
+        setStatusMsg('Navigation item added.');
+      }
+    } finally {
+      setAddingNav(false);
     }
   }
 
   async function toggleNavVisibility(item) {
-    const res = await fetch('/api/settings', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        group: 'navigationItems',
-        action: 'update',
-        item: { id: item.id, isVisible: !item.isVisible },
-      }),
-    });
-    if (res.ok) {
-      setNavItems((prev) =>
-        prev.map((n) => (n.id === item.id ? { ...n, isVisible: !n.isVisible } : n))
-      );
+    if (togglingNavId === item.id) return;
+    setTogglingNavId(item.id);
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          group: 'navigationItems',
+          action: 'update',
+          item: { id: item.id, isVisible: !item.isVisible },
+        }),
+      });
+      if (res.ok) {
+        setNavItems((prev) =>
+          prev.map((n) => (n.id === item.id ? { ...n, isVisible: !n.isVisible } : n))
+        );
+      }
+    } finally {
+      setTogglingNavId(null);
     }
   }
 
   async function deleteNavItem(id) {
-    const res = await fetch('/api/settings', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        group: 'navigationItems',
-        action: 'delete',
-        item: { id },
-      }),
-    });
-    if (res.ok) {
-      setNavItems((prev) => prev.filter((n) => n.id !== id));
+    if (deletingNavId === id) return;
+    setDeletingNavId(id);
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          group: 'navigationItems',
+          action: 'delete',
+          item: { id },
+        }),
+      });
+      if (res.ok) {
+        setNavItems((prev) => prev.filter((n) => n.id !== id));
+      }
+    } finally {
+      setDeletingNavId(null);
     }
   }
 
@@ -218,10 +245,15 @@ export default function AdminNavigationClient({ initialSettings = {}, initialNav
 
           <button
             type="submit"
-            className="px-5 py-2 rounded bg-[#C8A464] text-[#09090B] hover:bg-[#D4B475] text-xs font-semibold inline-flex items-center gap-1.5"
+            disabled={savingHeaderFooter}
+            className="px-5 py-2 rounded bg-[#C8A464] text-[#09090B] hover:bg-[#D4B475] text-xs font-semibold inline-flex items-center gap-1.5 disabled:opacity-50"
           >
-            <Save className="w-4 h-4" />
-            <span>Save Header & Footer</span>
+            {savingHeaderFooter ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Save className="w-4 h-4" />
+            )}
+            <span>{savingHeaderFooter ? 'Saving...' : 'Save Header & Footer'}</span>
           </button>
         </div>
       </form>
@@ -258,10 +290,15 @@ export default function AdminNavigationClient({ initialSettings = {}, initialNav
           </select>
           <button
             type="submit"
-            className="sm:col-span-2 px-3 py-2 rounded bg-[#C8A464] text-[#09090B] text-xs font-semibold flex items-center justify-center gap-1"
+            disabled={addingNav}
+            className="sm:col-span-2 px-3 py-2 rounded bg-[#C8A464] text-[#09090B] text-xs font-semibold flex items-center justify-center gap-1 disabled:opacity-50"
           >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Add Item</span>
+            {addingNav ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Plus className="w-3.5 h-3.5" />
+            )}
+            <span>{addingNav ? 'Adding...' : 'Add Item'}</span>
           </button>
         </form>
 
@@ -278,18 +315,30 @@ export default function AdminNavigationClient({ initialSettings = {}, initialNav
               <div className="flex items-center gap-2">
                 <button
                   type="button"
+                  disabled={togglingNavId === item.id}
                   onClick={() => toggleNavVisibility(item)}
-                  className={item.isVisible ? 'text-[#4ADE80]' : 'text-[#71717A]'}
+                  className={`${item.isVisible ? 'text-[#4ADE80]' : 'text-[#71717A]'} disabled:opacity-50`}
                 >
-                  {item.isVisible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                  {togglingNavId === item.id ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : item.isVisible ? (
+                    <Eye className="w-4 h-4" />
+                  ) : (
+                    <EyeOff className="w-4 h-4" />
+                  )}
                 </button>
                 <button
                   type="button"
+                  disabled={deletingNavId === item.id}
                   onClick={() => deleteNavItem(item.id)}
                   aria-label={`Delete navigation item ${item.label}`}
-                  className="text-[#9A9AA2] hover:text-[#F87171]"
+                  className="text-[#9A9AA2] hover:text-[#F87171] disabled:opacity-50"
                 >
-                  <Trash2 className="w-4 h-4" />
+                  {deletingNavId === item.id ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-[#F87171]" />
+                  ) : (
+                    <Trash2 className="w-4 h-4" />
+                  )}
                 </button>
               </div>
             </div>

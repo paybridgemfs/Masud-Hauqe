@@ -1,24 +1,39 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'motion/react';
-import { Play, Pause, Download, Disc3 } from 'lucide-react';
+import { Play, Pause, Download, Disc3, Loader2 } from 'lucide-react';
 import { usePlayer } from '@/components/player/PlayerContext.jsx';
 import {
   getPublicDownloadUrl,
   getTrackDownloadFilename,
 } from '@/lib/storage/audio-delivery.js';
+import { triggerManagedDownload } from '@/lib/client-download.js';
 import ShimmerImage from '@/components/ui/ShimmerImage.jsx';
 import MiniEqualizerBars from '@/components/ui/MiniEqualizerBars.jsx';
 
 export default function MusicCard({ track, queue = [], index = 0 }) {
-  const { currentTrack, isPlaying, playTrack } = usePlayer();
+  const { currentTrack, isPlaying, isLoading, playTrack } = usePlayer();
+  const [isDownloading, setIsDownloading] = useState(false);
   const isCurrent = currentTrack?.id === track.id;
   const activePlaying = isCurrent && isPlaying;
+  const activeLoading = isCurrent && isLoading;
   const downloadUrl = getPublicDownloadUrl(track);
   const downloadFilename = getTrackDownloadFilename(track);
   const staggerDelay = Math.min((Number(index) % 8) * 0.06, 0.42);
+
+  async function handleDownload(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!downloadUrl || isDownloading) return;
+    setIsDownloading(true);
+    try {
+      await triggerManagedDownload(downloadUrl, downloadFilename);
+    } finally {
+      setIsDownloading(false);
+    }
+  }
 
   return (
     <motion.article
@@ -76,13 +91,16 @@ export default function MusicCard({ track, queue = [], index = 0 }) {
         <div className="absolute inset-0 z-[2] bg-black/35 group-hover:bg-black/45 transition-colors flex items-center justify-center">
           <button
             type="button"
+            disabled={activeLoading}
             onClick={() => playTrack(track, queue)}
             aria-label={activePlaying ? `Pause ${track.title}` : `Play ${track.title}`}
-            className={`w-8 h-8 sm:w-11 sm:h-11 rounded-full bg-[#C8A464] text-[#09090B] hover:bg-[#D4B475] flex items-center justify-center shadow-lg transition-transform duration-200 hover:scale-110 active:scale-95 ${
+            className={`w-8 h-8 sm:w-11 sm:h-11 rounded-full bg-[#C8A464] text-[#09090B] hover:bg-[#D4B475] flex items-center justify-center shadow-lg transition-transform duration-200 hover:scale-110 active:scale-95 disabled:opacity-75 disabled:cursor-wait ${
               activePlaying ? 'ring-4 ring-[#C8A464]/25' : ''
             }`}
           >
-            {activePlaying ? (
+            {activeLoading ? (
+              <Loader2 className="w-3.5 h-3.5 sm:w-5 sm:h-5 animate-spin" />
+            ) : activePlaying ? (
               <Pause className="w-3.5 h-3.5 sm:w-5 sm:h-5 fill-current" />
             ) : (
               <Play className="w-3.5 h-3.5 sm:w-5 sm:h-5 fill-current ml-0.5" />
@@ -141,15 +159,25 @@ export default function MusicCard({ track, queue = [], index = 0 }) {
           </div>
 
           {downloadUrl ? (
-            <a
-              href={downloadUrl}
-              download={downloadFilename}
+            <button
+              type="button"
+              onClick={handleDownload}
+              disabled={isDownloading}
               aria-label={`Download ${track.title} MP3`}
-              className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-medium text-[#C8A464] hover:text-[#D4B475] transition-colors whitespace-nowrap shrink-0"
+              className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-medium text-[#C8A464] hover:text-[#D4B475] transition-colors whitespace-nowrap shrink-0 disabled:opacity-65 disabled:cursor-wait"
             >
-              <Download className="w-3 h-3" />
-              <span>MP3</span>
-            </a>
+              {isDownloading ? (
+                <>
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  <span>Wait...</span>
+                </>
+              ) : (
+                <>
+                  <Download className="w-3 h-3" />
+                  <span>MP3</span>
+                </>
+              )}
+            </button>
           ) : (
             <span className="text-[10px] text-[#6E6E77] shrink-0">Stream</span>
           )}

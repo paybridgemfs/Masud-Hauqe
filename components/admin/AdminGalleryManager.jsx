@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
-import { Plus, Trash2, Image as ImageIcon } from 'lucide-react';
+import { Plus, Trash2, Image as ImageIcon, Loader2 } from 'lucide-react';
 import DriveImageUpload from '@/components/admin/DriveImageUpload.jsx';
 
 export function AdminGalleryManager({ initialGallery = [] }) {
@@ -13,55 +13,69 @@ export function AdminGalleryManager({ initialGallery = [] }) {
   const [description, setDescription] = useState('');
   const [statusMsg, setStatusMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [addingPhoto, setAddingPhoto] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
 
   async function handleAdd(e) {
     e.preventDefault();
+    if (addingPhoto) return;
     setErrorMsg('');
     setStatusMsg('');
     if (!title.trim() || !imageUrl.trim()) {
       setErrorMsg('Please enter a title and upload a photograph to Google Drive first.');
       return;
     }
-    const res = await fetch('/api/settings', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({
-        group: 'gallery',
-        action: 'create',
-        item: {
-          title: title.trim(),
-          imageUrl: imageUrl.trim(),
-          imageFileId: imageFileId.trim(),
-          description: description.trim(),
-          isPublished: true,
-        },
-      }),
-    });
-    if (res.ok) {
-      const refreshed = await fetch('/api/settings').then((r) => r.json());
-      if (refreshed.gallery) setGallery(refreshed.gallery);
-      setTitle('');
-      setImageUrl('');
-      setImageFileId('');
-      setDescription('');
-      setStatusMsg('Photograph uploaded to Google Drive "Images" folder and saved in Gallery.');
+    setAddingPhoto(true);
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          group: 'gallery',
+          action: 'create',
+          item: {
+            title: title.trim(),
+            imageUrl: imageUrl.trim(),
+            imageFileId: imageFileId.trim(),
+            description: description.trim(),
+            isPublished: true,
+          },
+        }),
+      });
+      if (res.ok) {
+        const refreshed = await fetch('/api/settings').then((r) => r.json());
+        if (refreshed.gallery) setGallery(refreshed.gallery);
+        setTitle('');
+        setImageUrl('');
+        setImageFileId('');
+        setDescription('');
+        setStatusMsg('Photograph uploaded to Google Drive "Images" folder and saved in Gallery.');
+      }
+    } finally {
+      setAddingPhoto(false);
     }
   }
 
   async function handleDelete(id) {
-    const res = await fetch('/api/settings', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({
-        group: 'gallery',
-        action: 'delete',
-        item: { id },
-      }),
-    });
-    if (res.ok) {
-      setGallery((prev) => prev.filter((g) => g.id !== id));
+    if (deletingId === id) return;
+    setDeletingId(id);
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          group: 'gallery',
+          action: 'delete',
+          item: { id },
+        }),
+      });
+      if (res.ok) {
+        setGallery((prev) => prev.filter((g) => g.id !== id));
+      }
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -125,10 +139,15 @@ export function AdminGalleryManager({ initialGallery = [] }) {
 
         <button
           type="submit"
-          className="px-5 py-2.5 rounded bg-[#C8A464] text-[#09090B] text-xs font-semibold inline-flex items-center gap-1.5"
+          disabled={addingPhoto}
+          className="px-5 py-2.5 rounded bg-[#C8A464] text-[#09090B] text-xs font-semibold inline-flex items-center gap-1.5 disabled:opacity-50"
         >
-          <Plus className="w-4 h-4" />
-          <span>Publish to Gallery</span>
+          {addingPhoto ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <Plus className="w-4 h-4" />
+          )}
+          <span>{addingPhoto ? 'Publishing...' : 'Publish to Gallery'}</span>
         </button>
       </form>
 
@@ -163,11 +182,16 @@ export function AdminGalleryManager({ initialGallery = [] }) {
                 </div>
                 <button
                   type="button"
+                  disabled={deletingId === item.id}
                   onClick={() => handleDelete(item.id)}
                   aria-label={`Delete ${item.title}`}
-                  className="p-1.5 text-[#9A9AA2] hover:text-[#F87171]"
+                  className="p-1.5 text-[#9A9AA2] hover:text-[#F87171] disabled:opacity-50"
                 >
-                  <Trash2 className="w-4 h-4" />
+                  {deletingId === item.id ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-[#F87171]" />
+                  ) : (
+                    <Trash2 className="w-4 h-4" />
+                  )}
                 </button>
               </div>
             </div>

@@ -16,6 +16,7 @@ import {
   ExternalLink,
   Layers,
   Sparkles,
+  Loader2,
 } from 'lucide-react';
 import DriveImageUpload from '@/components/admin/DriveImageUpload.jsx';
 
@@ -225,6 +226,11 @@ export default function AdminSectionsClient({ initialSections = [] }) {
   const [newHeading, setNewHeading] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [isRestoring, setIsRestoring] = useState(false);
+  const [addingSection, setAddingSection] = useState(false);
+  const [savingSectionId, setSavingSectionId] = useState(null);
+  const [togglingId, setTogglingId] = useState(null);
+  const [reordering, setReordering] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
 
   // Comprehensive draft state for full section & button customization
   const [editDraft, setEditDraft] = useState({
@@ -309,126 +315,151 @@ export default function AdminSectionsClient({ initialSections = [] }) {
   }
 
   async function saveEditing(sec) {
-    const nextContent = {
-      ...sec.content,
-      kicker: editDraft.kicker.trim(),
-      heading: editDraft.heading.trim(),
-      headline: editDraft.heading.trim(),
-      subheading: editDraft.subheading.trim(),
-      subheadline: editDraft.subheading.trim(),
-      body: editDraft.body.trim(),
-      careerBody: (editDraft.careerBody || '').trim(),
-      musicalBgBody: (editDraft.musicalBgBody || '').trim(),
-      showAchievements: Boolean(editDraft.showAchievements),
-      primaryCtaText: editDraft.primaryCtaText.trim(),
-      primaryCtaUrl: editDraft.primaryCtaUrl.trim(),
-      secondaryCtaText: editDraft.secondaryCtaText.trim(),
-      secondaryCtaUrl: editDraft.secondaryCtaUrl.trim(),
-      showLatestPlayButton: editDraft.showLatestPlayButton,
-      latestPlayButtonText: editDraft.latestPlayButtonText.trim(),
-      ctaText: editDraft.ctaText.trim(),
-      ctaUrl: editDraft.ctaUrl.trim(),
-      showCtaButton: editDraft.showCtaButton,
-      showEmailButton: editDraft.showEmailButton,
-      limit: Number(editDraft.limit) || 8,
-      emptyHeading: editDraft.emptyHeading.trim(),
-      emptyText: editDraft.emptyText.trim(),
-      backgroundImage: editDraft.backgroundImage || '',
-      backgroundImageFileId: editDraft.backgroundImageFileId || '',
-      showHeroGrid: Boolean(editDraft.showHeroGrid),
-      heroGridItems: (editDraft.heroGridItems || []).map((item) => ({
-        kicker: (item.kicker || '').trim(),
-        title: (item.title || '').trim(),
-        subtitle: (item.subtitle || '').trim(),
-        url: (item.url || '').trim(),
-      })),
-    };
+    if (savingSectionId === sec.id) return;
+    setSavingSectionId(sec.id);
+    try {
+      const nextContent = {
+        ...sec.content,
+        kicker: editDraft.kicker.trim(),
+        heading: editDraft.heading.trim(),
+        headline: editDraft.heading.trim(),
+        subheading: editDraft.subheading.trim(),
+        subheadline: editDraft.subheading.trim(),
+        body: editDraft.body.trim(),
+        careerBody: (editDraft.careerBody || '').trim(),
+        musicalBgBody: (editDraft.musicalBgBody || '').trim(),
+        showAchievements: Boolean(editDraft.showAchievements),
+        primaryCtaText: editDraft.primaryCtaText.trim(),
+        primaryCtaUrl: editDraft.primaryCtaUrl.trim(),
+        secondaryCtaText: editDraft.secondaryCtaText.trim(),
+        secondaryCtaUrl: editDraft.secondaryCtaUrl.trim(),
+        showLatestPlayButton: editDraft.showLatestPlayButton,
+        latestPlayButtonText: editDraft.latestPlayButtonText.trim(),
+        ctaText: editDraft.ctaText.trim(),
+        ctaUrl: editDraft.ctaUrl.trim(),
+        showCtaButton: editDraft.showCtaButton,
+        showEmailButton: editDraft.showEmailButton,
+        limit: Number(editDraft.limit) || 8,
+        emptyHeading: editDraft.emptyHeading.trim(),
+        emptyText: editDraft.emptyText.trim(),
+        backgroundImage: editDraft.backgroundImage || '',
+        backgroundImageFileId: editDraft.backgroundImageFileId || '',
+        showHeroGrid: Boolean(editDraft.showHeroGrid),
+        heroGridItems: (editDraft.heroGridItems || []).map((item) => ({
+          kicker: (item.kicker || '').trim(),
+          title: (item.title || '').trim(),
+          subtitle: (item.subtitle || '').trim(),
+          url: (item.url || '').trim(),
+        })),
+      };
 
-    const res = await fetch('/api/sections', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        id: sec.id,
-        name: editDraft.name.trim() || sec.name,
-        content: nextContent,
-      }),
-    });
-    const data = await res.json();
-    if (res.ok && data.ok) {
-      setSections((prev) => prev.map((s) => (s.id === sec.id ? data.section : s)));
-      setEditingId(null);
-      setStatusMsg(`Saved changes for section "${data.section.name}".`);
+      const res = await fetch('/api/sections', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: sec.id,
+          name: editDraft.name.trim() || sec.name,
+          content: nextContent,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        setSections((prev) => prev.map((s) => (s.id === sec.id ? data.section : s)));
+        setEditingId(null);
+        setStatusMsg(`Saved changes for section "${data.section.name}".`);
+      }
+    } finally {
+      setSavingSectionId(null);
     }
   }
 
   async function handleAddSection(e) {
     e.preventDefault();
-    const typeDef = SECTION_TYPES.find((t) => t.value === newType) || SECTION_TYPES[0];
-    const resolvedName = newName.trim() || typeDef.label;
-    const resolvedHeading = newHeading.trim() || typeDef.defaultHeading || resolvedName;
-    const defaultUrl = typeDef?.defaultUrl ?? '/music';
-    const defaultCtaText = typeDef?.defaultCtaText || 'Explore More';
+    if (addingSection) return;
+    setAddingSection(true);
+    try {
+      const typeDef = SECTION_TYPES.find((t) => t.value === newType) || SECTION_TYPES[0];
+      const resolvedName = newName.trim() || typeDef.label;
+      const resolvedHeading = newHeading.trim() || typeDef.defaultHeading || resolvedName;
+      const defaultUrl = typeDef?.defaultUrl ?? '/music';
+      const defaultCtaText = typeDef?.defaultCtaText || 'Explore More';
 
-    const res = await fetch('/api/sections', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name: resolvedName,
-        type: newType,
-        isVisible: true,
-        content: {
-          kicker: typeDef.defaultKicker || '',
-          heading: resolvedHeading,
-          ctaText: defaultCtaText,
-          ctaUrl: defaultUrl,
-          showCtaButton: Boolean(defaultUrl),
-          showAchievements: true,
-        },
-      }),
-    });
-    const data = await res.json();
-    if (res.ok && data.ok && data.section) {
-      setSections((prev) => [...prev, data.section]);
-      setNewName('');
-      setNewHeading('');
-      setShowAddForm(false);
-      setStatusMsg(`Added new section "${data.section.name}".`);
+      const res = await fetch('/api/sections', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: resolvedName,
+          type: newType,
+          isVisible: true,
+          content: {
+            kicker: typeDef.defaultKicker || '',
+            heading: resolvedHeading,
+            ctaText: defaultCtaText,
+            ctaUrl: defaultUrl,
+            showCtaButton: Boolean(defaultUrl),
+            showAchievements: true,
+          },
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.ok && data.section) {
+        setSections((prev) => [...prev, data.section]);
+        setNewName('');
+        setNewHeading('');
+        setShowAddForm(false);
+        setStatusMsg(`Added new section "${data.section.name}".`);
+      }
+    } finally {
+      setAddingSection(false);
     }
   }
 
   async function handleToggleVisibility(sec) {
-    const res = await fetch('/api/sections', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: sec.id, isVisible: !sec.isVisible }),
-    });
-    const data = await res.json();
-    if (res.ok && data.ok) {
-      setSections((prev) =>
-        prev.map((s) => (s.id === sec.id ? { ...s, isVisible: data.section.isVisible } : s))
-      );
-      setStatusMsg(`Visibility toggled for "${sec.name}".`);
+    if (togglingId === sec.id) return;
+    setTogglingId(sec.id);
+    try {
+      const res = await fetch('/api/sections', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: sec.id, isVisible: !sec.isVisible }),
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        setSections((prev) =>
+          prev.map((s) => (s.id === sec.id ? { ...s, isVisible: data.section.isVisible } : s))
+        );
+        setStatusMsg(`Visibility toggled for "${sec.name}".`);
+      }
+    } finally {
+      setTogglingId(null);
     }
   }
 
   async function handleMove(index, direction) {
+    if (reordering) return;
     const targetIdx = index + direction;
     if (targetIdx < 0 || targetIdx >= sections.length) return;
-    const next = [...sections];
-    const [moved] = next.splice(index, 1);
-    next.splice(targetIdx, 0, moved);
-    const reindexed = next.map((s, idx) => ({ ...s, position: idx + 1 }));
-    setSections(reindexed);
+    setReordering(true);
+    try {
+      const next = [...sections];
+      const [moved] = next.splice(index, 1);
+      next.splice(targetIdx, 0, moved);
+      const reindexed = next.map((s, idx) => ({ ...s, position: idx + 1 }));
+      setSections(reindexed);
 
-    await fetch('/api/sections', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ orderedIds: reindexed.map((s) => s.id) }),
-    });
-    setStatusMsg('Homepage section order updated.');
+      await fetch('/api/sections', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderedIds: reindexed.map((s) => s.id) }),
+      });
+      setStatusMsg('Homepage section order updated.');
+    } finally {
+      setReordering(false);
+    }
   }
 
   async function handleDelete(sec) {
+    if (deletingId === sec.id) return;
     if (
       !confirm(
         `Are you sure you want to delete "${sec.name}"? You can restore default sections anytime.`
@@ -436,12 +467,17 @@ export default function AdminSectionsClient({ initialSections = [] }) {
     ) {
       return;
     }
-    const res = await fetch(`/api/sections?id=${encodeURIComponent(sec.id)}`, {
-      method: 'DELETE',
-    });
-    if (res.ok) {
-      setSections((prev) => prev.filter((s) => s.id !== sec.id));
-      setStatusMsg(`Deleted section "${sec.name}".`);
+    setDeletingId(sec.id);
+    try {
+      const res = await fetch(`/api/sections?id=${encodeURIComponent(sec.id)}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        setSections((prev) => prev.filter((s) => s.id !== sec.id));
+        setStatusMsg(`Deleted section "${sec.name}".`);
+      }
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -626,9 +662,11 @@ export default function AdminSectionsClient({ initialSections = [] }) {
             </button>
             <button
               type="submit"
-              className="px-5 py-2 rounded bg-[#C8A464] text-[#09090B] text-xs font-bold hover:bg-[#D4B475]"
+              disabled={addingSection}
+              className="px-5 py-2 rounded bg-[#C8A464] text-[#09090B] text-xs font-bold hover:bg-[#D4B475] inline-flex items-center gap-1.5 disabled:opacity-50"
             >
-              Confirm & Add Section
+              {addingSection && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+              <span>{addingSection ? 'Adding Section...' : 'Confirm & Add Section'}</span>
             </button>
           </div>
         </form>
@@ -699,7 +737,7 @@ export default function AdminSectionsClient({ initialSections = [] }) {
                   <button
                     type="button"
                     onClick={() => handleMove(idx, -1)}
-                    disabled={idx === 0}
+                    disabled={idx === 0 || reordering}
                     aria-label={`Move ${sec.name} up`}
                     className="p-2 rounded border border-[#27272E] text-[#B4B4BC] hover:text-white disabled:opacity-30 transition-colors"
                   >
@@ -708,7 +746,7 @@ export default function AdminSectionsClient({ initialSections = [] }) {
                   <button
                     type="button"
                     onClick={() => handleMove(idx, 1)}
-                    disabled={idx === sections.length - 1}
+                    disabled={idx === sections.length - 1 || reordering}
                     aria-label={`Move ${sec.name} down`}
                     className="p-2 rounded border border-[#27272E] text-[#B4B4BC] hover:text-white disabled:opacity-30 transition-colors"
                   >
@@ -716,14 +754,20 @@ export default function AdminSectionsClient({ initialSections = [] }) {
                   </button>
                   <button
                     type="button"
+                    disabled={togglingId === sec.id}
                     onClick={() => handleToggleVisibility(sec)}
-                    className={`px-3 py-1.5 rounded border text-xs font-semibold inline-flex items-center gap-1.5 transition-colors ${
+                    className={`px-3 py-1.5 rounded border text-xs font-semibold inline-flex items-center gap-1.5 transition-colors disabled:opacity-50 ${
                       sec.isVisible
                         ? 'border-[#166534] bg-[#166534]/10 text-[#4ADE80]'
                         : 'border-[#52525B] bg-[#27272A]/20 text-[#A1A1AA]'
                     }`}
                   >
-                    {sec.isVisible ? (
+                    {togglingId === sec.id ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>Updating...</span>
+                      </>
+                    ) : sec.isVisible ? (
                       <>
                         <Eye className="w-3.5 h-3.5" />
                         <span>Visible</span>
@@ -750,11 +794,16 @@ export default function AdminSectionsClient({ initialSections = [] }) {
                   </button>
                   <button
                     type="button"
+                    disabled={deletingId === sec.id}
                     onClick={() => handleDelete(sec)}
                     aria-label={`Delete ${sec.name}`}
-                    className="p-2 rounded border border-[#27272E] text-[#9A9AA2] hover:text-[#F87171] hover:border-[#F87171]/40 transition-colors"
+                    className="p-2 rounded border border-[#27272E] text-[#9A9AA2] hover:text-[#F87171] hover:border-[#F87171]/40 transition-colors disabled:opacity-50"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
+                    {deletingId === sec.id ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-[#F87171]" />
+                    ) : (
+                      <Trash2 className="w-3.5 h-3.5" />
+                    )}
                   </button>
                 </div>
               </div>
@@ -1215,11 +1264,18 @@ export default function AdminSectionsClient({ initialSections = [] }) {
                     </button>
                     <button
                       type="button"
+                      disabled={savingSectionId === sec.id}
                       onClick={() => saveEditing(sec)}
-                      className="px-5 py-2 rounded bg-[#C8A464] hover:bg-[#D4B475] text-[#09090B] text-xs font-bold inline-flex items-center gap-1.5 shadow"
+                      className="px-5 py-2 rounded bg-[#C8A464] hover:bg-[#D4B475] text-[#09090B] text-xs font-bold inline-flex items-center gap-1.5 shadow disabled:opacity-50"
                     >
-                      <Check className="w-4 h-4" />
-                      <span>Save Section Changes</span>
+                      {savingSectionId === sec.id ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Check className="w-4 h-4" />
+                      )}
+                      <span>
+                        {savingSectionId === sec.id ? 'Saving Changes...' : 'Save Section Changes'}
+                      </span>
                     </button>
                   </div>
                 </div>

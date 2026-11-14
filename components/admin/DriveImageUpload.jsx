@@ -157,7 +157,11 @@ export default function DriveImageUpload({
                 onClick={handleClear}
                 className="px-3 py-2.5 bg-[#D64545]/10 hover:bg-[#D64545]/20 text-[#D64545] border border-[#D64545]/30 rounded text-xs font-semibold inline-flex items-center gap-1.5 transition-colors disabled:opacity-50"
               >
-                <Trash2 className="w-3.5 h-3.5" />
+                {removing ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Trash2 className="w-3.5 h-3.5" />
+                )}
                 <span>{removing ? 'Removing...' : 'Remove'}</span>
               </button>
             )}

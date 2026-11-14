@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Shield, KeyRound, UserCheck, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Shield, KeyRound, UserCheck, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 
 export default function AdminSettingsClient({ admin, promptPasswordChange = false }) {
   const router = useRouter();
@@ -144,9 +144,10 @@ export default function AdminSettingsClient({ admin, promptPasswordChange = fals
             <button
               type="submit"
               disabled={profileSaving}
-              className="px-5 py-2.5 bg-[#18181F] hover:bg-[#C8A464] hover:text-[#09090B] border border-[#F4F1EA]/[0.12] text-[#F4F1EA] font-bold text-xs uppercase tracking-widest rounded transition-colors"
+              className="px-5 py-2.5 bg-[#18181F] hover:bg-[#C8A464] hover:text-[#09090B] border border-[#F4F1EA]/[0.12] text-[#F4F1EA] font-bold text-xs uppercase tracking-widest rounded transition-colors inline-flex items-center gap-2 disabled:opacity-50"
             >
-              {profileSaving ? 'Updating...' : 'Update Profile'}
+              {profileSaving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+              <span>{profileSaving ? 'Updating...' : 'Update Profile'}</span>
             </button>
           </div>
         </form>
@@ -218,9 +219,10 @@ export default function AdminSettingsClient({ admin, promptPasswordChange = fals
             <button
               type="submit"
               disabled={passwordSaving}
-              className="px-6 py-2.5 bg-[#C8A464] hover:bg-[#E2C285] disabled:opacity-50 text-[#09090B] font-bold text-xs uppercase tracking-widest rounded transition-colors"
+              className="px-6 py-2.5 bg-[#C8A464] hover:bg-[#E2C285] disabled:opacity-50 text-[#09090B] font-bold text-xs uppercase tracking-widest rounded transition-colors inline-flex items-center gap-2"
             >
-              {passwordSaving ? 'Updating Password...' : 'Update Password'}
+              {passwordSaving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+              <span>{passwordSaving ? 'Updating Password...' : 'Update Password'}</span>
             </button>
           </div>
         </form>

@@ -13,6 +13,8 @@ import {
 import {
   ArrowRight,
   Play,
+  Pause,
+  Loader2,
   Mail,
   Music,
   Disc,
@@ -111,6 +113,9 @@ function HeroSpotlightSection({
   publishedMusic,
   publishedAlbums,
   playTrack,
+  currentTrack,
+  isPlaying,
+  isLoading,
 }) {
   const sectionRef = useRef(null);
 
@@ -259,11 +264,26 @@ function HeroSpotlightSection({
               {latestTrack && showLatestPlay && (
                 <button
                   type="button"
+                  disabled={currentTrack?.id === latestTrack.id && isLoading}
                   onClick={() => playTrack(latestTrack, publishedMusic)}
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded bg-[#C8A464] text-[#09090B] hover:bg-[#D4B475] text-sm font-semibold tracking-wide transition-all hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap shrink-0 shadow-md"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded bg-[#C8A464] text-[#09090B] hover:bg-[#D4B475] text-sm font-semibold tracking-wide transition-all hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap shrink-0 shadow-md disabled:opacity-75 disabled:cursor-wait"
                 >
-                  <Play className="w-4 h-4 fill-current" />
-                  <span>{latestPlayText}</span>
+                  {currentTrack?.id === latestTrack.id && isLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Loading...</span>
+                    </>
+                  ) : currentTrack?.id === latestTrack.id && isPlaying ? (
+                    <>
+                      <Pause className="w-4 h-4 fill-current" />
+                      <span>Pause Latest Release</span>
+                    </>
+                  ) : (
+                    <>
+                      <Play className="w-4 h-4 fill-current" />
+                      <span>{latestPlayText}</span>
+                    </>
+                  )}
                 </button>
               )}
 
@@ -396,7 +416,7 @@ export default function SectionRenderer({
   socialLinks = [],
   settings = {},
 }) {
-  const { playTrack } = usePlayer();
+  const { playTrack, currentTrack, isPlaying, isLoading } = usePlayer();
   if (!section || !section.isVisible) return null;
 
   const content = section.content || {};
@@ -411,6 +431,9 @@ export default function SectionRenderer({
           publishedMusic={publishedMusic}
           publishedAlbums={publishedAlbums}
           playTrack={playTrack}
+          currentTrack={currentTrack}
+          isPlaying={isPlaying}
+          isLoading={isLoading}
         />
       );
     }

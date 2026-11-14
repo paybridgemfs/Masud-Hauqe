@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Mail, MailOpen, Trash2, CheckCircle2, AlertCircle, Clock } from 'lucide-react';
+import { Mail, MailOpen, Trash2, CheckCircle2, AlertCircle, Clock, Loader2 } from 'lucide-react';
 
 export default function AdminMessagesClient({ initialMessages = [] }) {
   const router = useRouter();
@@ -10,13 +10,17 @@ export default function AdminMessagesClient({ initialMessages = [] }) {
   const [selectedId, setSelectedId] = useState(initialMessages[0]?.id || null);
   const [filter, setFilter] = useState('all'); // 'all' | 'unread'
   const [error, setError] = useState(null);
+  const [togglingId, setTogglingId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
 
   const filteredMessages = messages.filter((m) => (filter === 'unread' ? !m.isRead : true));
   const activeMessage =
     messages.find((m) => m.id === selectedId) || filteredMessages[0] || null;
 
   const handleToggleRead = async (msg) => {
+    if (togglingId === msg.id) return;
     setError(null);
+    setTogglingId(msg.id);
     const nextRead = !msg.isRead;
     try {
       const res = await fetch('/api/contact', {
@@ -34,11 +38,15 @@ export default function AdminMessagesClient({ initialMessages = [] }) {
       }
     } catch {
       setError('Network error while updating message status.');
+    } finally {
+      setTogglingId(null);
     }
   };
 
   const handleDelete = async (id) => {
+    if (deletingId === id) return;
     setError(null);
+    setDeletingId(id);
     try {
       const res = await fetch(`/api/contact?id=${encodeURIComponent(id)}`, {
         method: 'DELETE',
@@ -55,6 +63,8 @@ export default function AdminMessagesClient({ initialMessages = [] }) {
       }
     } catch {
       setError('Network error while deleting message.');
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -187,10 +197,16 @@ export default function AdminMessagesClient({ initialMessages = [] }) {
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
+                      disabled={togglingId === activeMessage.id}
                       onClick={() => handleToggleRead(activeMessage)}
-                      className="px-3.5 py-2 bg-[#18181F] hover:bg-[#F4F1EA]/[0.08] text-xs font-semibold text-[#F4F1EA] rounded border border-[#F4F1EA]/[0.12] inline-flex items-center gap-1.5 transition-colors"
+                      className="px-3.5 py-2 bg-[#18181F] hover:bg-[#F4F1EA]/[0.08] text-xs font-semibold text-[#F4F1EA] rounded border border-[#F4F1EA]/[0.12] inline-flex items-center gap-1.5 transition-colors disabled:opacity-50"
                     >
-                      {activeMessage.isRead ? (
+                      {togglingId === activeMessage.id ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin text-[#C8A464]" />
+                          <span>Updating...</span>
+                        </>
+                      ) : activeMessage.isRead ? (
                         <>
                           <Mail className="w-3.5 h-3.5 text-[#9E9A90]" />
                           <span>Mark Unread</span>
@@ -205,11 +221,16 @@ export default function AdminMessagesClient({ initialMessages = [] }) {
 
                     <button
                       type="button"
+                      disabled={deletingId === activeMessage.id}
                       onClick={() => handleDelete(activeMessage.id)}
-                      className="px-3.5 py-2 bg-[#D64545]/10 hover:bg-[#D64545]/20 text-xs font-semibold text-[#D64545] rounded border border-[#D64545]/30 inline-flex items-center gap-1.5 transition-colors"
+                      className="px-3.5 py-2 bg-[#D64545]/10 hover:bg-[#D64545]/20 text-xs font-semibold text-[#D64545] rounded border border-[#D64545]/30 inline-flex items-center gap-1.5 transition-colors disabled:opacity-50"
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      <span>Delete</span>
+                      {deletingId === activeMessage.id ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Trash2 className="w-3.5 h-3.5" />
+                      )}
+                      <span>{deletingId === activeMessage.id ? 'Deleting...' : 'Delete'}</span>
                     </button>
                   </div>
                 </div>

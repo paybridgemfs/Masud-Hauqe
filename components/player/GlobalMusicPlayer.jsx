@@ -19,12 +19,14 @@ import {
   X,
   Disc3,
   Maximize2,
+  Loader2,
 } from 'lucide-react';
 import { usePlayer } from './PlayerContext.jsx';
 import {
   getPublicDownloadUrl,
   getTrackDownloadFilename,
 } from '@/lib/storage/audio-delivery.js';
+import { triggerManagedDownload } from '@/lib/client-download.js';
 import ShimmerImage from '@/components/ui/ShimmerImage.jsx';
 import FullScreenPlayer from './FullScreenPlayer.jsx';
 
@@ -145,6 +147,7 @@ export default function GlobalMusicPlayer() {
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [isScrubbing, setIsScrubbing] = useState(false);
   const [scrubValue, setScrubValue] = useState(0);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const {
     playlist,
@@ -220,6 +223,16 @@ export default function GlobalMusicPlayer() {
   const displayTime = isScrubbing ? scrubValue : Math.min(currentTime, safeMaxDuration);
   const formattedTotalDuration =
     duration > 0 ? formatSeconds(duration) : currentTrack.duration || formatSeconds(safeMaxDuration);
+
+  async function handleDownloadCurrent() {
+    if (!downloadUrl || isDownloading) return;
+    setIsDownloading(true);
+    try {
+      await triggerManagedDownload(downloadUrl, downloadFilename);
+    } finally {
+      setIsDownloading(false);
+    }
+  }
 
   return (
     <>
@@ -368,11 +381,13 @@ export default function GlobalMusicPlayer() {
                 <button
                   type="button"
                   onClick={togglePlay}
-                  aria-label={isPlaying ? 'Pause' : 'Play'}
+                  aria-label={isLoading ? 'Loading track' : isPlaying ? 'Pause' : 'Play'}
                   disabled={isLoading}
-                  className="w-9 h-9 rounded-full bg-[#C8A464] text-[#09090B] hover:bg-[#D4B475] flex items-center justify-center transition-colors disabled:opacity-50 shadow-md"
+                  className="w-9 h-9 rounded-full bg-[#C8A464] text-[#09090B] hover:bg-[#D4B475] flex items-center justify-center transition-colors disabled:opacity-75 disabled:cursor-wait shadow-md"
                 >
-                  {isPlaying ? (
+                  {isLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : isPlaying ? (
                     <Pause className="w-4 h-4 fill-current" />
                   ) : (
                     <Play className="w-4 h-4 fill-current ml-0.5" />
@@ -451,15 +466,20 @@ export default function GlobalMusicPlayer() {
               </div>
 
               {downloadUrl && (
-                <a
-                  href={downloadUrl}
-                  download={downloadFilename}
+                <button
+                  type="button"
+                  onClick={handleDownloadCurrent}
+                  disabled={isDownloading}
                   aria-label={`Download ${currentTrack.title} MP3`}
-                  className="p-2 text-[#A1A1AA] hover:text-[#C8A464] transition-colors"
+                  className="p-2 text-[#A1A1AA] hover:text-[#C8A464] transition-colors disabled:opacity-60 disabled:cursor-wait"
                   title="Download Authorized MP3"
                 >
-                  <Download className="w-4 h-4" />
-                </a>
+                  {isDownloading ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-[#C8A464]" />
+                  ) : (
+                    <Download className="w-4 h-4" />
+                  )}
+                </button>
               )}
 
               <button
@@ -568,11 +588,13 @@ export default function GlobalMusicPlayer() {
               <button
                 type="button"
                 onClick={togglePlay}
-                aria-label={isPlaying ? 'Pause' : 'Play'}
+                aria-label={isLoading ? 'Loading track' : isPlaying ? 'Pause' : 'Play'}
                 disabled={isLoading}
-                className="w-8 h-8 mx-0.5 rounded-full bg-[#C8A464] text-[#09090B] flex items-center justify-center transition-colors disabled:opacity-50 shadow"
+                className="w-8 h-8 mx-0.5 rounded-full bg-[#C8A464] text-[#09090B] flex items-center justify-center transition-colors disabled:opacity-75 disabled:cursor-wait shadow"
               >
-                {isPlaying ? (
+                {isLoading ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : isPlaying ? (
                   <Pause className="w-3.5 h-3.5 fill-current" />
                 ) : (
                   <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
@@ -589,14 +611,19 @@ export default function GlobalMusicPlayer() {
               </button>
 
               {downloadUrl && (
-                <a
-                  href={downloadUrl}
-                  download={downloadFilename}
+                <button
+                  type="button"
+                  onClick={handleDownloadCurrent}
+                  disabled={isDownloading}
                   aria-label={`Download ${currentTrack.title} MP3`}
-                  className="p-1.5 text-[#A1A1AA] hover:text-[#C8A464] transition-colors"
+                  className="p-1.5 text-[#A1A1AA] hover:text-[#C8A464] transition-colors disabled:opacity-60 disabled:cursor-wait"
                 >
-                  <Download className="w-3.5 h-3.5" />
-                </a>
+                  {isDownloading ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-[#C8A464]" />
+                  ) : (
+                    <Download className="w-3.5 h-3.5" />
+                  )}
+                </button>
               )}
 
               <button

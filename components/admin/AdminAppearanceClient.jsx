@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Palette, Save, CheckCircle2, AlertCircle, RotateCcw, Layout, Type, Image as ImageIcon } from 'lucide-react';
+import { Palette, Save, CheckCircle2, AlertCircle, RotateCcw, Layout, Type, Image as ImageIcon, Loader2 } from 'lucide-react';
 import DriveImageUpload from '@/components/admin/DriveImageUpload';
 
 const DEFAULT_APPEARANCE = {
@@ -320,8 +320,12 @@ export default function AdminAppearanceClient({ initialSettings = {} }) {
           disabled={saving}
           className="px-6 py-3 bg-[#C8A464] hover:bg-[#E2C285] disabled:opacity-50 text-[#09090B] font-bold text-xs uppercase tracking-widest rounded transition-colors inline-flex items-center gap-2"
         >
-          <Save className="w-4 h-4" />
-          {saving ? 'Saving Appearance...' : 'Save Appearance Settings'}
+          {saving ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <Save className="w-4 h-4" />
+          )}
+          <span>{saving ? 'Saving Appearance...' : 'Save Appearance Settings'}</span>
         </button>
       </div>
     </form>

@@ -28,6 +28,7 @@ import {
   Twitter,
   Copy,
   Sparkles,
+  Loader2,
 } from 'lucide-react';
 import { usePlayer } from '@/components/player/PlayerContext.jsx';
 import {
@@ -36,6 +37,7 @@ import {
   getReleaseZipDownloadUrl,
   getReleaseZipFilename,
 } from '@/lib/storage/audio-delivery.js';
+import { triggerManagedDownload } from '@/lib/client-download.js';
 import ShimmerImage from '@/components/ui/ShimmerImage.jsx';
 import StoryCardModal from '@/components/music/StoryCardModal.jsx';
 import MiniEqualizerBars from '@/components/ui/MiniEqualizerBars.jsx';
@@ -87,10 +89,33 @@ export default function AlbumDetailClient({ album, shareUrl: initialShareUrl = '
 
   const [copied, setCopied] = useState(false);
   const [showStoryModal, setShowStoryModal] = useState(false);
+  const [isDownloadingZip, setIsDownloadingZip] = useState(false);
+  const [downloadingTrackId, setDownloadingTrackId] = useState(null);
   const headerRef = useRef(null);
   const shareUrl = initialShareUrl || `/releases/${album.slug}`;
   const releaseZipUrl = getReleaseZipDownloadUrl(album);
   const releaseZipFilename = getReleaseZipFilename(album);
+
+  async function handleDownloadReleaseZip() {
+    if (!releaseZipUrl || isDownloadingZip) return;
+    setIsDownloadingZip(true);
+    try {
+      await triggerManagedDownload(releaseZipUrl, releaseZipFilename);
+    } finally {
+      setIsDownloadingZip(false);
+    }
+  }
+
+  async function handleDownloadSingleTrack(track) {
+    const url = getPublicDownloadUrl(track);
+    if (!url || downloadingTrackId === track.id) return;
+    setDownloadingTrackId(track.id);
+    try {
+      await triggerManagedDownload(url, getTrackDownloadFilename(track));
+    } finally {
+      setDownloadingTrackId(null);
+    }
+  }
 
   // Ambient Cursor Spotlight & Cover Parallax Depth
   const mouseX = useMotionValue(420);
@@ -355,9 +380,11 @@ export default function AlbumDetailClient({ album, shareUrl: initialShareUrl = '
                       onClick={handlePreviewPlayPause}
                       disabled={isReleaseActive && isLoading}
                       aria-label={isReleaseActive && isPlaying ? 'Pause' : 'Play'}
-                      className="w-9 h-9 rounded-full bg-[#C8A464] text-[#09090B] hover:bg-[#D4B475] flex items-center justify-center transition-transform hover:scale-105 shadow"
+                      className="w-9 h-9 rounded-full bg-[#C8A464] text-[#09090B] hover:bg-[#D4B475] flex items-center justify-center transition-transform hover:scale-105 shadow disabled:opacity-75 disabled:cursor-wait"
                     >
-                      {isReleaseActive && isPlaying ? (
+                      {isReleaseActive && isLoading ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : isReleaseActive && isPlaying ? (
                         <Pause className="w-4 h-4 fill-current" />
                       ) : (
                         <Play className="w-4 h-4 fill-current ml-0.5" />
@@ -489,23 +516,43 @@ export default function AlbumDetailClient({ album, shareUrl: initialShareUrl = '
             <div className="pt-4 border-t border-[#1E1E24] flex flex-wrap items-center gap-3 sm:gap-4">
               <button
                 type="button"
+                disabled={isReleaseActive && isLoading}
                 onClick={() => playAlbum(tracks, 0)}
-                className="px-6 py-3 rounded bg-[#C8A464] text-[#09090B] hover:bg-[#D4B475] text-sm font-semibold flex items-center gap-2 transition-all hover:-translate-y-0.5 active:translate-y-0 shadow-md"
+                className="px-6 py-3 rounded bg-[#C8A464] text-[#09090B] hover:bg-[#D4B475] text-sm font-semibold flex items-center gap-2 transition-all hover:-translate-y-0.5 active:translate-y-0 shadow-md disabled:opacity-75 disabled:cursor-wait"
               >
-                <Play className="w-4 h-4 fill-current" />
-                <span>Play Complete Release</span>
+                {isReleaseActive && isLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Loading Release...</span>
+                  </>
+                ) : (
+                  <>
+                    <Play className="w-4 h-4 fill-current" />
+                    <span>Play Complete Release</span>
+                  </>
+                )}
               </button>
 
               {releaseZipUrl && (
-                <a
-                  href={releaseZipUrl}
-                  download={releaseZipFilename}
+                <button
+                  type="button"
+                  onClick={handleDownloadReleaseZip}
+                  disabled={isDownloadingZip}
                   aria-label={`Download full release ${album.title} as ZIP`}
-                  className="px-5 py-3 rounded border border-[#2E2E38] bg-[#14141A] text-[#F4F1EA] hover:border-[#C8A464] hover:text-[#C8A464] text-sm font-semibold flex items-center gap-2 transition-all hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap"
+                  className="px-5 py-3 rounded border border-[#2E2E38] bg-[#14141A] text-[#F4F1EA] hover:border-[#C8A464] hover:text-[#C8A464] text-sm font-semibold flex items-center gap-2 transition-all hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap disabled:opacity-65 disabled:cursor-wait"
                 >
-                  <Download className="w-4 h-4 text-[#C8A464]" />
-                  <span>Download Full Release (.ZIP)</span>
-                </a>
+                  {isDownloadingZip ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin text-[#C8A464]" />
+                      <span>Preparing Release .ZIP...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Download className="w-4 h-4 text-[#C8A464]" />
+                      <span>Download Full Release (.ZIP)</span>
+                    </>
+                  )}
+                </button>
               )}
             </div>
           )}
@@ -523,14 +570,24 @@ export default function AlbumDetailClient({ album, shareUrl: initialShareUrl = '
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <h2 className="text-xl font-bold text-[#F4F1EA]">Release Tracklist</h2>
           {releaseZipUrl && (
-            <a
-              href={releaseZipUrl}
-              download={releaseZipFilename}
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#C8A464] hover:text-[#D4B475] transition-colors self-start sm:self-auto"
+            <button
+              type="button"
+              onClick={handleDownloadReleaseZip}
+              disabled={isDownloadingZip}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#C8A464] hover:text-[#D4B475] transition-colors self-start sm:self-auto disabled:opacity-65 disabled:cursor-wait"
             >
-              <Download className="w-3.5 h-3.5" />
-              <span>Download All {tracks.length} Tracks (.ZIP)</span>
-            </a>
+              {isDownloadingZip ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>Building .ZIP Archive...</span>
+                </>
+              ) : (
+                <>
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download All {tracks.length} Tracks (.ZIP)</span>
+                </>
+              )}
+            </button>
           )}
         </div>
 
@@ -563,15 +620,18 @@ export default function AlbumDetailClient({ album, shareUrl: initialShareUrl = '
                     </span>
                     <button
                       type="button"
+                      disabled={active && isLoading}
                       onClick={() => playTrack(track, tracks)}
                       aria-label={activePlaying ? `Pause ${track.title}` : `Play ${track.title}`}
-                      className={`w-9 h-9 rounded-full flex items-center justify-center transition-all hover:scale-105 shrink-0 ${
+                      className={`w-9 h-9 rounded-full flex items-center justify-center transition-all hover:scale-105 shrink-0 disabled:opacity-75 disabled:cursor-wait ${
                         active
                           ? 'bg-[#C8A464] text-[#09090B]'
                           : 'bg-[#1E1E24] hover:bg-[#C8A464] text-[#F4F1EA] hover:text-[#09090B]'
                       }`}
                     >
-                      {activePlaying ? (
+                      {active && isLoading ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : activePlaying ? (
                         <Pause className="w-4 h-4 fill-current" />
                       ) : (
                         <Play className="w-4 h-4 fill-current ml-0.5" />
@@ -599,14 +659,19 @@ export default function AlbumDetailClient({ album, shareUrl: initialShareUrl = '
                       {track.duration || '0:00'}
                     </span>
                     {downloadUrl && (
-                      <a
-                        href={downloadUrl}
-                        download={downloadFilename}
+                      <button
+                        type="button"
+                        onClick={() => handleDownloadSingleTrack(track)}
+                        disabled={downloadingTrackId === track.id}
                         aria-label={`Download ${track.title} MP3`}
-                        className="p-2 text-[#9A9AA2] hover:text-[#C8A464] transition-colors"
+                        className="p-2 text-[#9A9AA2] hover:text-[#C8A464] transition-colors disabled:opacity-65 disabled:cursor-wait"
                       >
-                        <Download className="w-4 h-4" />
-                      </a>
+                        {downloadingTrackId === track.id ? (
+                          <Loader2 className="w-4 h-4 animate-spin text-[#C8A464]" />
+                        ) : (
+                          <Download className="w-4 h-4" />
+                        )}
+                      </button>
                     )}
                   </div>
                 </motion.div>

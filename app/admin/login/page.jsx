@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Lock, User, AlertCircle, ArrowLeft, ShieldCheck } from 'lucide-react';
+import { Lock, User, AlertCircle, ArrowLeft, ShieldCheck, Loader2 } from 'lucide-react';
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -147,9 +147,10 @@ export default function AdminLoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2.5 px-4 rounded bg-[#C8A464] text-[#09090B] hover:bg-[#D4B475] text-sm font-semibold transition-colors disabled:opacity-50"
+              className="w-full py-2.5 px-4 rounded bg-[#C8A464] text-[#09090B] hover:bg-[#D4B475] text-sm font-semibold transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-2"
             >
-              {loading ? 'Verifying Credentials...' : 'Sign In to Admin Console'}
+              {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+              <span>{loading ? 'Verifying Credentials...' : 'Sign In to Admin Console'}</span>
             </button>
           </form>
         </div>

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Save, Plus, Trash2, CheckCircle2, AlertCircle, Sparkles } from 'lucide-react';
+import { Save, Plus, Trash2, CheckCircle2, AlertCircle, Sparkles, Loader2 } from 'lucide-react';
 import DriveImageUpload from '@/components/admin/DriveImageUpload.jsx';
 import {
   resolveSocialPlatformInfo,
@@ -29,6 +29,8 @@ export default function AdminArtistClient({ initialArtist, initialSocialLinks = 
   const [newSocial, setNewSocial] = useState({ platform: '', url: '' });
   const [newAch, setNewAch] = useState({ title: '', year: '', description: '' });
   const [saving, setSaving] = useState(false);
+  const [addingSocial, setAddingSocial] = useState(false);
+  const [deletingSocialId, setDeletingSocialId] = useState(null);
   const [status, setStatus] = useState(null);
 
   async function handleSaveArtist(e) {
@@ -110,50 +112,61 @@ export default function AdminArtistClient({ initialArtist, initialSocialLinks = 
 
   async function handleAddSocial(e) {
     e.preventDefault();
-    if (!newSocial.url.trim()) return;
-    const detected = resolveSocialPlatformInfo(newSocial.url, newSocial.platform.trim());
-    const finalPlatform = newSocial.platform.trim() || detected.label;
+    if (!newSocial.url.trim() || addingSocial) return;
+    setAddingSocial(true);
+    try {
+      const detected = resolveSocialPlatformInfo(newSocial.url, newSocial.platform.trim());
+      const finalPlatform = newSocial.platform.trim() || detected.label;
 
-    const res = await fetch('/api/settings', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({
-        group: 'socialLinks',
-        action: 'create',
-        item: {
-          platform: finalPlatform,
-          url: newSocial.url.trim(),
-          icon: detected.key,
-          position: socialLinks.length + 1,
-          isVisible: true,
-        },
-      }),
-    });
-    if (res.ok) {
-      const refreshed = await fetch('/api/settings').then((r) => r.json());
-      if (refreshed.socialLinks) setSocialLinks(refreshed.socialLinks);
-      setNewSocial({ platform: '', url: '' });
-      setStatus({
-        type: 'success',
-        text: `Added "${finalPlatform}" with automatic social icon detection.`,
+      const res = await fetch('/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          group: 'socialLinks',
+          action: 'create',
+          item: {
+            platform: finalPlatform,
+            url: newSocial.url.trim(),
+            icon: detected.key,
+            position: socialLinks.length + 1,
+            isVisible: true,
+          },
+        }),
       });
+      if (res.ok) {
+        const refreshed = await fetch('/api/settings').then((r) => r.json());
+        if (refreshed.socialLinks) setSocialLinks(refreshed.socialLinks);
+        setNewSocial({ platform: '', url: '' });
+        setStatus({
+          type: 'success',
+          text: `Added "${finalPlatform}" with automatic social icon detection.`,
+        });
+      }
+    } finally {
+      setAddingSocial(false);
     }
   }
 
   async function handleDeleteSocial(id) {
-    const res = await fetch('/api/settings', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({
-        group: 'socialLinks',
-        action: 'delete',
-        item: { id },
-      }),
-    });
-    if (res.ok) {
-      setSocialLinks((prev) => prev.filter((s) => s.id !== id));
+    if (deletingSocialId === id) return;
+    setDeletingSocialId(id);
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          group: 'socialLinks',
+          action: 'delete',
+          item: { id },
+        }),
+      });
+      if (res.ok) {
+        setSocialLinks((prev) => prev.filter((s) => s.id !== id));
+      }
+    } finally {
+      setDeletingSocialId(null);
     }
   }
 
@@ -360,7 +373,11 @@ export default function AdminArtistClient({ initialArtist, initialSocialLinks = 
             disabled={saving}
             className="px-6 py-2.5 rounded bg-[#C8A464] text-[#09090B] hover:bg-[#D4B475] text-sm font-semibold inline-flex items-center gap-2 transition-colors disabled:opacity-50"
           >
-            <Save className="w-4 h-4" />
+            {saving ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Save className="w-4 h-4" />
+            )}
             <span>{saving ? 'Saving Artist Profile...' : 'Save Artist Profile & Biography'}</span>
           </button>
         </div>
@@ -399,11 +416,16 @@ export default function AdminArtistClient({ initialArtist, initialSocialLinks = 
                   </div>
                   <button
                     type="button"
+                    disabled={deletingSocialId === s.id}
                     onClick={() => handleDeleteSocial(s.id)}
                     aria-label={`Delete ${s.platform}`}
-                    className="p-1.5 text-[#9A9AA2] hover:text-[#F87171] shrink-0"
+                    className="p-1.5 text-[#9A9AA2] hover:text-[#F87171] shrink-0 disabled:opacity-50"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    {deletingSocialId === s.id ? (
+                      <Loader2 className="w-4 h-4 animate-spin text-[#F87171]" />
+                    ) : (
+                      <Trash2 className="w-4 h-4" />
+                    )}
                   </button>
                 </div>
               );
@@ -454,9 +476,15 @@ export default function AdminArtistClient({ initialArtist, initialSocialLinks = 
 
           <button
             type="submit"
-            className="sm:col-span-3 px-4 py-2 rounded bg-[#C8A464] hover:bg-[#D4B475] text-[#09090B] text-xs font-semibold transition-colors"
+            disabled={addingSocial}
+            className="sm:col-span-3 px-4 py-2 rounded bg-[#C8A464] hover:bg-[#D4B475] text-[#09090B] text-xs font-semibold transition-colors inline-flex items-center justify-center gap-1.5 disabled:opacity-50"
           >
-            Add Social Link
+            {addingSocial ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Plus className="w-3.5 h-3.5" />
+            )}
+            <span>{addingSocial ? 'Adding...' : 'Add Social Link'}</span>
           </button>
         </form>
       </section>

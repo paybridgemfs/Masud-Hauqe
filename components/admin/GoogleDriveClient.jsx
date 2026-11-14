@@ -13,6 +13,7 @@ import {
   Image as ImageIcon,
   Copy,
   Check,
+  Loader2,
 } from 'lucide-react';
 
 export default function GoogleDriveClient({
@@ -36,6 +37,7 @@ export default function GoogleDriveClient({
       : null
   );
   const [loading, setLoading] = useState(false);
+  const [activeAction, setActiveAction] = useState(null); // 'connect' | 'folders' | 'disconnect'
   const [copiedKey, setCopiedKey] = useState('');
 
   const isInternal = (url) => /localhost:(1000\b|10000\b)|127\.0\.0\.1:(1000\b|10000\b)/.test(url || '');
@@ -92,6 +94,7 @@ export default function GoogleDriveClient({
 
   async function handleConnectGoogle() {
     setLoading(true);
+    setActiveAction('connect');
     setStatus(null);
     try {
       const currentOrigin =
@@ -108,6 +111,7 @@ export default function GoogleDriveClient({
       if (!res.ok || !data.ok) {
         setStatus({ type: 'error', text: data.error || 'Could not initiate Google OAuth 2.0.' });
         setLoading(false);
+        setActiveAction(null);
         return;
       }
 
@@ -122,11 +126,13 @@ export default function GoogleDriveClient({
     } catch {
       setStatus({ type: 'error', text: 'Failed to reach Google OAuth server endpoint.' });
       setLoading(false);
+      setActiveAction(null);
     }
   }
 
   async function handleEnsureFolders() {
     setLoading(true);
+    setActiveAction('folders');
     setStatus(null);
     try {
       const res = await fetch('/api/integrations/google', {
@@ -157,11 +163,13 @@ export default function GoogleDriveClient({
       setStatus({ type: 'error', text: 'Network error while verifying Google Drive folders.' });
     } finally {
       setLoading(false);
+      setActiveAction(null);
     }
   }
 
   async function handleDisconnect() {
     setLoading(true);
+    setActiveAction('disconnect');
     try {
       const res = await fetch('/api/integrations/google', {
         method: 'DELETE',
@@ -185,6 +193,7 @@ export default function GoogleDriveClient({
       }
     } finally {
       setLoading(false);
+      setActiveAction(null);
     }
   }
 
@@ -233,28 +242,44 @@ export default function GoogleDriveClient({
                   type="button"
                   onClick={handleEnsureFolders}
                   disabled={loading}
-                  className="px-4 py-2 rounded border border-[#C8A464]/40 hover:border-[#C8A464] text-xs font-semibold text-[#C8A464] inline-flex items-center gap-1.5"
+                  className="px-4 py-2 rounded border border-[#C8A464]/40 hover:border-[#C8A464] text-xs font-semibold text-[#C8A464] inline-flex items-center gap-1.5 disabled:opacity-50"
                 >
-                  <FolderCheck className="w-3.5 h-3.5" />
-                  <span>Sync Auto-Folders</span>
+                  {loading && activeAction === 'folders' ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <FolderCheck className="w-3.5 h-3.5" />
+                  )}
+                  <span>
+                    {loading && activeAction === 'folders' ? 'Syncing...' : 'Sync Auto-Folders'}
+                  </span>
                 </button>
                 <button
                   type="button"
                   onClick={handleConnectGoogle}
                   disabled={loading}
-                  className="px-4 py-2 rounded border border-[#2E2E38] hover:border-[#C8A464] text-xs font-semibold text-[#F4F1EA] inline-flex items-center gap-1.5"
+                  className="px-4 py-2 rounded border border-[#2E2E38] hover:border-[#C8A464] text-xs font-semibold text-[#F4F1EA] inline-flex items-center gap-1.5 disabled:opacity-50"
                 >
-                  <RefreshCw className="w-3.5 h-3.5" />
-                  <span>Reconnect Account</span>
+                  <RefreshCw
+                    className={`w-3.5 h-3.5 ${loading && activeAction === 'connect' ? 'animate-spin' : ''}`}
+                  />
+                  <span>
+                    {loading && activeAction === 'connect' ? 'Reconnecting...' : 'Reconnect Account'}
+                  </span>
                 </button>
                 <button
                   type="button"
                   onClick={handleDisconnect}
                   disabled={loading}
-                  className="px-4 py-2 rounded border border-[#7F1D1D] hover:bg-[#2A1215] text-xs font-semibold text-[#FCA5A5] inline-flex items-center gap-1.5"
+                  className="px-4 py-2 rounded border border-[#7F1D1D] hover:bg-[#2A1215] text-xs font-semibold text-[#FCA5A5] inline-flex items-center gap-1.5 disabled:opacity-50"
                 >
-                  <Unlink className="w-3.5 h-3.5" />
-                  <span>Disconnect</span>
+                  {loading && activeAction === 'disconnect' ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Unlink className="w-3.5 h-3.5" />
+                  )}
+                  <span>
+                    {loading && activeAction === 'disconnect' ? 'Disconnecting...' : 'Disconnect'}
+                  </span>
                 </button>
               </>
             ) : (
@@ -262,9 +287,10 @@ export default function GoogleDriveClient({
                 type="button"
                 onClick={handleConnectGoogle}
                 disabled={loading}
-                className="px-5 py-2.5 rounded bg-[#C8A464] text-[#09090B] hover:bg-[#D4B475] text-xs font-semibold transition-colors"
+                className="px-5 py-2.5 rounded bg-[#C8A464] text-[#09090B] hover:bg-[#D4B475] text-xs font-semibold transition-colors inline-flex items-center gap-2 disabled:opacity-50"
               >
-                {loading ? 'Connecting...' : 'Connect Google Account via OAuth 2.0'}
+                {loading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                <span>{loading ? 'Connecting...' : 'Connect Google Account via OAuth 2.0'}</span>
               </button>
             )}
           </div>

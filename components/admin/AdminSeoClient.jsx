@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Globe, Save, CheckCircle2, AlertCircle, Search } from 'lucide-react';
+import { Globe, Save, CheckCircle2, AlertCircle, Search, Loader2 } from 'lucide-react';
 import DriveImageUpload from '@/components/admin/DriveImageUpload';
 
 const SEO_PAGES = [
@@ -297,8 +297,12 @@ export default function AdminSeoClient({ initialSeoSettings = [], appUrl = '' })
               disabled={saving}
               className="px-6 py-3 bg-[#C8A464] hover:bg-[#E2C285] disabled:opacity-50 text-[#09090B] font-bold text-xs uppercase tracking-widest rounded transition-colors inline-flex items-center gap-2"
             >
-              <Save className="w-4 h-4" />
-              {saving ? 'Saving SEO...' : 'Save Route SEO'}
+              {saving ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Save className="w-4 h-4" />
+              )}
+              <span>{saving ? 'Saving SEO...' : 'Save Route SEO'}</span>
             </button>
           </div>
         </form>

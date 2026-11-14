@@ -423,15 +423,22 @@ export function PlayerProvider({ children }) {
       audio.pause();
       setIsPlaying(false);
       isPlayingRef.current = false;
+      setIsLoading(false);
     } else {
+      if (audio.readyState < 3) {
+        setIsLoading(true);
+      }
       ensureWebAudioGraph();
       audio
         .play()
         .then(() => {
+          setIsLoading(false);
           setIsPlaying(true);
           isPlayingRef.current = true;
         })
-        .catch(() => {});
+        .catch(() => {
+          setIsLoading(false);
+        });
     }
   }, [currentTrack, ensureWebAudioGraph, loadAndPlayTrack]);
 

@@ -12,6 +12,7 @@ import {
   Plus,
   X,
   HardDrive,
+  Loader2,
 } from 'lucide-react';
 import DriveImageUpload from '@/components/admin/DriveImageUpload';
 
@@ -340,9 +341,10 @@ export default function AddMusicClient({
             type="button"
             onClick={handleFetchYouTube}
             disabled={fetchingYt}
-            className="px-5 py-2.5 rounded bg-[#C8A464] text-[#09090B] hover:bg-[#D4B475] text-xs font-semibold tracking-wide transition-colors whitespace-nowrap disabled:opacity-50"
+            className="px-5 py-2.5 rounded bg-[#C8A464] text-[#09090B] hover:bg-[#D4B475] text-xs font-semibold tracking-wide transition-colors whitespace-nowrap disabled:opacity-50 inline-flex items-center justify-center gap-2"
           >
-            {fetchingYt ? 'Fetching Metadata...' : 'Fetch Music Information'}
+            {fetchingYt && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+            <span>{fetchingYt ? 'Fetching Metadata...' : 'Fetch Music Information'}</span>
           </button>
         </div>
 
@@ -657,13 +659,18 @@ export default function AddMusicClient({
           <button
             type="submit"
             disabled={uploadLifecycle === 'uploading'}
-            className="px-6 py-2.5 rounded bg-[#C8A464] text-[#09090B] hover:bg-[#D4B475] text-sm font-semibold transition-colors disabled:opacity-50"
+            className="px-6 py-2.5 rounded bg-[#C8A464] text-[#09090B] hover:bg-[#D4B475] text-sm font-semibold transition-colors disabled:opacity-50 inline-flex items-center gap-2"
           >
-            {uploadLifecycle === 'uploading'
-              ? 'Uploading MP3...'
-              : isPublished
-              ? 'Upload & Publish Music'
-              : 'Upload & Save as Draft'}
+            {uploadLifecycle === 'uploading' && (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            )}
+            <span>
+              {uploadLifecycle === 'uploading'
+                ? 'Uploading MP3...'
+                : isPublished
+                ? 'Upload & Publish Music'
+                : 'Upload & Save as Draft'}
+            </span>
           </button>
         </div>
       </form>

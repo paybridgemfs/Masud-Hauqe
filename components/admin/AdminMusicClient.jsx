@@ -20,20 +20,28 @@ export default function AdminMusicClient({ initialMusic = [], albums = [] }) {
   const [statusMsg, setStatusMsg] = useState('');
   const [trackToDelete, setTrackToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [togglingKey, setTogglingKey] = useState(null);
 
   async function toggleField(track, field) {
-    const nextVal = !track[field];
-    const res = await fetch(`/api/music/${track.id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ [field]: nextVal }),
-    });
-    const data = await res.json();
-    if (res.ok && data.ok) {
-      setMusicList((prev) =>
-        prev.map((m) => (m.id === track.id ? { ...m, ...data.music } : m))
-      );
-      setStatusMsg(`Updated "${track.title}".`);
+    const key = `${track.id}:${field}`;
+    if (togglingKey === key) return;
+    setTogglingKey(key);
+    try {
+      const nextVal = !track[field];
+      const res = await fetch(`/api/music/${track.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [field]: nextVal }),
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        setMusicList((prev) =>
+          prev.map((m) => (m.id === track.id ? { ...m, ...data.music } : m))
+        );
+        setStatusMsg(`Updated "${track.title}".`);
+      }
+    } finally {
+      setTogglingKey(null);
     }
   }
 
@@ -114,12 +122,18 @@ export default function AdminMusicClient({ initialMusic = [], albums = [] }) {
                       <td className="py-3 px-4">
                         <button
                           type="button"
+                          disabled={togglingKey === `${track.id}:isPublished`}
                           onClick={() => toggleField(track, 'isPublished')}
-                          className={`inline-flex items-center gap-1.5 text-xs font-semibold ${
+                          className={`inline-flex items-center gap-1.5 text-xs font-semibold disabled:opacity-50 ${
                             track.isPublished ? 'text-[#4ADE80]' : 'text-[#FBBF24]'
                           }`}
                         >
-                          {track.isPublished ? (
+                          {togglingKey === `${track.id}:isPublished` ? (
+                            <>
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              <span>Updating...</span>
+                            </>
+                          ) : track.isPublished ? (
                             <>
                               <Eye className="w-3.5 h-3.5" />
                               <span>Published</span>
@@ -135,12 +149,17 @@ export default function AdminMusicClient({ initialMusic = [], albums = [] }) {
                       <td className="py-3 px-4">
                         <button
                           type="button"
+                          disabled={togglingKey === `${track.id}:downloadEnabled`}
                           onClick={() => toggleField(track, 'downloadEnabled')}
-                          className={`inline-flex items-center gap-1.5 text-xs font-medium ${
+                          className={`inline-flex items-center gap-1.5 text-xs font-medium disabled:opacity-50 ${
                             track.downloadEnabled ? 'text-[#C8A464]' : 'text-[#71717A]'
                           }`}
                         >
-                          <Download className="w-3.5 h-3.5" />
+                          {togglingKey === `${track.id}:downloadEnabled` ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Download className="w-3.5 h-3.5" />
+                          )}
                           <span>{track.downloadEnabled ? 'Enabled' : 'Disabled'}</span>
                         </button>
                       </td>
@@ -148,12 +167,17 @@ export default function AdminMusicClient({ initialMusic = [], albums = [] }) {
                         {track.youtubeVideoId ? (
                           <button
                             type="button"
+                            disabled={togglingKey === `${track.id}:includeYoutubeVideo`}
                             onClick={() => toggleField(track, 'includeYoutubeVideo')}
-                            className={`inline-flex items-center gap-1.5 text-xs font-medium ${
+                            className={`inline-flex items-center gap-1.5 text-xs font-medium disabled:opacity-50 ${
                               track.includeYoutubeVideo ? 'text-[#4ADE80]' : 'text-[#71717A]'
                             }`}
                           >
-                            <Video className="w-3.5 h-3.5" />
+                            {togglingKey === `${track.id}:includeYoutubeVideo` ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <Video className="w-3.5 h-3.5" />
+                            )}
                             <span>{track.includeYoutubeVideo ? 'Added' : 'Hidden'}</span>
                           </button>
                         ) : (

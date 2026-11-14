@@ -100,6 +100,8 @@ export default function AdminAlbumsClient({
   const [releaseDate, setReleaseDate] = useState('');
   const [isPublished, setIsPublished] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [togglingId, setogglingId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
   const [statusMsg, setStatusMsg] = useState('');
 
   // Batch MP3 Upload & Track Order Modal State
@@ -160,29 +162,41 @@ export default function AdminAlbumsClient({
   }
 
   async function togglePublish(album) {
-    const res = await fetch('/api/albums', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ id: album.id, isPublished: !album.isPublished }),
-    });
-    const data = await res.json();
-    if (res.ok && data.ok) {
-      setAlbums((prev) =>
-        prev.map((a) => (a.id === album.id ? { ...a, isPublished: data.album.isPublished } : a))
-      );
+    if (togglingId === album.id) return;
+    setogglingId(album.id);
+    try {
+      const res = await fetch('/api/albums', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ id: album.id, isPublished: !album.isPublished }),
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        setAlbums((prev) =>
+          prev.map((a) => (a.id === album.id ? { ...a, isPublished: data.album.isPublished } : a))
+        );
+      }
+    } finally {
+      setogglingId(null);
     }
   }
 
   async function handleDelete(album) {
+    if (deletingId === album.id) return;
     if (!confirm(`Are you sure you want to delete Release "${album.title}"?`)) return;
-    const res = await fetch(`/api/albums?id=${encodeURIComponent(album.id)}`, {
-      method: 'DELETE',
-      credentials: 'include',
-    });
-    if (res.ok) {
-      setAlbums((prev) => prev.filter((a) => a.id !== album.id));
-      setStatusMsg(`Release "${album.title}" deleted.`);
+    setDeletingId(album.id);
+    try {
+      const res = await fetch(`/api/albums?id=${encodeURIComponent(album.id)}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+      if (res.ok) {
+        setAlbums((prev) => prev.filter((a) => a.id !== album.id));
+        setStatusMsg(`Release "${album.title}" deleted.`);
+      }
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -624,9 +638,13 @@ export default function AdminAlbumsClient({
           <button
             type="submit"
             disabled={saving}
-            className="px-5 py-2 rounded bg-[#C8A464] text-[#09090B] hover:bg-[#D4B475] text-xs font-semibold inline-flex items-center gap-1.5"
+            className="px-5 py-2 rounded bg-[#C8A464] text-[#09090B] hover:bg-[#D4B475] text-xs font-semibold inline-flex items-center gap-1.5 disabled:opacity-50"
           >
-            <Plus className="w-4 h-4" />
+            {saving ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Plus className="w-4 h-4" />
+            )}
             <span>{saving ? 'Creating...' : 'Create Release'}</span>
           </button>
         </div>
@@ -702,12 +720,18 @@ export default function AdminAlbumsClient({
                       <td className="py-3.5 px-4">
                         <button
                           type="button"
+                          disabled={togglingId === album.id}
                           onClick={() => togglePublish(album)}
-                          className={`inline-flex items-center gap-1.5 font-semibold ${
+                          className={`inline-flex items-center gap-1.5 font-semibold disabled:opacity-50 ${
                             album.isPublished ? 'text-[#4ADE80]' : 'text-[#FBBF24]'
                           }`}
                         >
-                          {album.isPublished ? (
+                          {togglingId === album.id ? (
+                            <>
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              <span>Updating...</span>
+                            </>
+                          ) : album.isPublished ? (
                             <>
                               <Eye className="w-3.5 h-3.5" />
                               <span>Published</span>
@@ -733,11 +757,16 @@ export default function AdminAlbumsClient({
 
                           <button
                             type="button"
+                            disabled={deletingId === album.id}
                             onClick={() => handleDelete(album)}
                             aria-label={`Delete release ${album.title}`}
-                            className="p-1.5 rounded border border-[#27272E] text-[#9A9AA2] hover:text-[#F87171] hover:border-[#F87171]/40 transition-colors"
+                            className="p-1.5 rounded border border-[#27272E] text-[#9A9AA2] hover:text-[#F87171] hover:border-[#F87171]/40 transition-colors disabled:opacity-50"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            {deletingId === album.id ? (
+                              <Loader2 className="w-4 h-4 animate-spin text-[#F87171]" />
+                            ) : (
+                              <Trash2 className="w-4 h-4" />
+                            )}
                           </button>
                         </div>
                       </td>

@@ -26,12 +26,14 @@ import {
   Twitter,
   Copy,
   Sparkles,
+  Loader2,
 } from 'lucide-react';
 import { usePlayer } from '@/components/player/PlayerContext.jsx';
 import {
   getPublicDownloadUrl,
   getTrackDownloadFilename,
 } from '@/lib/storage/audio-delivery.js';
+import { triggerManagedDownload } from '@/lib/client-download.js';
 import ShimmerImage from '@/components/ui/ShimmerImage.jsx';
 import StoryCardModal from '@/components/music/StoryCardModal.jsx';
 import MiniEqualizerBars from '@/components/ui/MiniEqualizerBars.jsx';
@@ -49,6 +51,7 @@ export default function MusicDetailClient({ track, relatedTracks = [], shareUrl:
   const {
     currentTrack,
     isPlaying,
+    isLoading,
     currentTime,
     duration,
     playTrack,
@@ -56,6 +59,7 @@ export default function MusicDetailClient({ track, relatedTracks = [], shareUrl:
   } = usePlayer();
   const [copied, setCopied] = useState(false);
   const [showStoryModal, setShowStoryModal] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const headerRef = useRef(null);
 
   const shareUrl = initialShareUrl || `/music/${track.slug}`;
@@ -93,8 +97,19 @@ export default function MusicDetailClient({ track, relatedTracks = [], shareUrl:
 
   const isCurrent = currentTrack?.id === track.id;
   const activePlaying = isCurrent && isPlaying;
+  const activeLoading = isCurrent && isLoading;
   const downloadUrl = getPublicDownloadUrl(track);
   const downloadFilename = getTrackDownloadFilename(track);
+
+  async function handleDownloadTrack() {
+    if (!downloadUrl || isDownloading) return;
+    setIsDownloading(true);
+    try {
+      await triggerManagedDownload(downloadUrl, downloadFilename);
+    } finally {
+      setIsDownloading(false);
+    }
+  }
 
   const publishedDate = track.createdAt
     ? new Date(track.createdAt).toLocaleDateString('en-US', {
@@ -375,10 +390,16 @@ export default function MusicDetailClient({ track, relatedTracks = [], shareUrl:
           <div className="pt-4 border-t border-[#1E1E24] flex flex-wrap items-center gap-3 sm:gap-4">
             <button
               type="button"
+              disabled={activeLoading}
               onClick={() => playTrack(track, [track, ...relatedTracks])}
-              className="px-6 py-3 rounded bg-[#C8A464] text-[#09090B] hover:bg-[#D4B475] text-sm font-semibold flex items-center gap-2 transition-all hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap shadow-md"
+              className="px-6 py-3 rounded bg-[#C8A464] text-[#09090B] hover:bg-[#D4B475] text-sm font-semibold flex items-center gap-2 transition-all hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap shadow-md disabled:opacity-75 disabled:cursor-wait"
             >
-              {activePlaying ? (
+              {activeLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Loading Stream...</span>
+                </>
+              ) : activePlaying ? (
                 <>
                   <Pause className="w-4 h-4 fill-current" />
                   <span>Pause Master Stream</span>
@@ -392,14 +413,24 @@ export default function MusicDetailClient({ track, relatedTracks = [], shareUrl:
             </button>
 
             {downloadUrl && (
-              <a
-                href={downloadUrl}
-                download={downloadFilename}
-                className="px-5 py-3 rounded border border-[#2E2E38] text-[#F4F1EA] hover:border-[#C8A464] hover:text-[#C8A464] text-sm font-semibold flex items-center gap-2 transition-colors whitespace-nowrap"
+              <button
+                type="button"
+                onClick={handleDownloadTrack}
+                disabled={isDownloading}
+                className="px-5 py-3 rounded border border-[#2E2E38] text-[#F4F1EA] hover:border-[#C8A464] hover:text-[#C8A464] text-sm font-semibold flex items-center gap-2 transition-colors whitespace-nowrap disabled:opacity-65 disabled:cursor-wait"
               >
-                <Download className="w-4 h-4" />
-                <span>Download MP3</span>
-              </a>
+                {isDownloading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin text-[#C8A464]" />
+                    <span>Preparing MP3...</span>
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-4 h-4" />
+                    <span>Download MP3</span>
+                  </>
+                )}
+              </button>
             )}
           </div>
         </div>

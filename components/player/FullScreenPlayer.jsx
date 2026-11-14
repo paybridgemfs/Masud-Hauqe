@@ -17,8 +17,10 @@ import {
   ListMusic,
   Download,
   Disc3,
+  Loader2,
 } from 'lucide-react';
 import ShimmerImage from '@/components/ui/ShimmerImage.jsx';
+import { triggerManagedDownload } from '@/lib/client-download.js';
 
 function parseDurationToSeconds(durationStr) {
   if (!durationStr || typeof durationStr !== 'string') return 0;
@@ -280,9 +282,23 @@ export default function FullScreenPlayer({
   const [slideDirection, setSlideDirection] = useState(0);
   const [isScrubbing, setIsScrubbing] = useState(false);
   const [scrubValue, setScrubValue] = useState(0);
+  const [isDownloading, setIsDownloading] = useState(false);
   const seekBarRef = useRef(null);
 
   if (!isOpen || !currentTrack) return null;
+
+  async function handleDownloadTrack() {
+    if (!downloadUrl || isDownloading) return;
+    setIsDownloading(true);
+    try {
+      await triggerManagedDownload(
+        downloadUrl,
+        downloadFilename || `${currentTrack.title || 'track'}.mp3`
+      );
+    } finally {
+      setIsDownloading(false);
+    }
+  }
 
   const fallbackTrackDur = parseDurationToSeconds(currentTrack.duration);
   const effectiveDuration = duration > 0 ? duration : fallbackTrackDur > 0 ? fallbackTrackDur : 100;
@@ -565,10 +581,12 @@ export default function FullScreenPlayer({
                 type="button"
                 onClick={togglePlay}
                 disabled={isLoading}
-                aria-label={isPlaying ? 'Pause' : 'Play'}
-                className="w-13 h-13 sm:w-15 sm:h-15 rounded-full bg-[#C8A464] text-[#09090B] hover:bg-[#D4B475] flex items-center justify-center transition-all hover:scale-105 active:scale-95 shadow-[0_0_25px_rgba(200,164,100,0.5)] shrink-0"
+                aria-label={isLoading ? 'Loading track' : isPlaying ? 'Pause' : 'Play'}
+                className="w-13 h-13 sm:w-15 sm:h-15 rounded-full bg-[#C8A464] text-[#09090B] hover:bg-[#D4B475] flex items-center justify-center transition-all hover:scale-105 active:scale-95 disabled:opacity-75 disabled:cursor-wait shadow-[0_0_25px_rgba(200,164,100,0.5)] shrink-0"
               >
-                {isPlaying ? (
+                {isLoading ? (
+                  <Loader2 className="w-6 h-6 animate-spin" />
+                ) : isPlaying ? (
                   <Pause className="w-6 h-6 fill-current" />
                 ) : (
                   <Play className="w-6 h-6 fill-current ml-0.5" />
@@ -631,15 +649,25 @@ export default function FullScreenPlayer({
 
               <div className="flex items-center gap-2 ml-auto">
                 {downloadUrl && (
-                  <a
-                    href={downloadUrl}
-                    download={downloadFilename || `${currentTrack.title || 'track'}.mp3`}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#18181E] hover:bg-[#25252E] text-[#D4D4D8] hover:text-[#C8A464] border border-white/10 text-xs font-medium transition-colors"
+                  <button
+                    type="button"
+                    onClick={handleDownloadTrack}
+                    disabled={isDownloading}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#18181E] hover:bg-[#25252E] text-[#D4D4D8] hover:text-[#C8A464] border border-white/10 text-xs font-medium transition-colors disabled:opacity-60 disabled:cursor-wait"
                     aria-label={`Download ${currentTrack.title} MP3`}
                   >
-                    <Download className="w-3.5 h-3.5" />
-                    <span>Download MP3</span>
-                  </a>
+                    {isDownloading ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-[#C8A464]" />
+                        <span>Downloading...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Download className="w-3.5 h-3.5" />
+                        <span>Download MP3</span>
+                      </>
+                    )}
+                  </button>
                 )}
               </div>
             </div>

@@ -24,6 +24,7 @@ import {
   Menu,
   X,
   AlertTriangle,
+  Loader2,
 } from 'lucide-react';
 
 const NAV_GROUPS = [
@@ -153,9 +154,13 @@ export default function AdminShell({ admin, title, subtitle, children }) {
           type="button"
           onClick={handleLogout}
           disabled={loggingOut}
-          className="w-full px-3 py-2 rounded border border-[#2C2C35] hover:border-[#F87171] text-xs font-semibold text-[#D4D4D8] hover:text-[#FCA5A5] flex items-center justify-center gap-2 transition-colors"
+          className="w-full px-3 py-2 rounded border border-[#2C2C35] hover:border-[#F87171] text-xs font-semibold text-[#D4D4D8] hover:text-[#FCA5A5] flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
         >
-          <LogOut className="w-3.5 h-3.5" />
+          {loggingOut ? (
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          ) : (
+            <LogOut className="w-3.5 h-3.5" />
+          )}
           <span>{loggingOut ? 'Signing Out...' : 'Sign Out'}</span>
         </button>
       </div>
