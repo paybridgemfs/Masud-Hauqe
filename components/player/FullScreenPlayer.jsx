@@ -291,7 +291,7 @@ export default function FullScreenPlayer({
     getAudioRef.current = getRealtimeAudioData;
   }, [getRealtimeAudioData]);
 
-  // Real-time Bass & Beat-Reactive Scale ("Bounce / Zoom In-Out") for Full-Screen Thumbnail
+  // Real-time Bass & Beat-Reactive Scale ("Bounce / Zoom In-Out" up to 1.3x, no glow) for Full-Screen Thumbnail
   useEffect(() => {
     if (!isOpen || !currentTrack) return;
 
@@ -299,7 +299,7 @@ export default function FullScreenPlayer({
     let lastTime = performance.now();
     let currentScale = 1;
     let prevBass = 0;
-    let bassFloor = 0.18;
+    let bassFloor = 0.16;
 
     const animateBeat = (now) => {
       const dt = Math.min(0.05, Math.max(0.001, (now - lastTime) * 0.001));
@@ -307,7 +307,6 @@ export default function FullScreenPlayer({
       const t = now * 0.001;
 
       let targetScale = 1;
-      let glowAlpha = 0;
 
       if (isPlaying) {
         const audioFrame = getAudioRef.current ? getAudioRef.current() : null;
@@ -325,7 +324,7 @@ export default function FullScreenPlayer({
           let weightedSum = 0;
           let weightTotal = 0;
           for (let bin = 1; bin <= 8; bin++) {
-            const weight = bin >= 2 && bin <= 5 ? 1.85 : 1.0;
+            const weight = bin >= 2 && bin <= 5 ? 1.9 : 1.0;
             weightedSum += (freqData[bin] / 255) * weight;
             weightTotal += weight;
           }
@@ -336,30 +335,28 @@ export default function FullScreenPlayer({
               ? bassFloor * 0.92 + rawBass * 0.08
               : bassFloor * 0.985 + rawBass * 0.015;
 
-          const dynamicFloor = Math.min(0.45, bassFloor * 0.72);
+          const dynamicFloor = Math.min(0.42, bassFloor * 0.68);
           const cleanBass = Math.max(
             0,
-            (rawBass - dynamicFloor) / Math.max(0.32, 1 - dynamicFloor)
+            (rawBass - dynamicFloor) / Math.max(0.3, 1 - dynamicFloor)
           );
           const bassTransient = Math.max(0, rawBass - prevBass);
-          prevBass = rawBass * 0.6 + prevBass * 0.4;
+          prevBass = rawBass * 0.58 + prevBass * 0.42;
 
           const beatImpulse = Math.min(
             1,
-            Math.pow(cleanBass, 1.55) * 0.85 + bassTransient * 3.4
+            Math.pow(cleanBass, 1.35) * 0.95 + bassTransient * 3.8
           );
 
-          targetScale = 1 + beatImpulse * 0.16; // Scales up to 1.16x on bass/kick hits
-          glowAlpha = Math.min(0.85, beatImpulse * 0.85);
+          targetScale = 1 + beatImpulse * 0.3; // Scales up to 1.30x on bass/kick hits
         } else {
           // Fallback rhythmic beat bounce if WebAudio signal is not yet active
           const pulse = Math.pow(Math.max(0, Math.sin(t * 4.5)), 4);
-          targetScale = 1 + pulse * 0.12;
-          glowAlpha = pulse * 0.45;
+          targetScale = 1 + pulse * 0.25;
         }
       }
 
-      const speed = targetScale > currentScale ? 36 : 13;
+      const speed = targetScale > currentScale ? 40 : 14;
       const alpha = 1 - Math.exp(-speed * dt);
       currentScale = currentScale + (targetScale - currentScale) * alpha;
       if (!isPlaying && Math.abs(currentScale - 1) < 0.002) {
@@ -368,10 +365,6 @@ export default function FullScreenPlayer({
 
       if (beatThumbRef.current) {
         beatThumbRef.current.style.transform = `scale(${currentScale.toFixed(3)})`;
-        beatThumbRef.current.style.boxShadow =
-          glowAlpha > 0.04
-            ? `0 20px 60px rgba(0,0,0,0.9), 0 0 ${(18 + glowAlpha * 32).toFixed(1)}px rgba(200, 164, 100, ${(0.2 + glowAlpha * 0.55).toFixed(2)})`
-            : '0 20px 60px rgba(0,0,0,0.9)';
       }
 
       animId = requestAnimationFrame(animateBeat);
@@ -529,7 +522,7 @@ export default function FullScreenPlayer({
       <main className="relative z-10 flex-1 min-h-0 px-4 sm:px-8 py-2 sm:py-4 flex items-center justify-center overflow-hidden">
         <div className="max-w-5xl w-full h-full flex flex-col lg:flex-row items-center justify-center lg:justify-between gap-4 lg:gap-12 py-1">
           {/* THUMBNAIL (LEFT ON DESKTOP, CENTER ON MOBILE) */}
-          <div className="shrink-0 flex items-center justify-center my-auto lg:my-0 p-3 sm:p-5">
+          <div className="shrink-0 flex items-center justify-center my-auto lg:my-0 p-4 sm:p-6">
             <div className="relative">
               <AnimatePresence mode="wait" initial={false}>
                 <motion.div
@@ -561,7 +554,7 @@ export default function FullScreenPlayer({
                 >
                   <div
                     ref={beatThumbRef}
-                    className="relative aspect-square h-[26vh] sm:h-[34vh] lg:h-[44vh] max-h-[380px] rounded-2xl overflow-hidden bg-[#121217] border border-[#C8A464]/45 shadow-[0_20px_60px_rgba(0,0,0,0.9)] flex items-center justify-center will-change-transform origin-center"
+                    className="relative aspect-square h-[24vh] sm:h-[32vh] lg:h-[42vh] max-h-[360px] rounded-2xl overflow-hidden bg-[#121217] border border-white/10 flex items-center justify-center will-change-transform origin-center"
                   >
                     {currentTrack.thumbnail ? (
                       <ShimmerImage

@@ -149,9 +149,6 @@ export default function GlobalMusicPlayer() {
   const [scrubValue, setScrubValue] = useState(0);
   const [isDownloading, setIsDownloading] = useState(false);
 
-  const desktopThumbRef = React.useRef(null);
-  const mobileThumbRef = React.useRef(null);
-
   const {
     playlist,
     currentTrack,
@@ -179,110 +176,6 @@ export default function GlobalMusicPlayer() {
     closePlayer,
     clearError,
   } = usePlayer();
-
-  const getAudioRef = React.useRef(getRealtimeAudioData);
-  useEffect(() => {
-    getAudioRef.current = getRealtimeAudioData;
-  }, [getRealtimeAudioData]);
-
-  // Real-time Bass & Beat-Reactive Scale ("Zoom In/Out") for Bottom Bar Thumbnails
-  useEffect(() => {
-    if (!currentTrack) return;
-
-    let animId = null;
-    let lastTime = performance.now();
-    let currentScale = 1;
-    let prevBass = 0;
-    let bassFloor = 0.18;
-
-    const animateBeat = (now) => {
-      const dt = Math.min(0.05, Math.max(0.001, (now - lastTime) * 0.001));
-      lastTime = now;
-      const t = now * 0.001;
-
-      let targetScale = 1;
-      let glowAlpha = 0;
-
-      if (isPlaying) {
-        const audioFrame = getAudioRef.current ? getAudioRef.current() : null;
-        const freqData = audioFrame?.freqData;
-
-        let maxSignal = 0;
-        if (freqData) {
-          for (let k = 1; k < 64; k++) {
-            if (freqData[k] > maxSignal) maxSignal = freqData[k];
-          }
-        }
-
-        if (freqData && maxSignal > 2) {
-          // Sample Sub-Bass & Kick Drum fundamental bins (~35Hz to ~170Hz)
-          let weightedSum = 0;
-          let weightTotal = 0;
-          for (let bin = 1; bin <= 8; bin++) {
-            const weight = bin >= 2 && bin <= 5 ? 1.8 : 1.0;
-            weightedSum += (freqData[bin] / 255) * weight;
-            weightTotal += weight;
-          }
-          const rawBass = weightedSum / weightTotal;
-
-          bassFloor =
-            rawBass < bassFloor
-              ? bassFloor * 0.92 + rawBass * 0.08
-              : bassFloor * 0.985 + rawBass * 0.015;
-
-          const dynamicFloor = Math.min(0.45, bassFloor * 0.72);
-          const cleanBass = Math.max(
-            0,
-            (rawBass - dynamicFloor) / Math.max(0.32, 1 - dynamicFloor)
-          );
-          const bassTransient = Math.max(0, rawBass - prevBass);
-          prevBass = rawBass * 0.6 + prevBass * 0.4;
-
-          const beatImpulse = Math.min(
-            1,
-            Math.pow(cleanBass, 1.55) * 0.85 + bassTransient * 3.4
-          );
-
-          targetScale = 1 + beatImpulse * 0.18; // Scales up to 1.18x on bass/kick hits
-          glowAlpha = Math.min(0.75, beatImpulse * 0.8);
-        } else {
-          // Fallback rhythmic beat bounce if WebAudio signal is not yet active
-          const pulse = Math.pow(Math.max(0, Math.sin(t * 4.5)), 4);
-          targetScale = 1 + pulse * 0.14;
-          glowAlpha = pulse * 0.5;
-        }
-      }
-
-      const speed = targetScale > currentScale ? 38 : 14;
-      const alpha = 1 - Math.exp(-speed * dt);
-      currentScale = currentScale + (targetScale - currentScale) * alpha;
-      if (!isPlaying && Math.abs(currentScale - 1) < 0.002) {
-        currentScale = 1;
-      }
-
-      const transformStr = `scale(${currentScale.toFixed(3)})`;
-      const shadowStr =
-        glowAlpha > 0.05
-          ? `0 0 ${(8 + glowAlpha * 14).toFixed(1)}px rgba(200, 164, 100, ${glowAlpha.toFixed(2)})`
-          : 'none';
-
-      if (desktopThumbRef.current) {
-        desktopThumbRef.current.style.transform = transformStr;
-        desktopThumbRef.current.style.boxShadow = shadowStr;
-      }
-      if (mobileThumbRef.current) {
-        mobileThumbRef.current.style.transform = transformStr;
-        mobileThumbRef.current.style.boxShadow = shadowStr;
-      }
-
-      animId = requestAnimationFrame(animateBeat);
-    };
-
-    animId = requestAnimationFrame(animateBeat);
-    return () => {
-      if (animId) cancelAnimationFrame(animId);
-    };
-  }, [isPlaying, currentTrack]);
 
   useEffect(() => {
     if (!isScrubbing) return;
@@ -433,10 +326,7 @@ export default function GlobalMusicPlayer() {
           <div className="max-w-7xl mx-auto flex items-center justify-between gap-6">
             {/* Left: Track Identity */}
             <div className="flex items-center gap-3.5 min-w-0 w-[28%]">
-              <div
-                ref={desktopThumbRef}
-                className="relative w-12 h-12 rounded-md bg-[#18181C] border border-[#C8A464]/35 overflow-hidden shrink-0 flex items-center justify-center will-change-transform origin-center"
-              >
+              <div className="relative w-12 h-12 rounded-md bg-[#18181C] border border-[#27272C] overflow-hidden shrink-0 flex items-center justify-center">
                 {currentTrack.thumbnail ? (
                   <ShimmerImage
                     src={currentTrack.thumbnail}
@@ -656,10 +546,7 @@ export default function GlobalMusicPlayer() {
           <div className="flex items-center justify-between gap-2">
             {/* Track Info */}
             <div className="flex items-center gap-2.5 min-w-0 flex-1">
-              <div
-                ref={mobileThumbRef}
-                className="relative w-10 h-10 rounded bg-[#18181C] border border-[#C8A464]/35 overflow-hidden shrink-0 flex items-center justify-center will-change-transform origin-center"
-              >
+              <div className="relative w-10 h-10 rounded bg-[#18181C] border border-[#27272C] overflow-hidden shrink-0 flex items-center justify-center">
                 {currentTrack.thumbnail ? (
                   <ShimmerImage
                     src={currentTrack.thumbnail}
