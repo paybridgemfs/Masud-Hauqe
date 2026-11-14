@@ -17,6 +17,7 @@ export async function generateMetadata() {
 
 export default async function MusicPage() {
   const { artist, publishedMusic, publishedAlbums } = await getPublicWebsiteData();
+  const singlePublishedMusic = (publishedMusic || []).filter((m) => !m.albumId);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 sm:py-20 space-y-10">
@@ -33,13 +34,13 @@ export default async function MusicPage() {
           </p>
         </div>
         <div className="text-xs text-[#8E8E96] tabular-nums">
-          <span>{publishedMusic.length} Published Tracks</span>
+          <span>{singlePublishedMusic.length} Single Tracks</span>
           <span aria-hidden="true"> · </span>
           <span>{publishedAlbums.length} Releases</span>
         </div>
       </div>
 
-      <MusicLibraryClient initialMusic={publishedMusic} albums={publishedAlbums} />
+      <MusicLibraryClient initialMusic={singlePublishedMusic} />
     </div>
   );
 }

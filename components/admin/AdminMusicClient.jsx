@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import {
@@ -16,11 +16,19 @@ import {
   Loader2,
   Edit3,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import DriveImageUpload from '@/components/admin/DriveImageUpload';
 
-export default function AdminMusicClient({ initialMusic = [], albums = [] }) {
-  const [musicList, setMusicList] = useState(initialMusic);
+const TRACKS_PER_PAGE = 10;
+
+export default function AdminMusicClient({ initialMusic = [] }) {
+  // Strictly keep only Single tracks (exclude any track belonging to a Release)
+  const [musicList, setMusicList] = useState(() =>
+    (initialMusic || []).filter((m) => !m.albumId)
+  );
+  const [currentPage, setCurrentPage] = useState(1);
   const [statusMsg, setStatusMsg] = useState('');
   const [trackToDelete, setTrackToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -30,7 +38,6 @@ export default function AdminMusicClient({ initialMusic = [], albums = [] }) {
   const [editingTrack, setEditingTrack] = useState(null);
   const [editTitle, setEditTitle] = useState('');
   const [editArtistName, setEditArtistName] = useState('');
-  const [editAlbumId, setEditAlbumId] = useState('');
   const [editAlbumTitle, setEditAlbumTitle] = useState('');
   const [editGenre, setEditGenre] = useState('');
   const [editReleaseYear, setEditReleaseYear] = useState('');
@@ -40,21 +47,28 @@ export default function AdminMusicClient({ initialMusic = [], albums = [] }) {
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [editError, setEditError] = useState('');
 
+  const totalPages = Math.max(1, Math.ceil(musicList.length / TRACKS_PER_PAGE));
+  const safePage = Math.min(currentPage, totalPages);
+
+  const paginatedTracks = useMemo(() => {
+    const start = (safePage - 1) * TRACKS_PER_PAGE;
+    return musicList.slice(start, start + TRACKS_PER_PAGE);
+  }, [musicList, safePage]);
+
   function openEditModal(track) {
-    const albumObj = albums.find((a) => a.id === track.albumId);
     setEditingTrack(track);
     setEditTitle(track.title || '');
     setEditArtistName(track.artistName || 'Masud Hauqe');
-    setEditAlbumId(track.albumId || '');
-    setEditAlbumTitle(track.albumTitle || albumObj?.title || 'Single');
-    setEditGenre(track.genre || albumObj?.genre || '');
+    setEditAlbumTitle(track.albumTitle || 'Single');
+    setEditGenre(track.genre || '');
     setEditReleaseYear(
       track.releaseYear ||
-        albumObj?.releaseYear ||
-        (track.createdAt ? String(new Date(track.createdAt).getFullYear()) : String(new Date().getFullYear()))
+        (track.createdAt
+          ? String(new Date(track.createdAt).getFullYear())
+          : String(new Date().getFullYear()))
     );
     setEditComposer(track.composer || track.artistName || 'Masud Hauqe');
-    setEditThumbnail(track.thumbnail || albumObj?.coverImage || '');
+    setEditThumbnail(track.thumbnail || '');
     setEditThumbnailFileId(track.thumbnailFileId || '');
     setEditError('');
   }
@@ -70,19 +84,13 @@ export default function AdminMusicClient({ initialMusic = [], albums = [] }) {
     setIsSavingEdit(true);
     setEditError('');
     try {
-      const selectedAlbum = albums.find((a) => a.id === editAlbumId);
-      const resolvedAlbumTitle = selectedAlbum
-        ? selectedAlbum.title
-        : editAlbumTitle.trim() || 'Single';
-
       const res = await fetch(`/api/music/${editingTrack.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: editTitle.trim(),
           artistName: editArtistName.trim() || 'Masud Hauqe',
-          albumId: editAlbumId,
-          albumTitle: resolvedAlbumTitle,
+          albumTitle: editAlbumTitle.trim() || 'Single',
           genre: editGenre.trim(),
           releaseYear: editReleaseYear.trim(),
           composer: editComposer.trim() || editArtistName.trim() || 'Masud Hauqe',
@@ -96,7 +104,7 @@ export default function AdminMusicClient({ initialMusic = [], albums = [] }) {
           prev.map((m) => (m.id === editingTrack.id ? { ...m, ...data.music } : m))
         );
         setStatusMsg(
-          `Updated MP3 Cover Photo & ID3 Metadata for "${data.music.title}". Next MP3 or ZIP download will automatically include the new Cover Photo & Tags.`
+          `Updated MP3 Cover Photo & ID3 Metadata for "${data.music.title}".`
         );
         setEditingTrack(null);
       } else {
@@ -141,7 +149,14 @@ export default function AdminMusicClient({ initialMusic = [], albums = [] }) {
         credentials: 'include',
       });
       if (res.ok) {
-        setMusicList((prev) => prev.filter((m) => m.id !== trackToDelete.id));
+        setMusicList((prev) => {
+          const updated = prev.filter((m) => m.id !== trackToDelete.id);
+          const nextMaxPage = Math.max(1, Math.ceil(updated.length / TRACKS_PER_PAGE));
+          if (currentPage > nextMaxPage) {
+            setCurrentPage(nextMaxPage);
+          }
+          return updated;
+        });
         setStatusMsg(
           `Deleted "${trackToDelete.title}" and removed its MP3 file from Google Drive.`
         );
@@ -152,11 +167,20 @@ export default function AdminMusicClient({ initialMusic = [], albums = [] }) {
     }
   }
 
+  const startIdx = musicList.length === 0 ? 0 : (safePage - 1) * TRACKS_PER_PAGE + 1;
+  const endIdx = Math.min(safePage * TRACKS_PER_PAGE, musicList.length);
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <p className="text-xs text-[#8E8E96] tabular-nums">
-          Total Records in PostgreSQL: {musicList.length} · All MP3 &amp; ZIP downloads embed ID3v2 Cover Photo &amp; Metadata automatically
+          Total Single Tracks: <span className="text-[#F4F1EA] font-semibold">{musicList.length}</span>
+          {musicList.length > 0 && (
+            <span>
+              {' '}
+              · Showing {startIdx}–{endIdx} (10 per page)
+            </span>
+          )}
         </p>
         <Link
           href="/admin/music/add"
@@ -191,7 +215,6 @@ export default function AdminMusicClient({ initialMusic = [], albums = [] }) {
                 <tr className="border-b border-[#222228] text-[#8E8E96]">
                   <th className="py-3.5 px-4 font-semibold">Track &amp; MP3 Cover</th>
                   <th className="py-3.5 px-4 font-semibold">ID3 Metadata (Artist / Genre / Year)</th>
-                  <th className="py-3.5 px-4 font-semibold">Release / Album</th>
                   <th className="py-3.5 px-4 font-semibold">Duration</th>
                   <th className="py-3.5 px-4 font-semibold">Status</th>
                   <th className="py-3.5 px-4 font-semibold">MP3 Download</th>
@@ -201,13 +224,11 @@ export default function AdminMusicClient({ initialMusic = [], albums = [] }) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#1C1C22]">
-                {musicList.map((track) => {
-                  const albumObj = albums.find((a) => a.id === track.albumId);
-                  const coverUrl = track.thumbnail || albumObj?.coverImage || '';
-                  const displayGenre = track.genre || albumObj?.genre || '—';
+                {paginatedTracks.map((track) => {
+                  const coverUrl = track.thumbnail || '';
+                  const displayGenre = track.genre || '—';
                   const displayYear =
                     track.releaseYear ||
-                    albumObj?.releaseYear ||
                     (track.createdAt ? new Date(track.createdAt).getFullYear() : '—');
                   return (
                     <tr key={track.id} className="hover:bg-[#15151A]">
@@ -243,9 +264,6 @@ export default function AdminMusicClient({ initialMusic = [], albums = [] }) {
                           Genre: <span className="text-[#C8A464]">{displayGenre}</span> · Year:{' '}
                           <span className="tabular-nums">{displayYear}</span>
                         </p>
-                      </td>
-                      <td className="py-3 px-4 text-[#B4B4BC]">
-                        {albumObj?.title || track.albumTitle || 'Single'}
                       </td>
                       <td className="py-3 px-4 text-[#B4B4BC] tabular-nums">
                         {track.duration || '0:00'}
@@ -345,13 +363,65 @@ export default function AdminMusicClient({ initialMusic = [], albums = [] }) {
               </tbody>
             </table>
           </div>
+
+          {/* Pagination Footer (10 tracks per view) */}
+          {totalPages > 1 && (
+            <div className="px-4 py-3.5 bg-[#0D0D11] border-t border-[#222228] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+              <p className="text-[#8E8E96] tabular-nums">
+                Showing <span className="text-[#F4F1EA] font-semibold">{startIdx}</span> to{' '}
+                <span className="text-[#F4F1EA] font-semibold">{endIdx}</span> of{' '}
+                <span className="text-[#F4F1EA] font-semibold">{musicList.length}</span> single tracks
+                (Page {safePage} of {totalPages})
+              </p>
+
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  disabled={safePage <= 1}
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  className="px-2.5 py-1.5 rounded bg-[#15151B] hover:bg-[#1E1E26] border border-[#27272E] text-[#D4D4D8] disabled:opacity-40 disabled:pointer-events-none inline-flex items-center gap-1 font-medium transition-colors"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                  <span>Prev</span>
+                </button>
+
+                {Array.from({ length: totalPages }, (_, idx) => idx + 1).map((pageNum) => {
+                  const isActive = pageNum === safePage;
+                  return (
+                    <button
+                      key={pageNum}
+                      type="button"
+                      onClick={() => setCurrentPage(pageNum)}
+                      className={`w-8 h-8 rounded font-semibold tabular-nums transition-colors ${
+                        isActive
+                          ? 'bg-[#C8A464] text-[#09090B]'
+                          : 'bg-[#15151B] hover:bg-[#1E1E26] border border-[#27272E] text-[#B4B4BC]'
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+
+                <button
+                  type="button"
+                  disabled={safePage >= totalPages}
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  className="px-2.5 py-1.5 rounded bg-[#15151B] hover:bg-[#1E1E26] border border-[#27272E] text-[#D4D4D8] disabled:opacity-40 disabled:pointer-events-none inline-flex items-center gap-1 font-medium transition-colors"
+                >
+                  <span>Next</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         <div className="bg-[#111115] border border-[#222228] rounded-lg p-12 text-center space-y-3">
           <Music className="w-8 h-8 text-[#C8A464] mx-auto" />
-          <h2 className="text-base font-semibold text-[#F4F1EA]">No Music Tracks Uploaded Yet</h2>
+          <h2 className="text-base font-semibold text-[#F4F1EA]">No Single Music Tracks Uploaded Yet</h2>
           <p className="text-xs text-[#8E8E96] max-w-md mx-auto">
-            Your database begins with zero fabricated tracks. Click &ldquo;Add New Music&rdquo; to fetch YouTube metadata and upload your first MP3 master.
+            Single tracks uploaded via &ldquo;Add New Music&rdquo; appear here. (Release tracks are managed directly inside Release Management.)
           </p>
         </div>
       )}
@@ -446,7 +516,7 @@ export default function AdminMusicClient({ initialMusic = [], albums = [] }) {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
                       <label className="block text-xs font-semibold text-[#D4D4D8] mb-1">
                         Genre (ID3 TCON)
@@ -473,36 +543,6 @@ export default function AdminMusicClient({ initialMusic = [], albums = [] }) {
                         className="w-full bg-[#09090B] border border-[#27272E] rounded px-3 py-2 text-xs text-[#F4F1EA] tabular-nums focus:border-[#C8A464] outline-none"
                       />
                     </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-semibold text-[#D4D4D8] mb-1">
-                        Assign to Release
-                      </label>
-                      <select
-                        value={editAlbumId}
-                        onChange={(e) => {
-                          const nextId = e.target.value;
-                          setEditAlbumId(nextId);
-                          const found = albums.find((a) => a.id === nextId);
-                          if (found) {
-                            setEditAlbumTitle(found.title);
-                            if (found.coverImage && !editThumbnail) {
-                              setEditThumbnail(found.coverImage);
-                            }
-                          }
-                        }}
-                        className="w-full bg-[#09090B] border border-[#27272E] rounded px-3 py-2 text-xs text-[#F4F1EA] focus:border-[#C8A464] outline-none"
-                      >
-                        <option value="">Single (No Release)</option>
-                        {albums.map((alb) => (
-                          <option key={alb.id} value={alb.id}>
-                            {alb.title}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
 
                     <div>
                       <label className="block text-xs font-semibold text-[#D4D4D8] mb-1">
@@ -512,7 +552,7 @@ export default function AdminMusicClient({ initialMusic = [], albums = [] }) {
                         type="text"
                         value={editAlbumTitle}
                         onChange={(e) => setEditAlbumTitle(e.target.value)}
-                        placeholder="e.g. Single or Album Name"
+                        placeholder="e.g. Single"
                         className="w-full bg-[#09090B] border border-[#27272E] rounded px-3 py-2 text-xs text-[#F4F1EA] focus:border-[#C8A464] outline-none"
                       />
                     </div>

@@ -1,7 +1,7 @@
 import React from "react";
 import { notFound } from "next/navigation";
 import { headers } from "next/headers";
-import { getPublicWebsiteData } from "@/lib/db.js";
+import { getPublicWebsiteData, sortAlbumTracks } from "@/lib/db.js";
 import MusicDetailClient from "@/components/music/MusicDetailClient.jsx";
 
 export const revalidate = 60;
@@ -80,7 +80,17 @@ export default async function MusicDetailPage({ params }) {
     notFound();
   }
 
-  const relatedTracks = publishedMusic.filter((m) => m.id !== track.id).slice(0, 4);
+  // If this track belongs to a Release, Related Recordings shows ONLY the other tracks in that same Release.
+  // If this track is a Single track, Related Recordings shows ONLY other Single tracks.
+  const relatedTracks = track.albumId
+    ? sortAlbumTracks(
+        publishedMusic.filter(
+          (m) => m.albumId === track.albumId && m.id !== track.id
+        )
+      )
+    : publishedMusic
+        .filter((m) => !m.albumId && m.id !== track.id)
+        .slice(0, 4);
 
   const origin = await resolveOrigin();
   return <MusicDetailClient track={track} relatedTracks={relatedTracks} shareUrl={`${origin}/music/${track.slug}`} />;

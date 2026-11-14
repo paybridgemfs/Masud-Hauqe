@@ -469,7 +469,7 @@ export default function MusicDetailClient({ track, relatedTracks = [], shareUrl:
         >
           <h2 className="text-2xl font-bold text-[#F4F1EA]">Related Recordings</h2>
           <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-5">
-            {relatedTracks.slice(0, 4).map((item, idx) => (
+            {relatedTracks.map((item, idx) => (
               <MusicCard key={item.id} track={item} queue={relatedTracks} index={idx} />
             ))}
           </div>

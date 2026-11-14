@@ -14,14 +14,15 @@ export default async function AdminMusicPage() {
   }
 
   const db = await getDbState();
+  const singleMusicOnly = (db.music || []).filter((m) => !m.albumId);
 
   return (
     <AdminShell
       admin={admin}
       title="All Music"
-      subtitle="Manage published recordings, draft uploads, release assignments, and MP3 download permissions"
+      subtitle="Manage single track recordings, ID3v2 metadata, cover photos, and MP3 download permissions (10 tracks per page)"
     >
-      <AdminMusicClient initialMusic={db.music || []} albums={db.albums || []} />
+      <AdminMusicClient initialMusic={singleMusicOnly} />
     </AdminShell>
   );
 }

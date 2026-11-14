@@ -125,6 +125,7 @@ export default function AdminAlbumsClient({
   const [dragOverTrackIdx, setDragOverTrackIdx] = useState(null);
   const [savingTrackOrder, setSavingTrackOrder] = useState(false);
   const [trackOrderStatus, setTrackOrderStatus] = useState('');
+  const [deletingTrackId, setDeletingTrackId] = useState(null);
 
   // Drag & Drop State for Queue Items (Before Upload)
   const [draggedQueueIdx, setDraggedQueueIdx] = useState(null);
@@ -297,6 +298,51 @@ export default function AdminAlbumsClient({
     setBatchError('');
     setBatchSummary('');
     setTrackOrderStatus('');
+  }
+
+  async function handleDeleteReleaseTrack(track) {
+    if (!batchAlbum || !track || deletingTrackId === track.id) return;
+    setDeletingTrackId(track.id);
+    setTrackOrderStatus('');
+    try {
+      const res = await fetch(`/api/music/${track.id}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+      if (res.ok) {
+        const remaining = (batchAlbum.tracks || [])
+          .filter((t) => t.id !== track.id)
+          .map((t, idx) => ({ ...t, trackOrder: idx + 1 }));
+
+        setBatchAlbum((prev) =>
+          prev
+            ? {
+                ...prev,
+                tracks: remaining,
+                trackCount: remaining.length,
+              }
+            : prev
+        );
+        setAlbums((prev) =>
+          prev.map((a) =>
+            a.id === batchAlbum.id
+              ? {
+                  ...a,
+                  tracks: remaining,
+                  trackCount: remaining.length,
+                }
+              : a
+          )
+        );
+        setTrackOrderStatus(`Deleted track "${track.title}"`);
+      } else {
+        setTrackOrderStatus('Failed to delete track.');
+      }
+    } catch {
+      setTrackOrderStatus('Network error while deleting track.');
+    } finally {
+      setDeletingTrackId(null);
+    }
   }
 
   async function persistTrackOrder(albumId, reorderedTracks) {
@@ -1337,7 +1383,7 @@ export default function AdminAlbumsClient({
                 </label>
               </div>
 
-              {/* Existing Tracks in this Release — DRAG & DROP TRACK ORDER */}
+              {/* Existing Tracks in this Release — DRAG & DROP TRACK ORDER + DELETE TRACK */}
               {(batchAlbum.tracks || []).length > 0 && (
                 <div className="pt-3 border-t border-[#202028] space-y-2.5">
                   <div className="flex flex-wrap items-center justify-between gap-2">
@@ -1346,12 +1392,12 @@ export default function AdminAlbumsClient({
                         Release Tracklist &amp; Serial Order ({batchAlbum.tracks.length} Tracks)
                       </p>
                       <p className="text-[11px] text-[#8E8E96]">
-                        মাউস দিয়ে টেনে (Drag &amp; Drop করে) অথবা তীর চিহ্নে ক্লিক করে গানের ১, ২, ৩ সিরিয়াল সাজান
+                        মাউস দিয়ে টেনে (Drag &amp; Drop করে) গানের ১, ২, ৩ সিরিয়াল সাজান অথবা ডিলিট বাটনে ক্লিক করে গান মুছুন
                       </p>
                     </div>
                     {trackOrderStatus && (
                       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#181820] border border-[#C8A464]/35 text-[11px] font-semibold text-[#C8A464]">
-                        {savingTrackOrder ? (
+                        {savingTrackOrder || deletingTrackId ? (
                           <Loader2 className="w-3 h-3 animate-spin" />
                         ) : (
                           <CheckCircle2 className="w-3 h-3 text-[#4ADE80]" />
@@ -1365,10 +1411,11 @@ export default function AdminAlbumsClient({
                     {batchAlbum.tracks.map((t, i) => {
                       const isDragging = draggedTrackIdx === i;
                       const isDragOver = dragOverTrackIdx === i && draggedTrackIdx !== i;
+                      const isDeletingThis = deletingTrackId === t.id;
                       return (
                         <div
                           key={t.id}
-                          draggable={!savingTrackOrder}
+                          draggable={!savingTrackOrder && !isDeletingThis}
                           onDragStart={() => {
                             setDraggedTrackIdx(i);
                           }}
@@ -1422,7 +1469,7 @@ export default function AdminAlbumsClient({
                               <div className="flex items-center gap-0.5">
                                 <button
                                   type="button"
-                                  disabled={i === 0 || savingTrackOrder}
+                                  disabled={i === 0 || savingTrackOrder || isDeletingThis}
                                   onClick={() => reorderExistingTracks(i, i - 1)}
                                   title="Move track up"
                                   className="p-1 rounded border border-[#24242E] text-[#8E8E96] hover:text-[#F4F1EA] hover:border-[#C8A464]/40 disabled:opacity-25 transition-colors"
@@ -1431,7 +1478,11 @@ export default function AdminAlbumsClient({
                                 </button>
                                 <button
                                   type="button"
-                                  disabled={i === batchAlbum.tracks.length - 1 || savingTrackOrder}
+                                  disabled={
+                                    i === batchAlbum.tracks.length - 1 ||
+                                    savingTrackOrder ||
+                                    isDeletingThis
+                                  }
                                   onClick={() => reorderExistingTracks(i, i + 1)}
                                   title="Move track down"
                                   className="p-1 rounded border border-[#24242E] text-[#8E8E96] hover:text-[#F4F1EA] hover:border-[#C8A464]/40 disabled:opacity-25 transition-colors"
@@ -1440,6 +1491,21 @@ export default function AdminAlbumsClient({
                                 </button>
                               </div>
                             )}
+
+                            <button
+                              type="button"
+                              disabled={isDeletingThis || savingTrackOrder}
+                              onClick={() => handleDeleteReleaseTrack(t)}
+                              title={`Delete track "${t.title}"`}
+                              aria-label={`Delete track ${t.title}`}
+                              className="p-1.5 rounded border border-[#27272E] text-[#9A9AA2] hover:text-[#F87171] hover:border-[#F87171]/40 disabled:opacity-50 transition-colors"
+                            >
+                              {isDeletingThis ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin text-[#F87171]" />
+                              ) : (
+                                <Trash2 className="w-3.5 h-3.5" />
+                              )}
+                            </button>
                           </div>
                         </div>
                       );
