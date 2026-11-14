@@ -13,6 +13,7 @@ import { musicSchema } from '@/lib/validation.js';
 import { sanitizeFilename, verifyMp3Signature } from '@/lib/security.js';
 import { getEnvConfig } from '@/lib/env.js';
 import { uploadMp3ToGoogleDrive, deleteFileFromGoogleDrive } from '@/lib/google-drive.js';
+import { embedMp3MetadataAndCover, resolveTrackYear } from '@/lib/mp3-id3.js';
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
@@ -110,6 +111,10 @@ export async function POST(request) {
         title: String(formData.get('title') || ''),
         artistName: String(formData.get('artistName') || ''),
         albumId: String(formData.get('albumId') || ''),
+        albumTitle: String(formData.get('albumTitle') || ''),
+        genre: String(formData.get('genre') || ''),
+        releaseYear: String(formData.get('releaseYear') || ''),
+        composer: String(formData.get('composer') || ''),
         thumbnail: String(formData.get('thumbnail') || ''),
         thumbnailFileId: String(formData.get('thumbnailFileId') || ''),
         youtubeUrl: String(formData.get('youtubeUrl') || ''),
@@ -191,6 +196,27 @@ export async function POST(request) {
         );
       }
 
+      const artistObj = db.artists?.[0] || { name: 'Masud Hauqe' };
+      const targetAlbumObj = parsed.data.albumId
+        ? (db.albums || []).find((a) => a.id === parsed.data.albumId) || null
+        : null;
+
+      // Embed ID3v2.3 Metadata + Cover Photo directly into the MP3 buffer prior to Google Drive upload
+      fileBuffer = await embedMp3MetadataAndCover(fileBuffer, {
+        track: {
+          title: parsed.data.title,
+          artistName: parsed.data.artistName || targetAlbumObj?.artistName || artistObj.name,
+          albumTitle: targetAlbumObj?.title || parsed.data.albumTitle || 'Single',
+          genre: parsed.data.genre || targetAlbumObj?.genre || 'Contemporary',
+          releaseYear: resolveTrackYear(parsed.data, targetAlbumObj),
+          composer: parsed.data.composer || parsed.data.artistName || artistObj.name,
+          thumbnail: parsed.data.thumbnail || targetAlbumObj?.coverImage || '',
+          thumbnailFileId: parsed.data.thumbnailFileId || targetAlbumObj?.coverImageFileId || '',
+        },
+        album: targetAlbumObj,
+        artist: artistObj,
+      });
+
       const safeFileName = sanitizeFilename(originalFileName);
       const driveResult = await uploadMp3ToGoogleDrive({
         buffer: fileBuffer,
@@ -220,8 +246,12 @@ export async function POST(request) {
 
     await updateDbState(async (state) => {
       const slug = await createUniqueSlug(state.music, parsed.data.title);
-      const artistId = state.artists[0]?.id || 'masud-hauqe';
+      const artistObj = state.artists[0] || { id: 'masud-hauqe', name: 'Masud Hauqe' };
+      const artistId = artistObj.id || 'masud-hauqe';
       const targetAlbumId = parsed.data.albumId || null;
+      const targetAlbum = targetAlbumId
+        ? (state.albums || []).find((a) => a.id === targetAlbumId) || null
+        : null;
       let nextTrackOrder = 0;
       if (targetAlbumId) {
         const albumTracks = (state.music || []).filter((m) => m.albumId === targetAlbumId);
@@ -232,15 +262,29 @@ export async function POST(request) {
         nextTrackOrder = maxOrder + 1;
       }
 
+      const resolvedArtistName =
+        parsed.data.artistName?.trim() ||
+        targetAlbum?.artistName ||
+        artistObj.name ||
+        'Masud Hauqe';
+      const resolvedGenre =
+        parsed.data.genre?.trim() || targetAlbum?.genre || 'Contemporary';
+      const resolvedYear = resolveTrackYear(parsed.data, targetAlbum);
+
       createdRecord = {
         id: cuid(),
         title: parsed.data.title,
         slug,
         artistId,
+        artistName: resolvedArtistName,
         albumId: targetAlbumId,
+        albumTitle: targetAlbum?.title || parsed.data.albumTitle?.trim() || '',
+        genre: resolvedGenre,
+        releaseYear: resolvedYear,
+        composer: parsed.data.composer?.trim() || resolvedArtistName,
         trackOrder: nextTrackOrder,
-        thumbnail: parsed.data.thumbnail || '',
-        thumbnailFileId: parsed.data.thumbnailFileId || '',
+        thumbnail: parsed.data.thumbnail || targetAlbum?.coverImage || '',
+        thumbnailFileId: parsed.data.thumbnailFileId || targetAlbum?.coverImageFileId || '',
         youtubeUrl: parsed.data.youtubeUrl || '',
         youtubeVideoId: parsed.data.youtubeVideoId || '',
         duration: parsed.data.duration || '0:00',

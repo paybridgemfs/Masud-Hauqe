@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import {
   PlusCircle,
@@ -13,7 +14,10 @@ import {
   AlertTriangle,
   X,
   Loader2,
+  Edit3,
+  CheckCircle2,
 } from 'lucide-react';
+import DriveImageUpload from '@/components/admin/DriveImageUpload';
 
 export default function AdminMusicClient({ initialMusic = [], albums = [] }) {
   const [musicList, setMusicList] = useState(initialMusic);
@@ -21,6 +25,89 @@ export default function AdminMusicClient({ initialMusic = [], albums = [] }) {
   const [trackToDelete, setTrackToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [togglingKey, setTogglingKey] = useState(null);
+
+  // Edit Metadata & Cover Photo Modal State
+  const [editingTrack, setEditingTrack] = useState(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editArtistName, setEditArtistName] = useState('');
+  const [editAlbumId, setEditAlbumId] = useState('');
+  const [editAlbumTitle, setEditAlbumTitle] = useState('');
+  const [editGenre, setEditGenre] = useState('');
+  const [editReleaseYear, setEditReleaseYear] = useState('');
+  const [editComposer, setEditComposer] = useState('');
+  const [editThumbnail, setEditThumbnail] = useState('');
+  const [editThumbnailFileId, setEditThumbnailFileId] = useState('');
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [editError, setEditError] = useState('');
+
+  function openEditModal(track) {
+    const albumObj = albums.find((a) => a.id === track.albumId);
+    setEditingTrack(track);
+    setEditTitle(track.title || '');
+    setEditArtistName(track.artistName || 'Masud Hauqe');
+    setEditAlbumId(track.albumId || '');
+    setEditAlbumTitle(track.albumTitle || albumObj?.title || 'Single');
+    setEditGenre(track.genre || albumObj?.genre || '');
+    setEditReleaseYear(
+      track.releaseYear ||
+        albumObj?.releaseYear ||
+        (track.createdAt ? String(new Date(track.createdAt).getFullYear()) : String(new Date().getFullYear()))
+    );
+    setEditComposer(track.composer || track.artistName || 'Masud Hauqe');
+    setEditThumbnail(track.thumbnail || albumObj?.coverImage || '');
+    setEditThumbnailFileId(track.thumbnailFileId || '');
+    setEditError('');
+  }
+
+  async function handleSaveEdit(e) {
+    e.preventDefault();
+    if (!editingTrack || isSavingEdit) return;
+    if (!editTitle.trim()) {
+      setEditError('Song title is required.');
+      return;
+    }
+
+    setIsSavingEdit(true);
+    setEditError('');
+    try {
+      const selectedAlbum = albums.find((a) => a.id === editAlbumId);
+      const resolvedAlbumTitle = selectedAlbum
+        ? selectedAlbum.title
+        : editAlbumTitle.trim() || 'Single';
+
+      const res = await fetch(`/api/music/${editingTrack.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: editTitle.trim(),
+          artistName: editArtistName.trim() || 'Masud Hauqe',
+          albumId: editAlbumId,
+          albumTitle: resolvedAlbumTitle,
+          genre: editGenre.trim(),
+          releaseYear: editReleaseYear.trim(),
+          composer: editComposer.trim() || editArtistName.trim() || 'Masud Hauqe',
+          thumbnail: editThumbnail.trim(),
+          thumbnailFileId: editThumbnailFileId.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        setMusicList((prev) =>
+          prev.map((m) => (m.id === editingTrack.id ? { ...m, ...data.music } : m))
+        );
+        setStatusMsg(
+          `Updated MP3 Cover Photo & ID3 Metadata for "${data.music.title}". Next MP3 or ZIP download will automatically include the new Cover Photo & Tags.`
+        );
+        setEditingTrack(null);
+      } else {
+        setEditError(data.error || 'Failed to update metadata.');
+      }
+    } catch {
+      setEditError('Network error while saving metadata.');
+    } finally {
+      setIsSavingEdit(false);
+    }
+  }
 
   async function toggleField(track, field) {
     const key = `${track.id}:${field}`;
@@ -69,7 +156,7 @@ export default function AdminMusicClient({ initialMusic = [], albums = [] }) {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <p className="text-xs text-[#8E8E96] tabular-nums">
-          Total Records in PostgreSQL: {musicList.length}
+          Total Records in PostgreSQL: {musicList.length} · All MP3 &amp; ZIP downloads embed ID3v2 Cover Photo &amp; Metadata automatically
         </p>
         <Link
           href="/admin/music/add"
@@ -81,8 +168,18 @@ export default function AdminMusicClient({ initialMusic = [], albums = [] }) {
       </div>
 
       {statusMsg && (
-        <div className="p-3 rounded bg-[#11261B] border border-[#166534] text-xs text-[#BBF7D0]">
-          {statusMsg}
+        <div className="p-3 rounded bg-[#11261B] border border-[#166534] text-xs text-[#BBF7D0] flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-[#4ADE80] shrink-0" />
+            <span>{statusMsg}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setStatusMsg('')}
+            className="text-[#BBF7D0] hover:text-white"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
         </div>
       )}
 
@@ -92,8 +189,9 @@ export default function AdminMusicClient({ initialMusic = [], albums = [] }) {
             <table className="w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="border-b border-[#222228] text-[#8E8E96]">
-                  <th className="py-3.5 px-4 font-semibold">Track</th>
-                  <th className="py-3.5 px-4 font-semibold">Release</th>
+                  <th className="py-3.5 px-4 font-semibold">Track &amp; MP3 Cover</th>
+                  <th className="py-3.5 px-4 font-semibold">ID3 Metadata (Artist / Genre / Year)</th>
+                  <th className="py-3.5 px-4 font-semibold">Release / Album</th>
                   <th className="py-3.5 px-4 font-semibold">Duration</th>
                   <th className="py-3.5 px-4 font-semibold">Status</th>
                   <th className="py-3.5 px-4 font-semibold">MP3 Download</th>
@@ -105,16 +203,49 @@ export default function AdminMusicClient({ initialMusic = [], albums = [] }) {
               <tbody className="divide-y divide-[#1C1C22]">
                 {musicList.map((track) => {
                   const albumObj = albums.find((a) => a.id === track.albumId);
+                  const coverUrl = track.thumbnail || albumObj?.coverImage || '';
+                  const displayGenre = track.genre || albumObj?.genre || '—';
+                  const displayYear =
+                    track.releaseYear ||
+                    albumObj?.releaseYear ||
+                    (track.createdAt ? new Date(track.createdAt).getFullYear() : '—');
                   return (
                     <tr key={track.id} className="hover:bg-[#15151A]">
                       <td className="py-3 px-4">
-                        <p className="font-semibold text-[#F4F1EA]">{track.title}</p>
-                        <p className="text-[11px] text-[#8E8E96] font-mono">
-                          Drive ID: {track.audioFileId || '—'}
+                        <div className="flex items-center gap-3">
+                          <div className="relative w-10 h-10 rounded bg-[#09090B] border border-[#27272E] overflow-hidden shrink-0 flex items-center justify-center">
+                            {coverUrl ? (
+                              <Image
+                                src={coverUrl}
+                                alt={track.title}
+                                fill
+                                sizes="40px"
+                                className="object-cover"
+                                referrerPolicy="no-referrer"
+                              />
+                            ) : (
+                              <Music className="w-4 h-4 text-[#C8A464]" />
+                            )}
+                          </div>
+                          <div>
+                            <p className="font-semibold text-[#F4F1EA]">{track.title}</p>
+                            <p className="text-[11px] text-[#8E8E96] font-mono">
+                              Drive ID: {track.audioFileId ? `${track.audioFileId.slice(0, 12)}...` : '—'}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 text-[#B4B4BC]">
+                        <p className="font-medium text-[#F4F1EA]">
+                          {track.artistName || 'Masud Hauqe'}
+                        </p>
+                        <p className="text-[11px] text-[#8E8E96]">
+                          Genre: <span className="text-[#C8A464]">{displayGenre}</span> · Year:{' '}
+                          <span className="tabular-nums">{displayYear}</span>
                         </p>
                       </td>
                       <td className="py-3 px-4 text-[#B4B4BC]">
-                        {albumObj?.title || 'Single'}
+                        {albumObj?.title || track.albumTitle || 'Single'}
                       </td>
                       <td className="py-3 px-4 text-[#B4B4BC] tabular-nums">
                         {track.duration || '0:00'}
@@ -188,14 +319,25 @@ export default function AdminMusicClient({ initialMusic = [], albums = [] }) {
                         {track.playCount || 0} / {track.downloadCount || 0}
                       </td>
                       <td className="py-3 px-4 text-right">
-                        <button
-                          type="button"
-                          onClick={() => setTrackToDelete(track)}
-                          aria-label={`Delete ${track.title}`}
-                          className="p-1.5 text-[#9A9AA2] hover:text-[#F87171] transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        <div className="inline-flex items-center justify-end gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => openEditModal(track)}
+                            title="Edit MP3 Cover Photo & ID3 Metadata"
+                            className="px-2.5 py-1.5 rounded bg-[#181820] hover:bg-[#23232F] border border-[#2C2C38] hover:border-[#C8A464]/50 text-[#C8A464] text-[11px] font-semibold inline-flex items-center gap-1 transition-colors"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                            <span>Metadata &amp; Cover</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setTrackToDelete(track)}
+                            aria-label={`Delete ${track.title}`}
+                            className="p-1.5 text-[#9A9AA2] hover:text-[#F87171] transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -211,6 +353,195 @@ export default function AdminMusicClient({ initialMusic = [], albums = [] }) {
           <p className="text-xs text-[#8E8E96] max-w-md mx-auto">
             Your database begins with zero fabricated tracks. Click &ldquo;Add New Music&rdquo; to fetch YouTube metadata and upload your first MP3 master.
           </p>
+        </div>
+      )}
+
+      {/* Edit MP3 Cover Photo & ID3 Metadata Modal */}
+      {editingTrack && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="edit-music-metadata-title"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto"
+        >
+          <div className="w-full max-w-2xl bg-[#111115] border border-[#2C2C36] rounded-xl shadow-2xl overflow-hidden my-auto">
+            <div className="flex items-center justify-between px-6 py-4 bg-[#15151B] border-b border-[#24242E]">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#C8A464]">
+                  MP3 Cover Photo &amp; ID3v2 Tag Editor
+                </span>
+                <h3 id="edit-music-metadata-title" className="text-base font-bold text-[#F4F1EA]">
+                  {editingTrack.title}
+                </h3>
+              </div>
+              <button
+                type="button"
+                disabled={isSavingEdit}
+                onClick={() => setEditingTrack(null)}
+                className="p-1.5 rounded border border-[#27272E] text-[#8E8E96] hover:text-white disabled:opacity-50"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEdit} className="p-6 space-y-5 max-h-[80vh] overflow-y-auto">
+              {editError && (
+                <div className="p-3 rounded bg-[#2A1215] border border-[#7F1D1D] text-xs text-[#FECACA]">
+                  {editError}
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
+                <div className="md:col-span-5">
+                  <DriveImageUpload
+                    label="MP3 Cover Photo (APIC Front Cover)"
+                    value={editThumbnail}
+                    fileId={editThumbnailFileId}
+                    aspectClass="aspect-square w-full"
+                    helperText="Embedded inside the downloaded MP3 file as its Cover Art."
+                    onChange={({ url, fileId }) => {
+                      setEditThumbnail(url);
+                      setEditThumbnailFileId(fileId);
+                    }}
+                  />
+                </div>
+
+                <div className="md:col-span-7 space-y-3.5">
+                  <div>
+                    <label className="block text-xs font-semibold text-[#D4D4D8] mb-1">
+                      Song Title (ID3 TIT2) *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                      className="w-full bg-[#09090B] border border-[#27272E] rounded px-3 py-2 text-xs text-[#F4F1EA] focus:border-[#C8A464] outline-none"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-[#D4D4D8] mb-1">
+                        Artist Name (ID3 TPE1)
+                      </label>
+                      <input
+                        type="text"
+                        value={editArtistName}
+                        onChange={(e) => setEditArtistName(e.target.value)}
+                        className="w-full bg-[#09090B] border border-[#27272E] rounded px-3 py-2 text-xs text-[#F4F1EA] focus:border-[#C8A464] outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-[#D4D4D8] mb-1">
+                        Composer (ID3 TCOM)
+                      </label>
+                      <input
+                        type="text"
+                        value={editComposer}
+                        onChange={(e) => setEditComposer(e.target.value)}
+                        className="w-full bg-[#09090B] border border-[#27272E] rounded px-3 py-2 text-xs text-[#F4F1EA] focus:border-[#C8A464] outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-[#D4D4D8] mb-1">
+                        Genre (ID3 TCON)
+                      </label>
+                      <input
+                        type="text"
+                        value={editGenre}
+                        onChange={(e) => setEditGenre(e.target.value)}
+                        placeholder="e.g. Folk, Pop, Acoustic"
+                        className="w-full bg-[#09090B] border border-[#27272E] rounded px-3 py-2 text-xs text-[#F4F1EA] focus:border-[#C8A464] outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-[#D4D4D8] mb-1">
+                        Release Year (ID3 TYER)
+                      </label>
+                      <input
+                        type="text"
+                        maxLength={4}
+                        value={editReleaseYear}
+                        onChange={(e) => setEditReleaseYear(e.target.value)}
+                        placeholder="e.g. 2026"
+                        className="w-full bg-[#09090B] border border-[#27272E] rounded px-3 py-2 text-xs text-[#F4F1EA] tabular-nums focus:border-[#C8A464] outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-[#D4D4D8] mb-1">
+                        Assign to Release
+                      </label>
+                      <select
+                        value={editAlbumId}
+                        onChange={(e) => {
+                          const nextId = e.target.value;
+                          setEditAlbumId(nextId);
+                          const found = albums.find((a) => a.id === nextId);
+                          if (found) {
+                            setEditAlbumTitle(found.title);
+                            if (found.coverImage && !editThumbnail) {
+                              setEditThumbnail(found.coverImage);
+                            }
+                          }
+                        }}
+                        className="w-full bg-[#09090B] border border-[#27272E] rounded px-3 py-2 text-xs text-[#F4F1EA] focus:border-[#C8A464] outline-none"
+                      >
+                        <option value="">Single (No Release)</option>
+                        {albums.map((alb) => (
+                          <option key={alb.id} value={alb.id}>
+                            {alb.title}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-[#D4D4D8] mb-1">
+                        ID3 Album Tag (TALB)
+                      </label>
+                      <input
+                        type="text"
+                        value={editAlbumTitle}
+                        onChange={(e) => setEditAlbumTitle(e.target.value)}
+                        placeholder="e.g. Single or Album Name"
+                        className="w-full bg-[#09090B] border border-[#27272E] rounded px-3 py-2 text-xs text-[#F4F1EA] focus:border-[#C8A464] outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-[#222228]">
+                <button
+                  type="button"
+                  disabled={isSavingEdit}
+                  onClick={() => setEditingTrack(null)}
+                  className="px-4 py-2 rounded border border-[#2E2E38] text-xs font-semibold text-[#D4D4D8] hover:text-white disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingEdit}
+                  className="px-5 py-2 rounded bg-[#C8A464] hover:bg-[#D4B475] text-[#09090B] text-xs font-bold inline-flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  {isSavingEdit && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  <span>
+                    {isSavingEdit ? 'Saving Metadata...' : 'Save Cover & ID3 Metadata'}
+                  </span>
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 

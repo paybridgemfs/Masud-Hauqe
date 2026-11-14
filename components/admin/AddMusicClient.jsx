@@ -36,6 +36,10 @@ export default function AddMusicClient({
 
   const [title, setTitle] = useState('');
   const [artistName, setArtistName] = useState(defaultArtistName);
+  const [albumTitle, setAlbumTitle] = useState('Single');
+  const [genre, setGenre] = useState('');
+  const [releaseYear, setReleaseYear] = useState(String(new Date().getFullYear()));
+  const [composer, setComposer] = useState(defaultArtistName);
   const [thumbnail, setThumbnail] = useState('');
   const [thumbnailFileId, setThumbnailFileId] = useState('');
   const [duration, setDuration] = useState('0:00');
@@ -86,6 +90,10 @@ export default function AddMusicClient({
         setYoutubeVideoId(meta.youtubeVideoId || '');
         setChannelTitle(meta.channelTitle || '');
         setYoutubeUrl(meta.youtubeUrl || youtubeUrl);
+        if (meta.publishedAt) {
+          const yr = String(meta.publishedAt).slice(0, 4);
+          if (/^\d{4}$/.test(yr)) setReleaseYear(yr);
+        }
         setYtStatus({
           type: 'success',
           text: 'YouTube metadata retrieved and populated automatically.',
@@ -214,6 +222,10 @@ export default function AddMusicClient({
     formData.append('title', title.trim());
     formData.append('artistName', artistName.trim() || defaultArtistName);
     formData.append('albumId', '');
+    formData.append('albumTitle', albumTitle.trim() || 'Single');
+    formData.append('genre', genre.trim());
+    formData.append('releaseYear', releaseYear.trim());
+    formData.append('composer', composer.trim() || artistName.trim() || defaultArtistName);
     formData.append('thumbnail', thumbnail.trim());
     formData.append('thumbnailFileId', thumbnailFileId.trim());
     formData.append('youtubeUrl', youtubeUrl.trim());
@@ -374,10 +386,10 @@ export default function AddMusicClient({
           <div className="space-y-1">
             <p className="text-xs font-semibold tracking-[0.18em] text-[#C8A464]">STEP 2</p>
             <h2 className="text-lg font-bold text-[#F4F1EA]">
-              Single Track Metadata & Artwork
+              Single Track ID3v2 Metadata &amp; MP3 Cover Photo
             </h2>
             <p className="text-xs text-[#8E8E96]">
-              Review or customize the single track metadata before uploading your MP3 master. (For multi-track Releases/Albums, use the &ldquo;Batch upload&rdquo; button in Release Management.)
+              Set the Track Cover Photo (Thumbnail), Artist Name, Genre, Album/Release Tag, Year, and Composer. These values are embedded directly inside the MP3 file (ID3v2.3 tags + APIC Front Cover) when uploaded and downloaded.
             </p>
           </div>
 
@@ -385,11 +397,11 @@ export default function AddMusicClient({
             {/* Thumbnail Preview & Upload */}
             <div className="lg:col-span-4 space-y-2">
               <DriveImageUpload
-                label="Track Thumbnail (YouTube Auto-Fill or Custom Upload to Drive)"
+                label="MP3 Cover Photo / Track Thumbnail"
                 value={thumbnail}
                 fileId={thumbnailFileId}
-                aspectClass="aspect-video w-full"
-                helperText="Auto-populated from YouTube or upload a custom cover into Google Drive 'Images' folder."
+                aspectClass="aspect-square w-full"
+                helperText="Used on the website AND automatically embedded inside the downloaded MP3 file as its Front Cover Photo (APIC)."
                 onChange={({ url, fileId }) => {
                   setThumbnail(url);
                   setThumbnailFileId(fileId);
@@ -407,7 +419,7 @@ export default function AddMusicClient({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label htmlFor="track-title" className="block text-xs font-semibold text-[#D4D4D8] mb-1">
-                    Song Title *
+                    Song Title (ID3 Title) *
                   </label>
                   <input
                     id="track-title"
@@ -422,19 +434,79 @@ export default function AddMusicClient({
 
                 <div>
                   <label htmlFor="track-artist" className="block text-xs font-semibold text-[#D4D4D8] mb-1">
-                    Artist Name
+                    Artist Name (ID3 Artist)
                   </label>
                   <input
                     id="track-artist"
                     type="text"
                     value={artistName}
                     onChange={(e) => setArtistName(e.target.value)}
+                    placeholder="e.g. Masud Hauqe"
                     className="w-full bg-[#09090B] border border-[#27272E] rounded px-3.5 py-2 text-sm text-[#F4F1EA] focus:outline-none focus:border-[#C8A464]"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label htmlFor="track-genre" className="block text-xs font-semibold text-[#D4D4D8] mb-1">
+                    Genre (ID3 Genre)
+                  </label>
+                  <input
+                    id="track-genre"
+                    type="text"
+                    value={genre}
+                    onChange={(e) => setGenre(e.target.value)}
+                    placeholder="e.g. Acoustic, Folk, Pop"
+                    className="w-full bg-[#09090B] border border-[#27272E] rounded px-3.5 py-2 text-sm text-[#F4F1EA] focus:outline-none focus:border-[#C8A464]"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="track-year" className="block text-xs font-semibold text-[#D4D4D8] mb-1">
+                    Release Year (ID3 Year)
+                  </label>
+                  <input
+                    id="track-year"
+                    type="text"
+                    maxLength={4}
+                    value={releaseYear}
+                    onChange={(e) => setReleaseYear(e.target.value)}
+                    placeholder="e.g. 2026"
+                    className="w-full bg-[#09090B] border border-[#27272E] rounded px-3.5 py-2 text-sm text-[#F4F1EA] tabular-nums focus:outline-none focus:border-[#C8A464]"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="track-album-tag" className="block text-xs font-semibold text-[#D4D4D8] mb-1">
+                    Album / Release Tag (ID3 Album)
+                  </label>
+                  <input
+                    id="track-album-tag"
+                    type="text"
+                    value={albumTitle}
+                    onChange={(e) => setAlbumTitle(e.target.value)}
+                    placeholder="e.g. Single"
+                    className="w-full bg-[#09090B] border border-[#27272E] rounded px-3.5 py-2 text-sm text-[#F4F1EA] focus:outline-none focus:border-[#C8A464]"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label htmlFor="track-composer" className="block text-xs font-semibold text-[#D4D4D8] mb-1">
+                    Composer (ID3 Composer)
+                  </label>
+                  <input
+                    id="track-composer"
+                    type="text"
+                    value={composer}
+                    onChange={(e) => setComposer(e.target.value)}
+                    placeholder="e.g. Masud Hauqe"
+                    className="w-full bg-[#09090B] border border-[#27272E] rounded px-3.5 py-2 text-sm text-[#F4F1EA] focus:outline-none focus:border-[#C8A464]"
+                  />
+                </div>
+
                 <div>
                   <label htmlFor="track-duration" className="block text-xs font-semibold text-[#D4D4D8] mb-1">
                     Duration
@@ -462,6 +534,12 @@ export default function AddMusicClient({
                     className="w-full bg-[#09090B] border border-[#27272E] rounded px-3.5 py-2 text-sm text-[#F4F1EA] font-mono focus:outline-none focus:border-[#C8A464]"
                   />
                 </div>
+              </div>
+
+              <div className="p-3 rounded-lg bg-[#0D0D11] border border-[#24242E] text-[11px] text-[#A1A1AA] flex items-center justify-between gap-2">
+                <span>
+                  <strong className="text-[#C8A464]">ID3v2.3 Auto-Tagging Active:</strong> ডাউনলোড করা MP3 ফাইলে উপরের Cover Photo, Song Title, Artist Name, Genre, Album এবং Year অটোমেটিক এম্বেড থাকবে।
+                </span>
               </div>
             </div>
           </div>

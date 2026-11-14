@@ -33,7 +33,12 @@ export async function PUT(request, { params }) {
       target.title = body.title.trim();
       target.slug = await createUniqueSlug(state.music, target.title, target.id);
     }
+    if (typeof body.artistName === 'string') target.artistName = body.artistName.trim();
     if (typeof body.albumId !== 'undefined') target.albumId = body.albumId || null;
+    if (typeof body.albumTitle === 'string') target.albumTitle = body.albumTitle.trim();
+    if (typeof body.genre === 'string') target.genre = body.genre.trim();
+    if (typeof body.releaseYear === 'string') target.releaseYear = body.releaseYear.trim();
+    if (typeof body.composer === 'string') target.composer = body.composer.trim();
     if (typeof body.thumbnail === 'string') target.thumbnail = body.thumbnail.trim();
     if (typeof body.thumbnailFileId === 'string') {
       const nextThumbId = body.thumbnailFileId.trim();

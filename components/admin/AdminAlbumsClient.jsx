@@ -94,6 +94,9 @@ export default function AdminAlbumsClient({
 }) {
   const [albums, setAlbums] = useState(initialAlbums);
   const [title, setTitle] = useState('');
+  const [artistName, setArtistName] = useState(defaultArtistName);
+  const [genre, setGenre] = useState('');
+  const [releaseYear, setReleaseYear] = useState(String(new Date().getFullYear()));
   const [description, setDescription] = useState('');
   const [coverImage, setCoverImage] = useState('');
   const [coverImageFileId, setCoverImageFileId] = useState('');
@@ -106,6 +109,10 @@ export default function AdminAlbumsClient({
 
   // Batch MP3 Upload & Track Order Modal State
   const [batchAlbum, setBatchAlbum] = useState(null);
+  const [batchArtistName, setBatchArtistName] = useState(defaultArtistName);
+  const [batchGenre, setBatchGenre] = useState('');
+  const [batchReleaseYear, setBatchReleaseYear] = useState(String(new Date().getFullYear()));
+  const [savingReleaseMeta, setSavingReleaseMeta] = useState(false);
   const [batchQueue, setBatchQueue] = useState([]);
   const [batchError, setBatchError] = useState('');
   const [batchPublish, setBatchPublish] = useState(true);
@@ -133,12 +140,18 @@ export default function AdminAlbumsClient({
     setSaving(true);
     setStatusMsg('');
     try {
+      const derivedYear =
+        releaseYear.trim() ||
+        (releaseDate && /^\d{4}/.test(releaseDate) ? releaseDate.slice(0, 4) : String(new Date().getFullYear()));
       const res = await fetch('/api/albums', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
           title: title.trim(),
+          artistName: artistName.trim() || defaultArtistName,
+          genre: genre.trim(),
+          releaseYear: derivedYear,
           description: description.trim(),
           coverImage: coverImage.trim(),
           coverImageFileId: coverImageFileId.trim(),
@@ -154,6 +167,7 @@ export default function AdminAlbumsClient({
         setCoverImage('');
         setCoverImageFileId('');
         setReleaseDate('');
+        setGenre('');
         setStatusMsg(`Release "${data.album.title}" created and saved in PostgreSQL.`);
       }
     } finally {
@@ -202,6 +216,12 @@ export default function AdminAlbumsClient({
 
   function openBatchUploadModal(album) {
     setBatchAlbum(album);
+    setBatchArtistName(album.artistName || defaultArtistName);
+    setBatchGenre(album.genre || '');
+    setBatchReleaseYear(
+      album.releaseYear ||
+        (album.releaseDate ? String(album.releaseDate).slice(0, 4) : String(new Date().getFullYear()))
+    );
     setBatchQueue([]);
     setBatchError('');
     setBatchSummary('');
@@ -214,6 +234,53 @@ export default function AdminAlbumsClient({
     setDraggedQueueIdx(null);
     setDragOverQueueIdx(null);
     cancelBatchRef.current = false;
+  }
+
+  async function handleSaveReleaseId3Meta() {
+    if (!batchAlbum || savingReleaseMeta) return;
+    setSavingReleaseMeta(true);
+    setTrackOrderStatus('');
+    try {
+      const res = await fetch('/api/albums', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          id: batchAlbum.id,
+          artistName: batchArtistName.trim() || defaultArtistName,
+          genre: batchGenre.trim(),
+          releaseYear: batchReleaseYear.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        setAlbums((prev) =>
+          prev.map((a) =>
+            a.id === batchAlbum.id
+              ? {
+                  ...a,
+                  artistName: data.album.artistName,
+                  genre: data.album.genre,
+                  releaseYear: data.album.releaseYear,
+                }
+              : a
+          )
+        );
+        setBatchAlbum((prev) =>
+          prev
+            ? {
+                ...prev,
+                artistName: data.album.artistName,
+                genre: data.album.genre,
+                releaseYear: data.album.releaseYear,
+              }
+            : prev
+        );
+        setTrackOrderStatus('Release ID3 Metadata (Artist, Genre, Year) saved!');
+      }
+    } finally {
+      setSavingReleaseMeta(false);
+    }
   }
 
   function closeBatchUploadModal() {
@@ -375,11 +442,23 @@ export default function AdminAlbumsClient({
         'title',
         (item.title || item.fileName.replace(/\.mp3$/i, '')).trim() || 'Track'
       );
-      formData.append('artistName', defaultArtistName);
+      const effectiveArtist =
+        batchArtistName.trim() || targetAlbum.artistName || defaultArtistName;
+      const effectiveGenre = batchGenre.trim() || targetAlbum.genre || '';
+      const effectiveYear =
+        batchReleaseYear.trim() ||
+        targetAlbum.releaseYear ||
+        (targetAlbum.releaseDate ? String(targetAlbum.releaseDate).slice(0, 4) : String(new Date().getFullYear()));
+
+      formData.append('artistName', effectiveArtist);
       formData.append('albumId', targetAlbum.id);
-      // Automatically use the Release's cover artwork as the track thumbnail
+      formData.append('albumTitle', targetAlbum.title || '');
+      formData.append('genre', effectiveGenre);
+      formData.append('releaseYear', effectiveYear);
+      formData.append('composer', effectiveArtist);
+      // Automatically use the Release's cover artwork as the track thumbnail & MP3 Cover Photo
       formData.append('thumbnail', targetAlbum.coverImage || '');
-      formData.append('thumbnailFileId', '');
+      formData.append('thumbnailFileId', targetAlbum.coverImageFileId || '');
       formData.append('youtubeUrl', '');
       formData.append('youtubeVideoId', '');
       formData.append('duration', item.duration || '0:00');
@@ -520,7 +599,7 @@ export default function AdminAlbumsClient({
 
     if (successCount > 0 && failCount === 0) {
       setBatchSummary(
-        `Successfully uploaded ${successCount} MP3 track${successCount > 1 ? 's' : ''} to Release "${batchAlbum.title}"!`
+        `Successfully uploaded ${successCount} MP3 track${successCount > 1 ? 's' : ''} with Release Cover Photo & ID3 Metadata to "${batchAlbum.title}"!`
       );
       setStatusMsg(
         `Batch uploaded ${successCount} MP3 track${successCount > 1 ? 's' : ''} under Release "${batchAlbum.title}".`
@@ -550,7 +629,7 @@ export default function AdminAlbumsClient({
           <div>
             <h2 className="text-lg font-bold text-[#F4F1EA]">Create Official Release</h2>
             <p className="text-xs text-[#8E8E96] mt-0.5">
-              Create a Release with its cover thumbnail first, then click &ldquo;Batch upload&rdquo; on the Release below to upload multiple MP3 tracks and arrange their serial order by Drag &amp; Drop.
+              Create a Release with its Cover Photo and ID3 Metadata (Artist, Genre, Year). Every MP3 uploaded to this Release or downloaded (Single MP3 or Full Release .ZIP) will automatically embed this Cover Photo and Metadata.
             </p>
           </div>
         </div>
@@ -568,10 +647,10 @@ export default function AdminAlbumsClient({
           </div>
         )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="sm:col-span-2">
             <label htmlFor="album-title" className="block text-xs font-semibold text-[#D4D4D8] mb-1">
-              Release Title *
+              Release / Album Title (ID3 Album) *
             </label>
             <input
               id="album-title"
@@ -585,6 +664,36 @@ export default function AdminAlbumsClient({
           </div>
 
           <div>
+            <label htmlFor="album-artist" className="block text-xs font-semibold text-[#D4D4D8] mb-1">
+              Artist Name (ID3 Artist)
+            </label>
+            <input
+              id="album-artist"
+              type="text"
+              value={artistName}
+              onChange={(e) => setArtistName(e.target.value)}
+              placeholder="e.g. Masud Hauqe"
+              className="w-full bg-[#09090B] border border-[#27272E] rounded px-3.5 py-2 text-sm text-[#F4F1EA]"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="album-genre" className="block text-xs font-semibold text-[#D4D4D8] mb-1">
+              Genre (ID3 Genre)
+            </label>
+            <input
+              id="album-genre"
+              type="text"
+              value={genre}
+              onChange={(e) => setGenre(e.target.value)}
+              placeholder="e.g. Folk, Pop, Acoustic"
+              className="w-full bg-[#09090B] border border-[#27272E] rounded px-3.5 py-2 text-sm text-[#F4F1EA]"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
             <label htmlFor="album-date" className="block text-xs font-semibold text-[#D4D4D8] mb-1">
               Release Date
             </label>
@@ -592,18 +701,39 @@ export default function AdminAlbumsClient({
               id="album-date"
               type="date"
               value={releaseDate}
-              onChange={(e) => setReleaseDate(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                setReleaseDate(val);
+                if (val && /^\d{4}/.test(val)) {
+                  setReleaseYear(val.slice(0, 4));
+                }
+              }}
               className="w-full bg-[#09090B] border border-[#27272E] rounded px-3.5 py-2 text-sm text-[#F4F1EA]"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="album-year" className="block text-xs font-semibold text-[#D4D4D8] mb-1">
+              Release Year (ID3 Year)
+            </label>
+            <input
+              id="album-year"
+              type="text"
+              maxLength={4}
+              value={releaseYear}
+              onChange={(e) => setReleaseYear(e.target.value)}
+              placeholder="e.g. 2026"
+              className="w-full bg-[#09090B] border border-[#27272E] rounded px-3.5 py-2 text-sm text-[#F4F1EA] tabular-nums"
             />
           </div>
         </div>
 
         <DriveImageUpload
-          label="Release Cover Artwork (Also used automatically as the thumbnail for all Batch Uploaded tracks)"
+          label="Release Cover Artwork (Also embedded inside all MP3 tracks & ZIP downloads as ID3 Front Cover Photo)"
           value={coverImage}
           fileId={coverImageFileId}
           aspectClass="aspect-square"
-          helperText="Uploads cover artwork to the Google Drive 'Images' folder and stores coverImageFileId in PostgreSQL."
+          helperText="Uploads cover artwork to the Google Drive 'Images' folder and embeds it as the MP3 Cover Photo."
           onChange={({ url, fileId }) => {
             setCoverImage(url);
             setCoverImageFileId(fileId);
@@ -657,8 +787,8 @@ export default function AdminAlbumsClient({
             <table className="w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="border-b border-[#222228] text-[#8E8E96]">
-                  <th className="py-3.5 px-4 font-semibold">Release</th>
-                  <th className="py-3.5 px-4 font-semibold">Slug</th>
+                  <th className="py-3.5 px-4 font-semibold">Release &amp; Cover</th>
+                  <th className="py-3.5 px-4 font-semibold">ID3 Metadata</th>
                   <th className="py-3.5 px-4 font-semibold">Tracks &amp; Order</th>
                   <th className="py-3.5 px-4 font-semibold">Status</th>
                   <th className="py-3.5 px-4 font-semibold text-right">Actions</th>
@@ -691,15 +821,20 @@ export default function AdminAlbumsClient({
                           <div>
                             <p className="text-sm font-bold text-[#F4F1EA]">{album.title}</p>
                             <p className="text-[11px] text-[#8E8E96] font-mono">
-                              {album.coverImageFileId
-                                ? `Cover ID: ${album.coverImageFileId.slice(0, 12)}...`
-                                : 'No Cover Uploaded'}
+                              /releases/{album.slug}
                             </p>
                           </div>
                         </div>
                       </td>
-                      <td className="py-3.5 px-4 text-[#8E8E96] font-mono">
-                        /releases/{album.slug}
+                      <td className="py-3.5 px-4 text-[#B4B4BC]">
+                        <p className="font-medium text-[#F4F1EA]">
+                          {album.artistName || defaultArtistName}
+                        </p>
+                        <p className="text-[11px] text-[#8E8E96]">
+                          {album.genre || 'No Genre'} ·{' '}
+                          {album.releaseYear ||
+                            (album.releaseDate ? String(album.releaseDate).slice(0, 4) : '—')}
+                        </p>
                       </td>
                       <td className="py-3.5 px-4">
                         <button
@@ -818,7 +953,7 @@ export default function AdminAlbumsClient({
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-[#C8A464]/15 text-[#C8A464] border border-[#C8A464]/30">
-                      Release Batch Upload &amp; Track Order
+                      Release Batch Upload &amp; ID3 Metadata
                     </span>
                     <span className="text-xs text-[#8E8E96] tabular-nums">
                       {(batchAlbum.tracks || []).length} tracks
@@ -849,16 +984,13 @@ export default function AdminAlbumsClient({
               <div className="p-3.5 rounded-lg bg-[#0D0D11] border border-[#24242E] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
                 <div className="space-y-1 text-[#B4B4BC]">
                   <p className="font-semibold text-[#F4F1EA]">
-                    Automatic Release Track Configuration:
+                    Automatic Release MP3 Cover Photo &amp; ID3v2 Tagging:
                   </p>
                   <p>
-                    • <strong className="text-[#C8A464]">Track Name:</strong> প্রতিটি MP3 ফাইলের যে নাম আছে সেই নামেই গান সেভ হবে (এবং ডাউনলোড করলেও সেই নামেই ডাউনলোড হবে)।
+                    • <strong className="text-[#C8A464]">MP3 Cover Photo:</strong> এই Release-এর থাম্বনেইলটি প্রতিটি গানের ভেতরে MP3 Cover Art (APIC) হিসেবে সেট হবে।
                   </p>
                   <p>
-                    • <strong className="text-[#C8A464]">Thumbnail:</strong> অটোমেটিক এই Release-এর কভার থাম্বনেইল ব্যবহৃত হবে (YouTube API প্রয়োজন নেই)।
-                  </p>
-                  <p>
-                    • <strong className="text-[#C8A464]">Drag &amp; Drop Serial Order:</strong> মাউস দিয়ে টেনে (Drag &amp; Drop করে) গানের ১, ২, ৩ সিরিয়াল সাজাতে পারবেন।
+                    • <strong className="text-[#C8A464]">ID3 Metadata:</strong> ডাউনলোড করা MP3 বা ZIP-এর ভেতরে Artist Name, Album ({batchAlbum.title}), Genre, Year এবং Track Serial অটোমেটিক সেট থাকবে।
                   </p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0 text-[11px] bg-[#14141A] border border-[#27272E] px-3 py-2 rounded">
@@ -866,6 +998,64 @@ export default function AdminAlbumsClient({
                   <span className={googleConnected ? 'text-[#4ADE80]' : 'text-[#FBBF24]'}>
                     {googleConnected ? 'Drive Connected' : 'Drive Not Connected'}
                   </span>
+                </div>
+              </div>
+
+              {/* Editable Release-Level ID3v2 Metadata Bar */}
+              <div className="p-4 rounded-lg bg-[#0B0B0E] border border-[#24242E] space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs font-bold text-[#F4F1EA]">
+                    Release ID3v2 Metadata (Applied to Batch Uploads &amp; Release ZIP Downloads)
+                  </p>
+                  <button
+                    type="button"
+                    disabled={savingReleaseMeta}
+                    onClick={handleSaveReleaseId3Meta}
+                    className="px-3 py-1 rounded bg-[#1E1E26] hover:bg-[#2A2A35] border border-[#C8A464]/40 text-[11px] font-semibold text-[#C8A464] inline-flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    {savingReleaseMeta && <Loader2 className="w-3 h-3 animate-spin" />}
+                    <span>{savingReleaseMeta ? 'Saving...' : 'Save Metadata'}</span>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-[#A1A1AA] mb-1">
+                      Artist Name (ID3 Artist)
+                    </label>
+                    <input
+                      type="text"
+                      value={batchArtistName}
+                      onChange={(e) => setBatchArtistName(e.target.value)}
+                      placeholder="e.g. Masud Hauqe"
+                      className="w-full bg-[#131318] border border-[#272730] focus:border-[#C8A464] rounded px-2.5 py-1.5 text-xs text-[#F4F1EA] outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-[#A1A1AA] mb-1">
+                      Genre (ID3 Genre)
+                    </label>
+                    <input
+                      type="text"
+                      value={batchGenre}
+                      onChange={(e) => setBatchGenre(e.target.value)}
+                      placeholder="e.g. Folk, Acoustic, Pop"
+                      className="w-full bg-[#131318] border border-[#272730] focus:border-[#C8A464] rounded px-2.5 py-1.5 text-xs text-[#F4F1EA] outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-[#A1A1AA] mb-1">
+                      Year (ID3 Year)
+                    </label>
+                    <input
+                      type="text"
+                      maxLength={4}
+                      value={batchReleaseYear}
+                      onChange={(e) => setBatchReleaseYear(e.target.value)}
+                      placeholder="e.g. 2026"
+                      className="w-full bg-[#131318] border border-[#272730] focus:border-[#C8A464] rounded px-2.5 py-1.5 text-xs text-[#F4F1EA] tabular-nums outline-none"
+                    />
+                  </div>
                 </div>
               </div>
 

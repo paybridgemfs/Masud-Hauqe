@@ -6,6 +6,7 @@ import {
   getGoogleDriveDirectDownloadUrl,
   getTrackDownloadFilename,
 } from '@/lib/storage/audio-delivery.js';
+import { embedMp3MetadataAndCover } from '@/lib/mp3-id3.js';
 
 const MAX_CACHE_ENTRIES = 8;
 const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
@@ -128,6 +129,21 @@ export async function GET(request, { params }) {
     headers.set('Cache-Control', 'public, max-age=3600');
 
     if (isDownload) {
+      const artist = db.artists?.[0] || { name: 'Masud Hauqe' };
+      const album = track.albumId
+        ? (db.albums || []).find((a) => a.id === track.albumId) || null
+        : null;
+      const totalAlbumTracks = album
+        ? (db.music || []).filter((m) => m.albumId === album.id && m.isPublished).length
+        : 0;
+
+      const taggedBuffer = await embedMp3MetadataAndCover(fullBuffer, {
+        track,
+        album,
+        artist,
+        totalAlbumTracks,
+      });
+
       const downloadFileName = getTrackDownloadFilename(track);
       const asciiFallback = downloadFileName
         .replace(/[^\x20-\x7E]/g, '_')
@@ -138,8 +154,8 @@ export async function GET(request, { params }) {
         'Content-Disposition',
         `attachment; filename="${asciiFallback}"; filename*=UTF-8''${encodedUtf8}`
       );
-      headers.set('Content-Length', String(totalLength));
-      return new NextResponse(fullBuffer, { status: 200, headers });
+      headers.set('Content-Length', String(taggedBuffer.length));
+      return new NextResponse(taggedBuffer, { status: 200, headers });
     }
 
     if (rangeHeader && rangeHeader.startsWith('bytes=')) {

@@ -7,6 +7,7 @@ import {
   getReleaseZipFilename,
 } from '@/lib/storage/audio-delivery.js';
 import { buildZipArchive } from '@/lib/zip-builder.js';
+import { embedMp3MetadataAndCover } from '@/lib/mp3-id3.js';
 
 const CACHE_TTL_MS = 30 * 60 * 1000;
 
@@ -84,13 +85,24 @@ export async function GET(request, { params }) {
 
   try {
     const { drive } = await getAuthenticatedDriveClient();
+    const artist = db.artists?.[0] || { name: 'Masud Hauqe' };
     const usedNames = new Set();
     const zipEntries = [];
 
     for (let i = 0; i < tracks.length; i++) {
       const track = tracks[i];
-      const buf = await fetchDriveAudioBuffer(drive, track.audioFileId);
-      if (!buf || buf.length === 0) continue;
+      const rawBuf = await fetchDriveAudioBuffer(drive, track.audioFileId);
+      if (!rawBuf || rawBuf.length === 0) continue;
+
+      const taggedBuf = await embedMp3MetadataAndCover(rawBuf, {
+        track: {
+          ...track,
+          trackOrder: track.trackOrder || i + 1,
+        },
+        album,
+        artist,
+        totalAlbumTracks: tracks.length,
+      });
 
       let entryName = getTrackDownloadFilename(track);
       if (usedNames.has(entryName.toLowerCase())) {
@@ -101,7 +113,7 @@ export async function GET(request, { params }) {
 
       zipEntries.push({
         name: entryName,
-        data: buf,
+        data: taggedBuf,
       });
     }
 

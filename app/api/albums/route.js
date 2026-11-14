@@ -53,11 +53,19 @@ export async function POST(request) {
 
     await updateDbState(async (state) => {
       const slug = await createUniqueSlug(state.albums, parsed.data.title);
-      const artistId = state.artists[0]?.id || 'masud-hauqe';
+      const artistObj = state.artists[0] || { id: 'masud-hauqe', name: 'Masud Hauqe' };
+      const artistId = artistObj.id || 'masud-hauqe';
+      const derivedYear =
+        parsed.data.releaseYear?.trim() ||
+        (parsed.data.releaseDate ? String(parsed.data.releaseDate).slice(0, 4) : '') ||
+        String(new Date().getFullYear());
       created = {
         id: cuid(),
         title: parsed.data.title,
         slug,
+        artistName: parsed.data.artistName?.trim() || artistObj.name || 'Masud Hauqe',
+        genre: parsed.data.genre?.trim() || 'Contemporary',
+        releaseYear: derivedYear,
         description: parsed.data.description || '',
         coverImage: parsed.data.coverImage || '',
         coverImageFileId: parsed.data.coverImageFileId || '',
@@ -98,6 +106,9 @@ export async function PUT(request) {
   const {
     id,
     title,
+    artistName,
+    genre,
+    releaseYear,
     description,
     coverImage,
     coverImageFileId,
@@ -131,6 +142,9 @@ export async function PUT(request) {
       target.title = title.trim();
       target.slug = await createUniqueSlug(state.albums, target.title, target.id);
     }
+    if (typeof artistName === 'string') target.artistName = artistName.trim();
+    if (typeof genre === 'string') target.genre = genre.trim();
+    if (typeof releaseYear === 'string') target.releaseYear = releaseYear.trim();
     if (typeof description === 'string') target.description = description.trim();
     if (typeof coverImage === 'string') {
       target.coverImage = coverImage.trim();
