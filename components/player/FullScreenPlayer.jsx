@@ -470,12 +470,12 @@ export default function FullScreenPlayer({
       className="fixed inset-0 z-50 h-[100dvh] max-h-[100dvh] w-screen bg-[#040406] text-[#F4F1EA] flex flex-col justify-between overflow-hidden select-none"
     >
       {/* ============================================================
-          FULL-SCREEN BLURRED THUMBNAIL BACKGROUND (DEEP, DARK & RICH)
+          FULL-SCREEN BLURRED THUMBNAIL BACKGROUND (VIVID, RICH COLORS & LESS BLUR)
       ============================================================ */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden select-none bg-[#040406]">
+      <div className="absolute inset-0 pointer-events-none overflow-hidden select-none bg-[#070709]">
         {currentTrack.thumbnail ? (
           <>
-            <div className="absolute -inset-14 filter blur-3xl scale-115 opacity-25 brightness-50 saturate-150 transition-opacity duration-700 ease-out">
+            <div className="absolute -inset-8 filter blur-xl scale-105 opacity-80 saturate-150 contrast-110 transition-opacity duration-700 ease-out">
               <Image
                 key={currentTrack.id || currentTrack.thumbnail}
                 src={currentTrack.thumbnail}
@@ -487,11 +487,11 @@ export default function FullScreenPlayer({
                 className="object-cover object-center pointer-events-none"
               />
             </div>
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(4,4,6,0.58)_0%,rgba(4,4,6,0.86)_58%,rgba(4,4,6,0.98)_100%)]" />
-            <div className="absolute inset-0 bg-gradient-to-b from-[#040406]/88 via-[#040406]/72 to-[#040406]/96" />
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(7,7,9,0.32)_68%,rgba(7,7,9,0.75)_100%)]" />
+            <div className="absolute inset-0 bg-gradient-to-b from-[#070709]/45 via-[#070709]/15 to-[#070709]/65" />
           </>
         ) : (
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_40%,rgba(200,164,100,0.14)_0%,rgba(4,4,6,0.98)_70%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_40%,rgba(200,164,100,0.35)_0%,rgba(7,7,9,0.95)_75%)]" />
         )}
       </div>
 
