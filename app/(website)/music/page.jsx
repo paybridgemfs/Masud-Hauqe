@@ -1,18 +1,12 @@
 import React from 'react';
 import { getPublicWebsiteData } from '@/lib/db.js';
+import { buildPageSocialMetadata } from '@/lib/seo.js';
 import MusicLibraryClient from '@/components/music/MusicLibraryClient.jsx';
 
 export const revalidate = 60;
 
 export async function generateMetadata() {
-  const { seoSettings, artist } = await getPublicWebsiteData();
-  const seo = (seoSettings || []).find((s) => s.page === 'music');
-  return {
-    title: seo?.metaTitle || (artist?.name ? `Music Library — ${artist.name}` : 'Music Library'),
-    description:
-      seo?.metaDescription ||
-      (artist?.name ? `Stream official recordings by ${artist.name}.` : ''),
-  };
+  return buildPageSocialMetadata({ pageId: 'music', path: '/music' });
 }
 
 export default async function MusicPage() {

@@ -1,8 +1,13 @@
 import React from 'react';
 import { getPublicWebsiteData } from '@/lib/db.js';
+import { buildPageSocialMetadata } from '@/lib/seo.js';
 import SectionRenderer from '@/components/website/SectionRenderer.jsx';
 
 export const revalidate = 60;
+
+export async function generateMetadata() {
+  return buildPageSocialMetadata({ pageId: 'home', path: '' });
+}
 
 export default async function HomePage() {
   const {

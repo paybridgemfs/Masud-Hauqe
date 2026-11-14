@@ -2,13 +2,13 @@ import React from 'react';
 import Link from 'next/link';
 import { Video } from 'lucide-react';
 import { getPublicWebsiteData } from '@/lib/db.js';
+import { buildPageSocialMetadata } from '@/lib/seo.js';
 
 export const revalidate = 60;
 
-export const metadata = {
-  title: 'Official Videos — Masud Hauqe',
-  description: 'Watch official YouTube music videos and studio performances by Masud Hauqe.',
-};
+export async function generateMetadata() {
+  return buildPageSocialMetadata({ pageId: 'videos', path: '/videos' });
+}
 
 export default async function VideosPage() {
   const { artist, publishedMusic } = await getPublicWebsiteData();

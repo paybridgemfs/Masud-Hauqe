@@ -1,20 +1,24 @@
 import React from 'react';
 import { notFound } from 'next/navigation';
 import { getPublicWebsiteData } from '@/lib/db.js';
+import { buildPageSocialMetadata } from '@/lib/seo.js';
 
 export const revalidate = 60;
 
 export async function generateMetadata({ params }) {
   const { slug } = await params;
-  const { pages } = await getPublicWebsiteData();
+  const { pages, artist } = await getPublicWebsiteData();
   const page = pages.find((p) => p.slug === slug);
+  const artistName = artist?.name || 'Masud Hauqe';
   if (!page) {
-    return { title: 'Legal Document Not Found — Masud Hauqe' };
+    return { title: `Legal Document Not Found — ${artistName}` };
   }
-  return {
-    title: page.metaTitle || `${page.title} — Masud Hauqe`,
-    description: page.metaDescription || page.title,
-  };
+  return buildPageSocialMetadata({
+    pageId: `legal-${slug}`,
+    path: `/legal/${page.slug}`,
+    customTitle: page.metaTitle || `${page.title} — ${artistName}`,
+    customDescription: page.metaDescription || page.title,
+  });
 }
 
 export default async function LegalPage({ params }) {

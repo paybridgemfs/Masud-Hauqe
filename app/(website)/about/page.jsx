@@ -1,19 +1,14 @@
 import React from 'react';
 import ShimmerImage from '@/components/ui/ShimmerImage.jsx';
 import { getPublicWebsiteData } from '@/lib/db.js';
+import { buildPageSocialMetadata } from '@/lib/seo.js';
 import { Globe, MapPin, Award } from 'lucide-react';
 import SocialMediaLinks from '@/components/website/SocialMediaLinks.jsx';
 
 export const revalidate = 60;
 
 export async function generateMetadata() {
-  const { artist, seoSettings } = await getPublicWebsiteData();
-  const seo = (seoSettings || []).find((s) => s.page === 'about');
-  const artistName = artist?.name || '';
-  return {
-    title: seo?.metaTitle || (artistName ? `About ${artistName}` : 'About Artist'),
-    description: seo?.metaDescription || artist?.shortBiography || '',
-  };
+  return buildPageSocialMetadata({ pageId: 'about', path: '/about' });
 }
 
 export default async function AboutPage() {

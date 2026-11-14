@@ -3,6 +3,7 @@ import './globals.css';
 import { PlayerProvider } from '@/components/player/PlayerContext.jsx';
 import GlobalMusicPlayer from '@/components/player/GlobalMusicPlayer.jsx';
 import { getPublicWebsiteData } from '@/lib/db.js';
+import { resolveOrigin } from '@/lib/seo.js';
 
 const dosis = Dosis({
   subsets: ['latin'],
@@ -12,16 +13,21 @@ const dosis = Dosis({
 });
 
 export async function generateMetadata() {
-  const { seoSettings, settings } = await getPublicWebsiteData();
+  const [{ seoSettings, settings, artist }, origin] = await Promise.all([
+    getPublicWebsiteData(),
+    resolveOrigin(),
+  ]);
   const globalSeo = (seoSettings || []).find((s) => s.page === 'global') || {};
+  const artistName = artist?.name || settings.siteName || 'Masud Hauqe';
+  const siteName = settings.siteName || artistName;
   const title =
     globalSeo.metaTitle ||
-    settings.siteName ||
-    'Official Artist Platform';
+    `${siteName} — Official Artist Website & Music Archive`;
   const description =
     globalSeo.metaDescription ||
+    artist?.shortBiography ||
     settings.siteTagline ||
-    '';
+    `Official website, original compositions, and studio recordings of ${artistName}.`;
 
   const faviconFileId = (settings.faviconFileId || '').trim();
   const faviconHref = faviconFileId
@@ -30,10 +36,9 @@ export async function generateMetadata() {
     ? settings.faviconUrl
     : '/favicon.ico';
 
-  const baseUrl = (process.env.APP_URL || 'http://localhost:3000').replace(/\/+$/, '');
   let metadataBase;
   try {
-    metadataBase = new URL(baseUrl);
+    metadataBase = new URL(origin);
   } catch {
     metadataBase = new URL('http://localhost:3000');
   }
@@ -50,12 +55,16 @@ export async function generateMetadata() {
     openGraph: {
       title,
       description,
+      url: origin,
+      siteName,
       type: 'website',
+      images: [],
     },
     twitter: {
-      card: 'summary_large_image',
+      card: 'summary',
       title,
       description,
+      images: [],
     },
   };
 }

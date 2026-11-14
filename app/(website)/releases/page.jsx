@@ -2,14 +2,14 @@ import React from "react";
 import Link from "next/link";
 import { Disc } from "lucide-react";
 import { getPublicWebsiteData } from "@/lib/db.js";
+import { buildPageSocialMetadata } from "@/lib/seo.js";
 import AlbumCard from "@/components/music/AlbumCard.jsx";
 
 export const revalidate = 60;
 
-export const metadata = {
-  title: "Official Releases & Discography",
-  description: "Explore official studio releases, anthologies, and tracklists.",
-};
+export async function generateMetadata() {
+  return buildPageSocialMetadata({ pageId: "releases", path: "/releases" });
+}
 
 export default async function AlbumsPage() {
   const { artist, publishedAlbums } = await getPublicWebsiteData();

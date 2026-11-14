@@ -3,7 +3,6 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Globe, Save, CheckCircle2, AlertCircle, Search, Loader2 } from 'lucide-react';
-import DriveImageUpload from '@/components/admin/DriveImageUpload';
 
 const SEO_PAGES = [
   { id: 'global', label: 'Global Site Defaults', path: '/*' },
@@ -243,33 +242,24 @@ export default function AdminSeoClient({ initialSeoSettings = [], appUrl = '' })
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div>
-                <label className="block text-xs uppercase tracking-wider text-[#9E9A90] font-semibold mb-2">
-                  Canonical URL (Auto APP_URL)
-                </label>
-                <input
-                  type="text"
-                  value={currentRecord.canonicalUrl || ''}
-                  onChange={(e) => handleFieldChange('canonicalUrl', e.target.value)}
-                  className="w-full h-11 px-3.5 bg-[#09090B] border border-[#F4F1EA]/[0.12] rounded text-sm text-[#F4F1EA] focus:outline-none focus:border-[#C8A464]"
-                  placeholder={defaultCanonicalForSelected}
-                />
-              </div>
-
-              <div>
-                <DriveImageUpload
-                  label="OpenGraph Share Image (Uploads to Drive 'Images')"
-                  value={currentRecord.ogImage || ''}
-                  fileId={currentRecord.ogImageFileId || ''}
-                  aspectClass="aspect-video w-48"
-                  helperText="Uploads to Google Drive 'Images' folder and stores Drive file ID."
-                  onChange={({ url, fileId }) => {
-                    handleFieldChange('ogImage', url);
-                    handleFieldChange('ogImageFileId', fileId);
-                  }}
-                />
-              </div>
+            <div>
+              <label className="block text-xs uppercase tracking-wider text-[#9E9A90] font-semibold mb-2">
+                Canonical URL (Auto APP_URL)
+              </label>
+              <input
+                type="text"
+                value={currentRecord.canonicalUrl || ''}
+                onChange={(e) => handleFieldChange('canonicalUrl', e.target.value)}
+                className="w-full h-11 px-3.5 bg-[#09090B] border border-[#F4F1EA]/[0.12] rounded text-sm text-[#F4F1EA] focus:outline-none focus:border-[#C8A464]"
+                placeholder={defaultCanonicalForSelected}
+              />
+              <p className="text-[11px] text-[#9E9A90] mt-2">
+                Note: Social preview banner images (<code className="text-[#C8A464]">og:image</code> /{' '}
+                <code className="text-[#C8A464]">summary_large_image</code>) are dynamically attached
+                exclusively to Track (<code className="text-[#F4F1EA]">/music/[slug]</code>) and
+                Release (<code className="text-[#F4F1EA]">/releases/[slug]</code>) links. General
+                website pages render clean text-only social cards.
+              </p>
             </div>
           </div>
 

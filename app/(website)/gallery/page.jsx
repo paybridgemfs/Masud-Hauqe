@@ -3,13 +3,13 @@ import Link from 'next/link';
 import ShimmerImage from '@/components/ui/ShimmerImage.jsx';
 import { Image as ImageIcon } from 'lucide-react';
 import { getPublicWebsiteData } from '@/lib/db.js';
+import { buildPageSocialMetadata } from '@/lib/seo.js';
 
 export const revalidate = 60;
 
-export const metadata = {
-  title: 'Photography & Visual Gallery',
-  description: 'Editorial photography, studio sessions, and visual gallery.',
-};
+export async function generateMetadata() {
+  return buildPageSocialMetadata({ pageId: 'gallery', path: '/gallery' });
+}
 
 export default async function GalleryPage() {
   const { artist, gallery } = await getPublicWebsiteData();

@@ -1,70 +1,66 @@
 import React from "react";
 import { notFound } from "next/navigation";
-import { headers } from "next/headers";
 import { getPublicWebsiteData, sortAlbumTracks } from "@/lib/db.js";
+import { resolveOrigin, resolveTrackSocialBanner } from "@/lib/seo.js";
 import MusicDetailClient from "@/components/music/MusicDetailClient.jsx";
 
 export const revalidate = 60;
 
-async function resolveOrigin() {
-  const configuredAppUrl = (process.env.APP_URL || "").trim().replace(/\/+$/, "");
-  if (
-    configuredAppUrl &&
-    !configuredAppUrl.includes("localhost") &&
-    !configuredAppUrl.includes("127.0.0.1")
-  ) {
-    return configuredAppUrl;
-  }
-  try {
-    const h = await headers();
-    const host = h.get("x-forwarded-host") || h.get("host");
-    const proto = h.get("x-forwarded-proto") || "https";
-    if (host && !host.includes("localhost") && !host.includes("127.0.0.1")) {
-      return `${proto}://${host}`;
-    }
-    if (configuredAppUrl) return configuredAppUrl;
-    if (host) return `${proto}://${host}`;
-  } catch {
-    // Fallback to APP_URL
-  }
-  return configuredAppUrl || "http://localhost:3000";
-}
-
-function toAbsoluteUrl(url, origin) {
-  if (!url) return "";
-  if (url.startsWith("http://") || url.startsWith("https://")) return url;
-  return `${origin}${url.startsWith("/") ? "" : "/"}${url}`;
-}
-
 export async function generateMetadata({ params }) {
   const { slug } = await params;
-  const { publishedMusic, artist } = await getPublicWebsiteData();
+  const [{ publishedMusic, artist, settings }, origin] = await Promise.all([
+    getPublicWebsiteData(),
+    resolveOrigin(),
+  ]);
   const track = publishedMusic.find((m) => m.slug === slug || m.id === slug);
   if (!track) {
     return { title: "Recording Not Found" };
   }
 
-  const origin = await resolveOrigin();
-  const absoluteThumb = toAbsoluteUrl(track.thumbnail, origin);
-  const artistName = artist?.name || "";
-  const desc = artistName
-    ? `Master Recording by ${artistName}${track.album ? ` · Release: ${track.album.title}` : ""}.`
-    : `Master Recording: ${track.title}.`;
+  const absoluteThumb = resolveTrackSocialBanner(track, origin);
+  const artistName = artist?.name || settings?.siteName || "Masud Hauqe";
+  const siteName = settings?.siteName || artistName;
+  const isReleaseTrack = Boolean(track.album?.title);
+
+  const pageTitle = isReleaseTrack
+    ? `${track.title} (${track.album.title}) — ${artistName}`
+    : `${track.title} — ${artistName}`;
+  const ogTitle = isReleaseTrack
+    ? `${track.title} · ${track.album.title} — ${artistName}`
+    : `${track.title} — ${artistName}`;
+  const desc =
+    track.description ||
+    (isReleaseTrack
+      ? `Stream or download "${track.title}" from the official release "${track.album.title}" by ${artistName}.`
+      : `Stream or download "${track.title}" — Official Master Recording by ${artistName}.`);
+  const canonicalUrl = `${origin}/music/${track.slug}`;
 
   return {
-    title: artistName ? `${track.title} — ${artistName}` : track.title,
+    title: pageTitle,
     description: desc,
+    alternates: {
+      canonical: canonicalUrl,
+    },
     openGraph: {
-      title: track.title,
+      title: ogTitle,
       description: desc,
       type: "music.song",
-      url: `${origin}/music/${track.slug}`,
-      siteName: artistName,
-      images: absoluteThumb ? [{ url: absoluteThumb, alt: track.title }] : [],
+      url: canonicalUrl,
+      siteName,
+      images: absoluteThumb
+        ? [
+            {
+              url: absoluteThumb,
+              width: 1200,
+              height: 630,
+              alt: isReleaseTrack ? `${track.title} — ${track.album.title}` : track.title,
+            },
+          ]
+        : [],
     },
     twitter: {
-      card: "summary_large_image",
-      title: track.title,
+      card: absoluteThumb ? "summary_large_image" : "summary",
+      title: ogTitle,
       description: desc,
       images: absoluteThumb ? [absoluteThumb] : [],
     },

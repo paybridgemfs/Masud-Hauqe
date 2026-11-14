@@ -1,15 +1,15 @@
 import React from 'react';
 import { getPublicWebsiteData } from '@/lib/db.js';
+import { buildPageSocialMetadata } from '@/lib/seo.js';
 import ContactFormClient from '@/components/forms/ContactFormClient.jsx';
 import SocialMediaLinks from '@/components/website/SocialMediaLinks.jsx';
 import { Mail, MapPin } from 'lucide-react';
 
 export const revalidate = 60;
 
-export const metadata = {
-  title: 'Contact & Booking',
-  description: 'Inquiries, bookings, and correspondence.',
-};
+export async function generateMetadata() {
+  return buildPageSocialMetadata({ pageId: 'contact', path: '/contact' });
+}
 
 export default async function ContactPage() {
   const { artist, settings, socialLinks } = await getPublicWebsiteData();
