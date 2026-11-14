@@ -150,6 +150,7 @@ export async function GET(request, { params }) {
         .replace(/["\\]/g, '')
         .trim() || `${track.slug || 'track'}.mp3`;
       const encodedUtf8 = encodeURIComponent(downloadFileName);
+      headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
       headers.set(
         'Content-Disposition',
         `attachment; filename="${asciiFallback}"; filename*=UTF-8''${encodedUtf8}`

@@ -212,6 +212,8 @@ export async function POST(request) {
           composer: parsed.data.composer || parsed.data.artistName || artistObj.name,
           thumbnail: parsed.data.thumbnail || targetAlbumObj?.coverImage || '',
           thumbnailFileId: parsed.data.thumbnailFileId || targetAlbumObj?.coverImageFileId || '',
+          youtubeVideoId: parsed.data.youtubeVideoId || '',
+          youtubeUrl: parsed.data.youtubeUrl || '',
         },
         album: targetAlbumObj,
         artist: artistObj,
