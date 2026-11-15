@@ -300,7 +300,7 @@ export default function MusicDetailClient({ track, relatedTracks = [], shareUrl:
                   if (isCurrent) {
                     seekTo(nextTime);
                   } else {
-                    playTrack(track, [track, ...relatedTracks]);
+                    playTrack(track, [track, ...relatedTracks], nextTime);
                   }
                 }}
                 className="w-full h-1.5 bg-[#27272C] accent-[#C8A464] rounded-lg cursor-pointer"

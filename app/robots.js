@@ -1,7 +1,8 @@
-import { getEnvConfig } from '@/lib/env.js';
+import { resolveOrigin } from '@/lib/seo.js';
 
-export default function robots() {
-  const { appUrl } = getEnvConfig();
+export default async function robots() {
+  const origin = await resolveOrigin();
+  const baseUrl = (origin || 'http://localhost:3000').replace(/\/+$/, '');
   return {
     rules: [
       {
@@ -10,6 +11,6 @@ export default function robots() {
         disallow: ['/admin/', '/api/'],
       },
     ],
-    sitemap: `${appUrl.replace(/\/$/, '')}/sitemap.xml`,
+    sitemap: `${baseUrl}/sitemap.xml`,
   };
 }

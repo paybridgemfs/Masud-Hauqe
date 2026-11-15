@@ -3,6 +3,24 @@ import { revalidatePath } from 'next/cache';
 import { requireAdminSession } from '@/lib/auth.js';
 import { getDbState, updateDbState, appendAuditRecord, createUniqueSlug } from '@/lib/db.js';
 import { deleteFileFromGoogleDrive } from '@/lib/google-drive.js';
+import { checkRateLimit, getClientIp, sanitizeSafeUrl } from '@/lib/security.js';
+import { z } from 'zod';
+
+const musicUpdateSchema = z.object({
+  title: z.string().trim().min(1).max(200).optional(),
+  artistName: z.string().trim().max(120).optional(),
+  albumId: z.string().trim().max(128).nullable().optional(),
+  albumTitle: z.string().trim().max(200).optional(),
+  genre: z.string().trim().max(100).optional(),
+  releaseYear: z.string().trim().max(16).optional(),
+  composer: z.string().trim().max(120).optional(),
+  thumbnail: z.string().trim().max(1024).optional(),
+  thumbnailFileId: z.string().trim().max(256).optional(),
+  duration: z.string().trim().max(32).optional(),
+  isPublished: z.boolean().optional(),
+  downloadEnabled: z.boolean().optional(),
+  includeYoutubeVideo: z.boolean().optional(),
+});
 
 export async function GET(request, { params }) {
   const { id } = await params;
@@ -10,6 +28,12 @@ export async function GET(request, { params }) {
   const track = (db.music || []).find((m) => m.id === id || m.slug === id);
   if (!track) {
     return NextResponse.json({ ok: false, error: 'Track not found.' }, { status: 404 });
+  }
+  if (!track.isPublished) {
+    const { authorized } = await requireAdminSession();
+    if (!authorized) {
+      return NextResponse.json({ ok: false, error: 'Track not found.' }, { status: 404 });
+    }
   }
   const artist = db.artists?.[0] || { id: 'masud-hauqe', name: 'Masud Hauqe' };
   const album = track.albumId ? (db.albums || []).find((a) => a.id === track.albumId) || null : null;
@@ -22,13 +46,23 @@ export async function PUT(request, { params }) {
     return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
   }
   const { id } = await params;
-  const body = await request.json();
+  const rawBody = await request.json();
+  const parsed = musicUpdateSchema.safeParse(rawBody);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { ok: false, error: parsed.error.issues[0]?.message || 'Invalid track update data.' },
+      { status: 400 }
+    );
+  }
+  const body = parsed.data;
   let updated = null;
+  let oldSlug = null;
   let oldThumbnailFileIdToDelete = null;
 
   await updateDbState(async (state) => {
     const target = state.music.find((m) => m.id === id);
     if (!target) return;
+    oldSlug = target.slug;
     if (typeof body.title === 'string' && body.title.trim()) {
       target.title = body.title.trim();
       target.slug = await createUniqueSlug(state.music, target.title, target.id);
@@ -39,7 +73,9 @@ export async function PUT(request, { params }) {
     if (typeof body.genre === 'string') target.genre = body.genre.trim();
     if (typeof body.releaseYear === 'string') target.releaseYear = body.releaseYear.trim();
     if (typeof body.composer === 'string') target.composer = body.composer.trim();
-    if (typeof body.thumbnail === 'string') target.thumbnail = body.thumbnail.trim();
+    if (typeof body.thumbnail === 'string') {
+      target.thumbnail = sanitizeSafeUrl(body.thumbnail, { allowRelative: true, fallback: '' });
+    }
     if (typeof body.thumbnailFileId === 'string') {
       const nextThumbId = body.thumbnailFileId.trim();
       if (target.thumbnailFileId && target.thumbnailFileId !== nextThumbId) {
@@ -81,6 +117,9 @@ export async function PUT(request, { params }) {
 
   revalidatePath('/');
   revalidatePath('/music');
+  if (oldSlug && oldSlug !== updated.slug) {
+    revalidatePath(`/music/${oldSlug}`);
+  }
   revalidatePath(`/music/${updated.slug}`);
   revalidatePath('/releases');
   revalidatePath('/videos');
@@ -90,9 +129,15 @@ export async function PUT(request, { params }) {
 
 export async function PATCH(request, { params }) {
   const { id } = await params;
+  const ip = getClientIp(request);
+  const rate = checkRateLimit(`play-patch:${ip}:${id}`, 12, 60 * 1000);
+  if (!rate.allowed) {
+    return NextResponse.json({ ok: false, error: 'Rate limit exceeded.' }, { status: 429 });
+  }
+
   let updatedTrack = null;
   await updateDbState((state) => {
-    const target = state.music.find((m) => m.id === id || m.slug === id);
+    const target = state.music.find((m) => (m.id === id || m.slug === id) && m.isPublished);
     if (target) {
       target.playCount = (target.playCount || 0) + 1;
       updatedTrack = { ...target };

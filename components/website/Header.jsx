@@ -6,19 +6,27 @@ import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'motion/react';
 import { Menu, X } from 'lucide-react';
+import { sanitizeSafeUrl } from '@/lib/safe-url.js';
 
 export default function Header({ settings = {}, navItems = [] }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const logoText = settings.logoText || settings.siteName || '';
-  const logoUrl = settings.logoUrl || '';
+  const logoUrl = sanitizeSafeUrl(settings.logoUrl || '', { allowRelative: true, fallback: '' });
   const sticky = settings.stickyHeader !== 'false';
   const ctaLabel = settings.headerCtaLabel || '';
-  const ctaUrl = settings.headerCtaUrl || '/music';
+  const ctaUrl = sanitizeSafeUrl(settings.headerCtaUrl || '/music', { allowRelative: true, fallback: '/music' });
+
+  const safeNavItems = (navItems || [])
+    .map((item) => ({
+      ...item,
+      safeUrl: sanitizeSafeUrl(item?.url || '', { allowRelative: true, fallback: '' }),
+    }))
+    .filter((item) => Boolean(item.safeUrl));
 
   // Enforce max 5 concise top-level navigation links per Top Bar Contract
-  const visibleLinks = (navItems || []).slice(0, 5);
+  const visibleLinks = safeNavItems.slice(0, 5);
 
   return (
     <header
@@ -55,11 +63,11 @@ export default function Header({ settings = {}, navItems = [] }) {
         >
           {visibleLinks.map((item) => {
             const active =
-              pathname === item.url || (item.url !== '/' && pathname?.startsWith(item.url));
+              pathname === item.safeUrl || (item.safeUrl !== '/' && pathname?.startsWith(item.safeUrl));
             return (
               <Link
                 key={item.id}
-                href={item.url}
+                href={item.safeUrl}
                 className={`relative whitespace-nowrap shrink-0 py-1.5 transition-colors ${
                   active ? 'text-[#C8A464]' : 'text-[#B4B4BC] hover:text-[#F4F1EA]'
                 }`}
@@ -112,12 +120,14 @@ export default function Header({ settings = {}, navItems = [] }) {
           >
             <div className="px-4 pt-3 pb-6 space-y-2">
               <nav aria-label="Mobile Navigation" className="flex flex-col space-y-1">
-                {(navItems || []).map((item) => {
-                  const active = pathname === item.url;
+                {safeNavItems.map((item) => {
+                  const active =
+                    pathname === item.safeUrl ||
+                    (item.safeUrl !== '/' && pathname?.startsWith(item.safeUrl));
                   return (
                     <Link
                       key={item.id}
-                      href={item.url}
+                      href={item.safeUrl}
                       onClick={() => setMobileOpen(false)}
                       className={`px-3 py-2.5 rounded text-base font-medium transition-colors ${
                         active
@@ -129,20 +139,6 @@ export default function Header({ settings = {}, navItems = [] }) {
                     </Link>
                   );
                 })}
-                <Link
-                  href="/videos"
-                  onClick={() => setMobileOpen(false)}
-                  className="px-3 py-2.5 rounded text-base font-medium text-[#E4E4E7] hover:bg-[#141418]"
-                >
-                  Videos
-                </Link>
-                <Link
-                  href="/gallery"
-                  onClick={() => setMobileOpen(false)}
-                  className="px-3 py-2.5 rounded text-base font-medium text-[#E4E4E7] hover:bg-[#141418]"
-                >
-                  Gallery
-                </Link>
               </nav>
               {ctaLabel && (
                 <div className="pt-3 border-t border-[#222226]">

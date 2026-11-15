@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireAdminSession } from '@/lib/auth.js';
 import { getDbState, updateDbState, appendAuditRecord, cuid } from '@/lib/db.js';
 import { contactMessageSchema } from '@/lib/validation.js';
-import { checkRateLimit } from '@/lib/security.js';
+import { checkRateLimit, getClientIp } from '@/lib/security.js';
 
 export async function GET() {
   const { authorized } = await requireAdminSession();
@@ -15,7 +15,7 @@ export async function GET() {
 
 export async function POST(request) {
   try {
-    const ip = request.headers.get('x-forwarded-for') || '127.0.0.1';
+    const ip = getClientIp(request);
     const rate = checkRateLimit(`contact:${ip}`, 5, 60 * 1000);
     if (!rate.allowed) {
       return NextResponse.json(
@@ -67,11 +67,15 @@ export async function PUT(request) {
     return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
   }
   const body = await request.json();
-  const { id, isRead } = body;
+  const id = typeof body?.id === 'string' ? body.id.trim() : '';
+  if (!id) {
+    return NextResponse.json({ ok: false, error: 'Message ID is required.' }, { status: 400 });
+  }
+  const isRead = Boolean(body?.isRead);
   await updateDbState((state) => {
     const msg = state.contactMessages.find((m) => m.id === id);
     if (msg) {
-      msg.isRead = Boolean(isRead);
+      msg.isRead = isRead;
     }
     appendAuditRecord(state, {
       adminId: admin.id,

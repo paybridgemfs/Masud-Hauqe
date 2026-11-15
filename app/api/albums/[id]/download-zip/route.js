@@ -10,6 +10,8 @@ import { buildZipArchive } from '@/lib/zip-builder.js';
 import { embedMp3MetadataAndCover } from '@/lib/mp3-id3.js';
 
 const CACHE_TTL_MS = 30 * 60 * 1000;
+const MAX_CACHED_FILE_BYTES = 25 * 1024 * 1024;
+const MAX_ZIP_TOTAL_BYTES = 180 * 1024 * 1024;
 
 function getAudioCache() {
   if (!globalThis.__masudAudioBufferCache) {
@@ -31,7 +33,7 @@ async function fetchDriveAudioBuffer(drive, fileId) {
     { responseType: 'arraybuffer' }
   );
   const buf = Buffer.from(driveRes.data);
-  if (buf.length > 0) {
+  if (buf.length > 0 && buf.length <= MAX_CACHED_FILE_BYTES) {
     if (cache.size >= 8) {
       const oldestKey = cache.keys().next().value;
       if (oldestKey) cache.delete(oldestKey);
@@ -88,11 +90,24 @@ export async function GET(request, { params }) {
     const artist = db.artists?.[0] || { name: 'Masud Hauqe' };
     const usedNames = new Set();
     const zipEntries = [];
+    let runningZipBytes = 0;
 
     for (let i = 0; i < tracks.length; i++) {
       const track = tracks[i];
       const rawBuf = await fetchDriveAudioBuffer(drive, track.audioFileId);
       if (!rawBuf || rawBuf.length === 0) continue;
+
+      runningZipBytes += rawBuf.length;
+      if (runningZipBytes > MAX_ZIP_TOTAL_BYTES) {
+        return NextResponse.json(
+          {
+            ok: false,
+            error:
+              'This release archive exceeds the 180 MB single-ZIP download limit. Please download individual tracks instead.',
+          },
+          { status: 413 }
+        );
+      }
 
       const taggedBuf = await embedMp3MetadataAndCover(rawBuf, {
         track: {

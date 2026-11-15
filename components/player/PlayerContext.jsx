@@ -44,7 +44,28 @@ export function PlayerProvider({ children }) {
   const activeLoadIdRef = useRef(0);
   const volumeRef = useRef(0.85);
   const isMutedRef = useRef(false);
+  const playlistRef = useRef(playlist);
+  const currentIndexRef = useRef(currentIndex);
+  const shuffleRef = useRef(shuffle);
+  const repeatModeRef = useRef(repeatMode);
+  const pendingInitialSeekRef = useRef(null);
   const handleTrackEndedRef = useRef(() => {});
+
+  useEffect(() => {
+    playlistRef.current = playlist;
+  }, [playlist]);
+
+  useEffect(() => {
+    currentIndexRef.current = currentIndex;
+  }, [currentIndex]);
+
+  useEffect(() => {
+    shuffleRef.current = shuffle;
+  }, [shuffle]);
+
+  useEffect(() => {
+    repeatModeRef.current = repeatMode;
+  }, [repeatMode]);
 
   const currentTrack =
     currentIndex >= 0 && currentIndex < playlist.length ? playlist[currentIndex] : null;
@@ -140,9 +161,27 @@ export function PlayerProvider({ children }) {
     audio.preload = 'auto';
     audioRef.current = audio;
 
+    const applyPendingInitialSeek = () => {
+      const target = pendingInitialSeekRef.current;
+      if (target === null || target === undefined) return;
+      if (!Number.isFinite(audio.duration) || audio.duration <= 0) return;
+      pendingInitialSeekRef.current = null;
+      const clamped = Math.max(0, Math.min(Number(target) || 0, Math.max(0, audio.duration - 0.1)));
+      pendingSeekTargetRef.current = clamped;
+      lastSeekTimestampRef.current = performance.now();
+      lastReportedTimeRef.current = clamped;
+      setCurrentTime(clamped);
+      try {
+        audio.currentTime = clamped;
+      } catch {
+        // Safe fallback
+      }
+    };
+
     const handleLoadedMetadata = () => {
       if (Number.isFinite(audio.duration) && audio.duration > 0) {
         setDuration(audio.duration);
+        applyPendingInitialSeek();
       }
     };
 
@@ -156,6 +195,7 @@ export function PlayerProvider({ children }) {
       setIsLoading(false);
       if (Number.isFinite(audio.duration) && audio.duration > 0) {
         setDuration(audio.duration);
+        applyPendingInitialSeek();
       }
     };
 
@@ -277,7 +317,7 @@ export function PlayerProvider({ children }) {
   }, []);
 
   const loadAndPlayTrack = useCallback(
-    (track, autoPlay = true) => {
+    (track, autoPlay = true, initialSeekSeconds = null) => {
       const audio = audioRef.current;
       if (!audio) return;
 
@@ -286,10 +326,14 @@ export function PlayerProvider({ children }) {
       // Immediately halt any previous playback on our single audio element
       audio.pause();
       pendingSeekTargetRef.current = null;
-      lastReportedTimeRef.current = 0;
+      pendingInitialSeekRef.current =
+        typeof initialSeekSeconds === 'number' && Number.isFinite(initialSeekSeconds) && initialSeekSeconds > 0
+          ? initialSeekSeconds
+          : null;
+      lastReportedTimeRef.current = pendingInitialSeekRef.current || 0;
       hasReceivedSignalRef.current = false;
       setError(null);
-      setCurrentTime(0);
+      setCurrentTime(pendingInitialSeekRef.current || 0);
 
       const fallbackDur = parseDurationString(track?.duration);
       setDuration(fallbackDur > 0 ? fallbackDur : 0);
@@ -378,34 +422,37 @@ export function PlayerProvider({ children }) {
 
   const handleTrackEnded = useCallback(() => {
     const audio = audioRef.current;
-    if (repeatMode === 'one' && audio) {
+    const mode = repeatModeRef.current;
+    if (mode === 'one' && audio) {
       seekTo(0);
       audio.play().catch(() => {});
       return;
     }
 
-    setPlaylist((currentList) => {
-      if (currentList.length === 0) return currentList;
-      setCurrentIndex((prevIdx) => {
-        if (shuffle && currentList.length > 1) {
-          let nextIdx = Math.floor(Math.random() * currentList.length);
-          if (nextIdx === prevIdx) {
-            nextIdx = (prevIdx + 1) % currentList.length;
-          }
-          setTimeout(() => loadAndPlayTrack(currentList[nextIdx], true), 0);
-          return nextIdx;
-        }
-        const isLast = prevIdx >= currentList.length - 1;
-        if (isLast && repeatMode !== 'all') {
-          return prevIdx;
-        }
-        const nextIdx = (prevIdx + 1) % currentList.length;
-        setTimeout(() => loadAndPlayTrack(currentList[nextIdx], true), 0);
-        return nextIdx;
-      });
-      return currentList;
-    });
-  }, [loadAndPlayTrack, repeatMode, seekTo, shuffle]);
+    const currentList = playlistRef.current || [];
+    if (currentList.length === 0) return;
+    const prevIdx = currentIndexRef.current;
+
+    if (shuffleRef.current && currentList.length > 1) {
+      let nextIdx = Math.floor(Math.random() * currentList.length);
+      if (nextIdx === prevIdx) {
+        nextIdx = (prevIdx + 1) % currentList.length;
+      }
+      currentIndexRef.current = nextIdx;
+      setCurrentIndex(nextIdx);
+      loadAndPlayTrack(currentList[nextIdx], true);
+      return;
+    }
+
+    const isLast = prevIdx >= currentList.length - 1;
+    if (isLast && mode !== 'all') {
+      return;
+    }
+    const nextIdx = (prevIdx + 1) % currentList.length;
+    currentIndexRef.current = nextIdx;
+    setCurrentIndex(nextIdx);
+    loadAndPlayTrack(currentList[nextIdx], true);
+  }, [loadAndPlayTrack, seekTo]);
 
   useEffect(() => {
     handleTrackEndedRef.current = handleTrackEnded;
@@ -443,66 +490,86 @@ export function PlayerProvider({ children }) {
   }, [currentTrack, ensureWebAudioGraph, loadAndPlayTrack]);
 
   const playTrack = useCallback(
-    (track, customQueue = null) => {
+    (track, customQueue = null, initialSeekSeconds = null) => {
       if (!track || !track.id) return;
       const targetQueue =
-        Array.isArray(customQueue) && customQueue.length > 0 ? customQueue : playlist;
+        Array.isArray(customQueue) && customQueue.length > 0 ? customQueue : playlistRef.current;
       const existingIdx = targetQueue.findIndex((t) => t.id === track.id);
 
       if (existingIdx !== -1) {
-        if (customQueue) setPlaylist(targetQueue);
+        if (customQueue) {
+          playlistRef.current = targetQueue;
+          setPlaylist(targetQueue);
+        }
         if (
-          currentIndex === existingIdx &&
+          currentIndexRef.current === existingIdx &&
           currentTrack?.id === track.id &&
           audioRef.current &&
           audioRef.current.getAttribute('src')
         ) {
+          if (typeof initialSeekSeconds === 'number' && Number.isFinite(initialSeekSeconds)) {
+            seekTo(initialSeekSeconds);
+            return;
+          }
           togglePlay();
           return;
         }
+        currentIndexRef.current = existingIdx;
         setCurrentIndex(existingIdx);
-        loadAndPlayTrack(targetQueue[existingIdx], true);
+        loadAndPlayTrack(targetQueue[existingIdx], true, initialSeekSeconds);
       } else {
         const nextQueue = [track, ...targetQueue];
+        playlistRef.current = nextQueue;
+        currentIndexRef.current = 0;
         setPlaylist(nextQueue);
         setCurrentIndex(0);
-        loadAndPlayTrack(track, true);
+        loadAndPlayTrack(track, true, initialSeekSeconds);
       }
     },
-    [currentIndex, currentTrack?.id, loadAndPlayTrack, playlist, togglePlay]
+    [currentTrack?.id, loadAndPlayTrack, seekTo, togglePlay]
   );
 
   const playAlbum = useCallback(
-    (tracks, startIndex = 0) => {
+    (tracks, startIndex = 0, initialSeekSeconds = null) => {
       if (!Array.isArray(tracks) || tracks.length === 0) return;
       const safeIndex = Math.max(0, Math.min(startIndex, tracks.length - 1));
+      playlistRef.current = tracks;
+      currentIndexRef.current = safeIndex;
       setPlaylist(tracks);
       setCurrentIndex(safeIndex);
-      loadAndPlayTrack(tracks[safeIndex], true);
+      loadAndPlayTrack(tracks[safeIndex], true, initialSeekSeconds);
     },
     [loadAndPlayTrack]
   );
 
   const playNext = useCallback(() => {
-    if (playlist.length === 0) return;
-    let nextIdx = (currentIndex + 1) % playlist.length;
-    if (shuffle && playlist.length > 1) {
-      nextIdx = Math.floor(Math.random() * playlist.length);
+    const list = playlistRef.current;
+    if (list.length === 0) return;
+    const prevIdx = currentIndexRef.current;
+    let nextIdx = (prevIdx + 1) % list.length;
+    if (shuffleRef.current && list.length > 1) {
+      nextIdx = Math.floor(Math.random() * list.length);
+      if (nextIdx === prevIdx) {
+        nextIdx = (prevIdx + 1) % list.length;
+      }
     }
+    currentIndexRef.current = nextIdx;
     setCurrentIndex(nextIdx);
-    loadAndPlayTrack(playlist[nextIdx], true);
-  }, [currentIndex, loadAndPlayTrack, playlist, shuffle]);
+    loadAndPlayTrack(list[nextIdx], true);
+  }, [loadAndPlayTrack]);
 
   const playPrevious = useCallback(() => {
-    if (playlist.length === 0) return;
-    if (currentTime > 3 && audioRef.current && audioRef.current.getAttribute('src')) {
+    const list = playlistRef.current;
+    if (list.length === 0) return;
+    if (lastReportedTimeRef.current > 3 && audioRef.current && audioRef.current.getAttribute('src')) {
       seekTo(0);
       return;
     }
-    const prevIdx = (currentIndex - 1 + playlist.length) % playlist.length;
+    const prevIdx = (currentIndexRef.current - 1 + list.length) % list.length;
+    currentIndexRef.current = prevIdx;
     setCurrentIndex(prevIdx);
-    loadAndPlayTrack(playlist[prevIdx], true);
-  }, [currentIndex, currentTime, loadAndPlayTrack, playlist, seekTo]);
+    loadAndPlayTrack(list[prevIdx], true);
+  }, [loadAndPlayTrack, seekTo]);
 
   const setVolume = useCallback((val) => {
     const clamped = Math.max(0, Math.min(1, Number(val)));

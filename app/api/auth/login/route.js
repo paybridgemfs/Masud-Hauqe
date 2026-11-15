@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { authenticateAdmin, setAdminSessionCookie, getCurrentAdmin } from '@/lib/auth.js';
 import { loginSchema } from '@/lib/validation.js';
-import { checkRateLimit } from '@/lib/security.js';
+import { checkRateLimit, getClientIp } from '@/lib/security.js';
 
 export async function GET() {
   const admin = await getCurrentAdmin();
@@ -13,7 +13,7 @@ export async function GET() {
 
 export async function POST(request) {
   try {
-    const ip = request.headers.get('x-forwarded-for') || '127.0.0.1';
+    const ip = getClientIp(request);
     const rate = checkRateLimit(`login:${ip}`, 10, 60 * 1000);
     if (!rate.allowed) {
       return NextResponse.json(

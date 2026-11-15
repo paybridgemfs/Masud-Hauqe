@@ -10,7 +10,7 @@ import {
   sortAlbumTracks,
 } from '@/lib/db.js';
 import { musicSchema } from '@/lib/validation.js';
-import { sanitizeFilename, verifyMp3Signature } from '@/lib/security.js';
+import { sanitizeFilename, verifyMp3Signature, sanitizeSafeUrl } from '@/lib/security.js';
 import { getEnvConfig } from '@/lib/env.js';
 import { uploadMp3ToGoogleDrive, deleteFileFromGoogleDrive } from '@/lib/google-drive.js';
 import { embedMp3MetadataAndCover, resolveTrackYear } from '@/lib/mp3-id3.js';
@@ -285,9 +285,9 @@ export async function POST(request) {
         releaseYear: resolvedYear,
         composer: parsed.data.composer?.trim() || resolvedArtistName,
         trackOrder: nextTrackOrder,
-        thumbnail: parsed.data.thumbnail || targetAlbum?.coverImage || '',
+        thumbnail: sanitizeSafeUrl(parsed.data.thumbnail || targetAlbum?.coverImage || '', { allowRelative: true, fallback: '' }),
         thumbnailFileId: parsed.data.thumbnailFileId || targetAlbum?.coverImageFileId || '',
-        youtubeUrl: parsed.data.youtubeUrl || '',
+        youtubeUrl: sanitizeSafeUrl(parsed.data.youtubeUrl || '', { allowRelative: false, fallback: '' }),
         youtubeVideoId: parsed.data.youtubeVideoId || '',
         duration: parsed.data.duration || '0:00',
         audioProvider: 'google_drive',

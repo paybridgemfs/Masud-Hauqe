@@ -11,8 +11,8 @@ export default function WebsiteLoader({ siteName = '' }) {
   useEffect(() => {
     let cancelled = false;
     const startTime = Date.now();
-    const minDisplayMs = 500;
-    const maxTimeoutMs = 2400;
+    const minDisplayMs = 150;
+    const maxTimeoutMs = 600;
 
     function finishLoading() {
       if (cancelled) return;
@@ -23,7 +23,7 @@ export default function WebsiteLoader({ siteName = '' }) {
         if (!cancelled) {
           setIsReady(true);
         }
-      }, remaining + 180);
+      }, remaining + 80);
     }
 
     function waitForAllImagesAndDom() {

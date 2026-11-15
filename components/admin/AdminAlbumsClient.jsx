@@ -22,6 +22,7 @@ import {
   ArrowDown,
 } from 'lucide-react';
 import DriveImageUpload from '@/components/admin/DriveImageUpload.jsx';
+import AdminConfirmModal from '@/components/admin/AdminConfirmModal.jsx';
 
 function formatBytes(bytes) {
   if (!bytes || bytes === 0) return '0 B';
@@ -106,6 +107,15 @@ export default function AdminAlbumsClient({
   const [togglingId, setogglingId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
   const [statusMsg, setStatusMsg] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
+  const [albumToDelete, setAlbumToDelete] = useState(null);
+  const [trackToDelete, setTrackToDelete] = useState(null);
+
+  const [prevInitialAlbums, setPrevInitialAlbums] = useState(initialAlbums);
+  if (prevInitialAlbums !== initialAlbums) {
+    setPrevInitialAlbums(initialAlbums);
+    setAlbums(initialAlbums || []);
+  }
 
   // Batch MP3 Upload & Track Order Modal State
   const [batchAlbum, setBatchAlbum] = useState(null);
@@ -140,6 +150,7 @@ export default function AdminAlbumsClient({
     if (!title.trim()) return;
     setSaving(true);
     setStatusMsg('');
+    setErrorMsg('');
     try {
       const derivedYear =
         releaseYear.trim() ||
@@ -160,7 +171,7 @@ export default function AdminAlbumsClient({
           isPublished,
         }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (res.ok && data.ok) {
         setAlbums((prev) => [{ ...data.album, tracks: [], trackCount: 0 }, ...prev]);
         setTitle('');
@@ -169,8 +180,12 @@ export default function AdminAlbumsClient({
         setCoverImageFileId('');
         setReleaseDate('');
         setGenre('');
-        setStatusMsg(`Release "${data.album.title}" created and saved in PostgreSQL.`);
+        setStatusMsg(`Release "${data.album.title}" created and saved.`);
+      } else {
+        setErrorMsg(data.error || 'Failed to create release.');
       }
+    } catch {
+      setErrorMsg('Network error while creating release.');
     } finally {
       setSaving(false);
     }
@@ -179,6 +194,7 @@ export default function AdminAlbumsClient({
   async function togglePublish(album) {
     if (togglingId === album.id) return;
     setogglingId(album.id);
+    setErrorMsg('');
     try {
       const res = await fetch('/api/albums', {
         method: 'PUT',
@@ -186,30 +202,41 @@ export default function AdminAlbumsClient({
         credentials: 'include',
         body: JSON.stringify({ id: album.id, isPublished: !album.isPublished }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (res.ok && data.ok) {
         setAlbums((prev) =>
           prev.map((a) => (a.id === album.id ? { ...a, isPublished: data.album.isPublished } : a))
         );
+      } else {
+        setErrorMsg(data.error || 'Failed to update release publish state.');
       }
+    } catch {
+      setErrorMsg('Network error while updating release status.');
     } finally {
       setogglingId(null);
     }
   }
 
-  async function handleDelete(album) {
-    if (deletingId === album.id) return;
-    if (!confirm(`Are you sure you want to delete Release "${album.title}"?`)) return;
+  async function confirmDeleteAlbum() {
+    if (!albumToDelete || deletingId === albumToDelete.id) return;
+    const album = albumToDelete;
     setDeletingId(album.id);
+    setErrorMsg('');
     try {
       const res = await fetch(`/api/albums?id=${encodeURIComponent(album.id)}`, {
         method: 'DELETE',
         credentials: 'include',
       });
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
         setAlbums((prev) => prev.filter((a) => a.id !== album.id));
         setStatusMsg(`Release "${album.title}" deleted.`);
+        setAlbumToDelete(null);
+      } else {
+        setErrorMsg(data.error || `Failed to delete release "${album.title}".`);
       }
+    } catch {
+      setErrorMsg('Network error while deleting release.');
     } finally {
       setDeletingId(null);
     }
@@ -253,7 +280,7 @@ export default function AdminAlbumsClient({
           releaseYear: batchReleaseYear.trim(),
         }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (res.ok && data.ok) {
         setAlbums((prev) =>
           prev.map((a) =>
@@ -278,7 +305,11 @@ export default function AdminAlbumsClient({
             : prev
         );
         setTrackOrderStatus('Release ID3 Metadata (Artist, Genre, Year) saved!');
+      } else {
+        setBatchError(data.error || 'Failed to save Release ID3 metadata.');
       }
+    } catch {
+      setBatchError('Network error while saving Release ID3 metadata.');
     } finally {
       setSavingReleaseMeta(false);
     }
@@ -300,15 +331,18 @@ export default function AdminAlbumsClient({
     setTrackOrderStatus('');
   }
 
-  async function handleDeleteReleaseTrack(track) {
-    if (!batchAlbum || !track || deletingTrackId === track.id) return;
+  async function confirmDeleteReleaseTrack() {
+    if (!batchAlbum || !trackToDelete || deletingTrackId === trackToDelete.id) return;
+    const track = trackToDelete;
     setDeletingTrackId(track.id);
     setTrackOrderStatus('');
+    setBatchError('');
     try {
       const res = await fetch(`/api/music/${track.id}`, {
         method: 'DELETE',
         credentials: 'include',
       });
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
         const remaining = (batchAlbum.tracks || [])
           .filter((t) => t.id !== track.id)
@@ -335,11 +369,12 @@ export default function AdminAlbumsClient({
           )
         );
         setTrackOrderStatus(`Deleted track "${track.title}"`);
+        setTrackToDelete(null);
       } else {
-        setTrackOrderStatus('Failed to delete track.');
+        setBatchError(data.error || 'Failed to delete track.');
       }
     } catch {
-      setTrackOrderStatus('Network error while deleting track.');
+      setBatchError('Network error while deleting track.');
     } finally {
       setDeletingTrackId(null);
     }
@@ -693,6 +728,22 @@ export default function AdminAlbumsClient({
           </div>
         )}
 
+        {errorMsg && (
+          <div className="p-3 rounded bg-[#2A1215] border border-[#7F1D1D] text-xs text-[#FECACA] flex items-center justify-between gap-2">
+            <span className="flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-[#F87171] shrink-0" />
+              <span>{errorMsg}</span>
+            </span>
+            <button
+              type="button"
+              onClick={() => setErrorMsg('')}
+              className="text-[#FECACA] hover:text-white shrink-0"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="sm:col-span-2">
             <label htmlFor="album-title" className="block text-xs font-semibold text-[#D4D4D8] mb-1">
@@ -939,7 +990,7 @@ export default function AdminAlbumsClient({
                           <button
                             type="button"
                             disabled={deletingId === album.id}
-                            onClick={() => handleDelete(album)}
+                            onClick={() => setAlbumToDelete(album)}
                             aria-label={`Delete release ${album.title}`}
                             className="p-1.5 rounded border border-[#27272E] text-[#9A9AA2] hover:text-[#F87171] hover:border-[#F87171]/40 transition-colors disabled:opacity-50"
                           >
@@ -1495,7 +1546,7 @@ export default function AdminAlbumsClient({
                             <button
                               type="button"
                               disabled={isDeletingThis || savingTrackOrder}
-                              onClick={() => handleDeleteReleaseTrack(t)}
+                              onClick={() => setTrackToDelete(t)}
                               title={`Delete track "${t.title}"`}
                               aria-label={`Delete track ${t.title}`}
                               className="p-1.5 rounded border border-[#27272E] text-[#9A9AA2] hover:text-[#F87171] hover:border-[#F87171]/40 disabled:opacity-50 transition-colors"
@@ -1519,7 +1570,7 @@ export default function AdminAlbumsClient({
             <div className="px-5 sm:px-6 py-4 bg-[#15151B] border-t border-[#24242E] flex items-center justify-between gap-3 shrink-0">
               <div className="text-xs text-[#8E8E96]">
                 {isBatchUploading
-                  ? 'Uploading MP3 files to Google Drive & PostgreSQL...'
+                  ? 'Uploading MP3 files to Google Drive & Database...'
                   : readyOrFailedCount > 0
                     ? `${readyOrFailedCount} MP3 file(s) ready to upload`
                     : 'Select .mp3 files above or drag tracks to reorder'}
@@ -1559,6 +1610,38 @@ export default function AdminAlbumsClient({
           </div>
         </div>
       )}
+
+      <AdminConfirmModal
+        isOpen={Boolean(albumToDelete)}
+        title="Delete Release"
+        message={
+          albumToDelete
+            ? `Are you sure you want to permanently delete "${albumToDelete.title}"? This action cannot be undone.`
+            : ''
+        }
+        confirmLabel="Delete Release"
+        loading={Boolean(deletingId)}
+        onConfirm={confirmDeleteAlbum}
+        onCancel={() => {
+          if (!deletingId) setAlbumToDelete(null);
+        }}
+      />
+
+      <AdminConfirmModal
+        isOpen={Boolean(trackToDelete)}
+        title="Remove Release Track"
+        message={
+          trackToDelete
+            ? `Are you sure you want to delete "${trackToDelete.title}" from this release and remove its media assets?`
+            : ''
+        }
+        confirmLabel="Delete Track"
+        loading={Boolean(deletingTrackId)}
+        onConfirm={confirmDeleteReleaseTrack}
+        onCancel={() => {
+          if (!deletingTrackId) setTrackToDelete(null);
+        }}
+      />
     </div>
   );
 }

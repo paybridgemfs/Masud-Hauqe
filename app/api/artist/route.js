@@ -4,6 +4,7 @@ import { requireAdminSession } from '@/lib/auth.js';
 import { getDbState, updateDbState, appendAuditRecord } from '@/lib/db.js';
 import { artistUpdateSchema, slugify } from '@/lib/validation.js';
 import { deleteFileFromGoogleDrive } from '@/lib/google-drive.js';
+import { sanitizeSafeUrl } from '@/lib/security.js';
 
 export async function GET() {
   const db = await getDbState();
@@ -51,12 +52,12 @@ export async function PUT(request) {
         target.biography = data.biography;
         target.careerInfo = data.careerInfo;
         target.musicalBg = data.musicalBg;
-        target.profileImage = data.profileImage;
+        target.profileImage = sanitizeSafeUrl(data.profileImage, { allowRelative: true, fallback: '' });
         target.profileImageFileId = nextProfileFileId;
-        target.coverImage = data.coverImage;
+        target.coverImage = sanitizeSafeUrl(data.coverImage, { allowRelative: true, fallback: '' });
         target.coverImageFileId = nextCoverFileId;
         target.location = data.location;
-        target.website = data.website;
+        target.website = sanitizeSafeUrl(data.website, { allowRelative: false, fallback: '' });
         target.achievements = data.achievements;
         target.updatedAt = now;
         updatedArtist = { ...target };

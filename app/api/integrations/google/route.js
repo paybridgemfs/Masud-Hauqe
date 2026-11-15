@@ -54,8 +54,11 @@ export async function POST(request) {
   const body = await request.json();
 
   if (body.action === 'connect') {
-    const proto = request.headers.get('x-forwarded-proto') || 'https';
-    const forwardedHost = request.headers.get('x-forwarded-host');
+    const env = getEnvConfig();
+    const proto = (request.headers.get('x-forwarded-proto') || 'https').split(',')[0].trim();
+    const forwardedHost = (request.headers.get('x-forwarded-host') || request.headers.get('host') || '')
+      .split(',')[0]
+      .trim();
     const isInternalPort = (u) => /localhost:(1000\b|10000\b)|127\.0\.0\.1:(1000\b|10000\b)/.test(u || '');
 
     let headerOrigin = '';
@@ -63,17 +66,28 @@ export async function POST(request) {
       headerOrigin = `${proto}://${forwardedHost}`;
     }
 
-    let clientOrigin = typeof body.origin === 'string' ? body.origin.trim() : '';
-    if (!clientOrigin || isInternalPort(clientOrigin)) {
-      clientOrigin = headerOrigin || '';
+    let trustedOrigin = headerOrigin || env.appUrl;
+    if (typeof body.origin === 'string' && body.origin.trim() && !isInternalPort(body.origin)) {
+      try {
+        const candidateUrl = new URL(body.origin.trim());
+        const envHost = new URL(env.appUrl).host;
+        if (
+          (candidateUrl.protocol === 'https:' || candidateUrl.protocol === 'http:') &&
+          (candidateUrl.host === forwardedHost || candidateUrl.host === envHost)
+        ) {
+          trustedOrigin = candidateUrl.origin;
+        }
+      } catch {
+        // Ignore invalid body.origin
+      }
     }
 
-    const redirectUri = resolveGoogleRedirectUri(clientOrigin);
+    const redirectUri = resolveGoogleRedirectUri(trustedOrigin);
     const authResult = generateGoogleAuthUrl(redirectUri);
     if (!authResult.ok) {
       return NextResponse.json({ ok: false, error: authResult.error }, { status: 400 });
     }
-    const host = forwardedHost || request.headers.get('host') || '';
+    const host = forwardedHost || '';
     const https =
       proto.includes('https') ||
       host.includes('.run.app') ||

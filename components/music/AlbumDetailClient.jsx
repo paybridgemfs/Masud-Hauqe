@@ -419,7 +419,7 @@ export default function AlbumDetailClient({ album, shareUrl: initialShareUrl = '
                       if (isReleaseActive) {
                         seekTo(nextTime);
                       } else {
-                        playAlbum(tracks, 0);
+                        playAlbum(tracks, 0, nextTime);
                       }
                     }}
                     className="w-full h-1.5 bg-[#27272C] accent-[#C8A464] rounded-lg cursor-pointer"
@@ -597,7 +597,6 @@ export default function AlbumDetailClient({ album, shareUrl: initialShareUrl = '
               const active = currentTrack?.id === track.id;
               const activePlaying = active && isPlaying;
               const downloadUrl = getPublicDownloadUrl(track);
-              const downloadFilename = getTrackDownloadFilename(track);
 
               return (
                 <motion.div

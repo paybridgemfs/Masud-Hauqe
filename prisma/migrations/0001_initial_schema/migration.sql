@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS "admins" (
     "passwordHash" TEXT NOT NULL,
     "role" TEXT NOT NULL DEFAULT 'SUPER_ADMIN',
     "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "tokenVersion" INTEGER NOT NULL DEFAULT 1,
     "mustChangePassword" BOOLEAN NOT NULL DEFAULT true,
     "lastLoginAt" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -46,6 +47,9 @@ CREATE TABLE IF NOT EXISTS "albums" (
     "id" TEXT NOT NULL,
     "title" TEXT NOT NULL,
     "slug" TEXT NOT NULL,
+    "artistName" TEXT NOT NULL DEFAULT '',
+    "genre" TEXT NOT NULL DEFAULT '',
+    "releaseYear" TEXT NOT NULL DEFAULT '',
     "description" TEXT NOT NULL DEFAULT '',
     "coverImage" TEXT NOT NULL DEFAULT '',
     "coverImageFileId" TEXT NOT NULL DEFAULT '',
@@ -67,7 +71,12 @@ CREATE TABLE IF NOT EXISTS "music" (
     "title" TEXT NOT NULL,
     "slug" TEXT NOT NULL,
     "artistId" TEXT NOT NULL,
+    "artistName" TEXT NOT NULL DEFAULT '',
     "albumId" TEXT,
+    "albumTitle" TEXT NOT NULL DEFAULT '',
+    "genre" TEXT NOT NULL DEFAULT '',
+    "releaseYear" TEXT NOT NULL DEFAULT '',
+    "composer" TEXT NOT NULL DEFAULT '',
     "description" TEXT NOT NULL DEFAULT '',
     "thumbnail" TEXT NOT NULL DEFAULT '',
     "thumbnailFileId" TEXT NOT NULL DEFAULT '',
@@ -85,6 +94,7 @@ CREATE TABLE IF NOT EXISTS "music" (
     "includeYoutubeVideo" BOOLEAN NOT NULL DEFAULT false,
     "playCount" INTEGER NOT NULL DEFAULT 0,
     "downloadCount" INTEGER NOT NULL DEFAULT 0,
+    "trackOrder" INTEGER NOT NULL DEFAULT 0,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     CONSTRAINT "music_pkey" PRIMARY KEY ("id"),
@@ -218,11 +228,21 @@ CREATE UNIQUE INDEX IF NOT EXISTS "seo_settings_page_key" ON "seo_settings"("pag
 DROP TABLE IF EXISTS "audit_logs" CASCADE;
 
 -- Safe non-destructive schema upgrades for existing tables
+ALTER TABLE "admins" ADD COLUMN IF NOT EXISTS "tokenVersion" INTEGER NOT NULL DEFAULT 1;
 ALTER TABLE "artists" ADD COLUMN IF NOT EXISTS "profileImageFileId" TEXT NOT NULL DEFAULT '';
 ALTER TABLE "artists" ADD COLUMN IF NOT EXISTS "coverImageFileId" TEXT NOT NULL DEFAULT '';
 ALTER TABLE "albums" ADD COLUMN IF NOT EXISTS "coverImageFileId" TEXT NOT NULL DEFAULT '';
+ALTER TABLE "albums" ADD COLUMN IF NOT EXISTS "artistName" TEXT NOT NULL DEFAULT '';
+ALTER TABLE "albums" ADD COLUMN IF NOT EXISTS "genre" TEXT NOT NULL DEFAULT '';
+ALTER TABLE "albums" ADD COLUMN IF NOT EXISTS "releaseYear" TEXT NOT NULL DEFAULT '';
 ALTER TABLE "music" ADD COLUMN IF NOT EXISTS "thumbnailFileId" TEXT NOT NULL DEFAULT '';
 ALTER TABLE "music" ADD COLUMN IF NOT EXISTS "includeYoutubeVideo" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "music" ADD COLUMN IF NOT EXISTS "artistName" TEXT NOT NULL DEFAULT '';
+ALTER TABLE "music" ADD COLUMN IF NOT EXISTS "albumTitle" TEXT NOT NULL DEFAULT '';
+ALTER TABLE "music" ADD COLUMN IF NOT EXISTS "genre" TEXT NOT NULL DEFAULT '';
+ALTER TABLE "music" ADD COLUMN IF NOT EXISTS "releaseYear" TEXT NOT NULL DEFAULT '';
+ALTER TABLE "music" ADD COLUMN IF NOT EXISTS "composer" TEXT NOT NULL DEFAULT '';
+ALTER TABLE "music" ADD COLUMN IF NOT EXISTS "trackOrder" INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE "gallery" ADD COLUMN IF NOT EXISTS "imageFileId" TEXT NOT NULL DEFAULT '';
 ALTER TABLE "seo_settings" ADD COLUMN IF NOT EXISTS "ogImageFileId" TEXT NOT NULL DEFAULT '';
 ALTER TABLE "google_integrations" ADD COLUMN IF NOT EXISTS "musicFolderId" TEXT NOT NULL DEFAULT '';

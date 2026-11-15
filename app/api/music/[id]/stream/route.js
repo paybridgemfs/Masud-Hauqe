@@ -7,8 +7,10 @@ import {
   getTrackDownloadFilename,
 } from '@/lib/storage/audio-delivery.js';
 import { embedMp3MetadataAndCover } from '@/lib/mp3-id3.js';
+import { checkStreamPlayDedupe, getClientIp } from '@/lib/security.js';
 
 const MAX_CACHE_ENTRIES = 8;
+const MAX_CACHED_FILE_BYTES = 25 * 1024 * 1024;
 const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
 
 function getAudioCache() {
@@ -52,7 +54,7 @@ async function fetchOrGetCachedAudioBuffer(fileId) {
       );
       const fullBuffer = Buffer.from(driveRes.data);
 
-      if (fullBuffer.length > 0) {
+      if (fullBuffer.length > 0 && fullBuffer.length <= MAX_CACHED_FILE_BYTES) {
         if (cache.size >= MAX_CACHE_ENTRIES) {
           const oldestKey = cache.keys().next().value;
           if (oldestKey) cache.delete(oldestKey);
@@ -104,8 +106,11 @@ export async function GET(request, { params }) {
   }
 
   const rangeHeader = request.headers.get('range');
+  const ip = getClientIp(request);
+  const isInitialStreamRequest = !rangeHeader || rangeHeader.startsWith('bytes=0-');
   const shouldIncrementCounter =
-    isDownload || !rangeHeader || rangeHeader.startsWith('bytes=0-');
+    isDownload ||
+    (isInitialStreamRequest && checkStreamPlayDedupe(`stream:${ip}:${track.id}`, 45 * 1000));
 
   if (shouldIncrementCounter) {
     updateDbState((state) => {

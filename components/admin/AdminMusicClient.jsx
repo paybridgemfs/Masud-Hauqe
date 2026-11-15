@@ -12,6 +12,7 @@ import {
   Music,
   Video,
   AlertTriangle,
+  AlertCircle,
   X,
   Loader2,
   Edit3,
@@ -30,9 +31,16 @@ export default function AdminMusicClient({ initialMusic = [] }) {
   );
   const [currentPage, setCurrentPage] = useState(1);
   const [statusMsg, setStatusMsg] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
   const [trackToDelete, setTrackToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [togglingKey, setTogglingKey] = useState(null);
+
+  const [prevInitialMusic, setPrevInitialMusic] = useState(initialMusic);
+  if (prevInitialMusic !== initialMusic) {
+    setPrevInitialMusic(initialMusic);
+    setMusicList((initialMusic || []).filter((m) => !m.albumId));
+  }
 
   // Edit Metadata & Cover Photo Modal State
   const [editingTrack, setEditingTrack] = useState(null);
@@ -121,6 +129,7 @@ export default function AdminMusicClient({ initialMusic = [] }) {
     const key = `${track.id}:${field}`;
     if (togglingKey === key) return;
     setTogglingKey(key);
+    setErrorMsg('');
     try {
       const nextVal = !track[field];
       const res = await fetch(`/api/music/${track.id}`, {
@@ -128,13 +137,17 @@ export default function AdminMusicClient({ initialMusic = [] }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ [field]: nextVal }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (res.ok && data.ok) {
         setMusicList((prev) =>
           prev.map((m) => (m.id === track.id ? { ...m, ...data.music } : m))
         );
         setStatusMsg(`Updated "${track.title}".`);
+      } else {
+        setErrorMsg(data.error || `Failed to update "${track.title}".`);
       }
+    } catch {
+      setErrorMsg(`Network error while updating "${track.title}".`);
     } finally {
       setTogglingKey(null);
     }
@@ -143,11 +156,13 @@ export default function AdminMusicClient({ initialMusic = [] }) {
   async function confirmDeleteTrack() {
     if (!trackToDelete || isDeleting) return;
     setIsDeleting(true);
+    setErrorMsg('');
     try {
       const res = await fetch(`/api/music/${trackToDelete.id}`, {
         method: 'DELETE',
         credentials: 'include',
       });
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
         setMusicList((prev) => {
           const updated = prev.filter((m) => m.id !== trackToDelete.id);
@@ -161,7 +176,11 @@ export default function AdminMusicClient({ initialMusic = [] }) {
           `Deleted "${trackToDelete.title}" and removed its MP3 file from Google Drive.`
         );
         setTrackToDelete(null);
+      } else {
+        setErrorMsg(data.error || `Failed to delete "${trackToDelete.title}".`);
       }
+    } catch {
+      setErrorMsg(`Network error while deleting "${trackToDelete.title}".`);
     } finally {
       setIsDeleting(false);
     }
@@ -201,6 +220,22 @@ export default function AdminMusicClient({ initialMusic = [] }) {
             type="button"
             onClick={() => setStatusMsg('')}
             className="text-[#BBF7D0] hover:text-white"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
+      {errorMsg && (
+        <div role="alert" className="p-3 rounded bg-[#2A1215] border border-[#7F1D1D] text-xs text-[#FECACA] flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-[#F87171] shrink-0" />
+            <span>{errorMsg}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setErrorMsg('')}
+            className="text-[#FECACA] hover:text-white"
           >
             <X className="w-3.5 h-3.5" />
           </button>

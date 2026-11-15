@@ -1,15 +1,48 @@
 import React from 'react';
 import Link from 'next/link';
 import SocialMediaLinks from '@/components/website/SocialMediaLinks.jsx';
+import { sanitizeSafeUrl } from '@/lib/safe-url.js';
 
-export default function Footer({ artist, settings = {}, footerNav = [], socialLinks = [] }) {
+const CORE_ARCHIVE_PATHS = new Set(['/music', '/releases', '/about', '/contact']);
+const LEGAL_SLUG_HINTS = ['privacy-policy', 'terms-and-conditions', 'copyright-music-usage'];
+
+export default function Footer({
+  artist,
+  settings = {},
+  footerNav = [],
+  socialLinks = [],
+  pages = [],
+}) {
   const siteName = settings.siteName || artist?.name || '';
   const footerDesc = settings.footerDescription || '';
   const copyrightText =
+    settings.footerCopyright ||
     settings.copyrightText ||
     (siteName ? `© ${new Date().getFullYear()} ${siteName}. All Rights Reserved.` : '');
   const contactEmail = settings.contactEmail || '';
   const contactLocation = settings.contactLocation || '';
+
+  // Deduplicate footer navigation against built-in archive links and sanitize URLs
+  const seenUrls = new Set(CORE_ARCHIVE_PATHS);
+  const customFooterLinks = [];
+  for (const item of footerNav || []) {
+    const safeUrl = sanitizeSafeUrl(item?.url || '', { allowRelative: true, fallback: '' });
+    if (!safeUrl || seenUrls.has(safeUrl)) continue;
+    seenUrls.add(safeUrl);
+    customFooterLinks.push({ ...item, safeUrl });
+  }
+
+  // Render legal links dynamically from published CMS pages
+  const publishedLegalPages = (pages || []).filter(
+    (p) =>
+      p &&
+      p.isPublished !== false &&
+      p.slug &&
+      (LEGAL_SLUG_HINTS.includes(p.slug) ||
+        p.slug.includes('privacy') ||
+        p.slug.includes('terms') ||
+        p.slug.includes('copyright'))
+  );
 
   return (
     <footer className="bg-[#070709] border-t border-[#222226] text-[#A1A1AA] pb-24">
@@ -71,9 +104,9 @@ export default function Footer({ artist, settings = {}, footerNav = [], socialLi
                   Contact
                 </Link>
               </li>
-              {footerNav.map((item) => (
-                <li key={item.id}>
-                  <Link href={item.url} className="hover:text-[#F4F1EA] transition-colors">
+              {customFooterLinks.map((item) => (
+                <li key={item.id || item.safeUrl}>
+                  <Link href={item.safeUrl} className="hover:text-[#F4F1EA] transition-colors">
                     {item.label}
                   </Link>
                 </li>
@@ -106,19 +139,21 @@ export default function Footer({ artist, settings = {}, footerNav = [], socialLi
 
         <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#71717A]">
           <p>{copyrightText}</p>
-          <div className="flex items-center gap-3">
-            <Link href="/legal/privacy-policy" className="hover:text-[#D4D4D8] transition-colors">
-              Privacy Policy
-            </Link>
-            <span aria-hidden="true">·</span>
-            <Link href="/legal/terms-and-conditions" className="hover:text-[#D4D4D8] transition-colors">
-              Terms
-            </Link>
-            <span aria-hidden="true">·</span>
-            <Link href="/legal/copyright-music-usage" className="hover:text-[#D4D4D8] transition-colors">
-              Copyright
-            </Link>
-          </div>
+          {publishedLegalPages.length > 0 && (
+            <div className="flex flex-wrap items-center gap-3">
+              {publishedLegalPages.map((page, index) => (
+                <React.Fragment key={page.id || page.slug}>
+                  {index > 0 && <span aria-hidden="true">·</span>}
+                  <Link
+                    href={`/legal/${page.slug}`}
+                    className="hover:text-[#D4D4D8] transition-colors"
+                  >
+                    {page.title}
+                  </Link>
+                </React.Fragment>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </footer>

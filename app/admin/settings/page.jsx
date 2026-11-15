@@ -1,7 +1,6 @@
 import React from 'react';
 import { redirect } from 'next/navigation';
 import { requireAdminSession } from '@/lib/auth.js';
-import { getDbState } from '@/lib/db.js';
 import AdminShell from '@/components/admin/AdminShell.jsx';
 import AdminSettingsClient from '@/components/admin/AdminSettingsClient.jsx';
 
@@ -15,7 +14,6 @@ export default async function AdminSettingsPage({ searchParams }) {
 
   const resolvedParams = await searchParams;
   const promptPasswordChange = resolvedParams?.promptPasswordChange === '1';
-  const db = await getDbState();
 
   return (
     <AdminShell

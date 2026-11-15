@@ -22,6 +22,7 @@ import {
   Share2,
   ExternalLink,
 } from 'lucide-react';
+import { sanitizeSafeUrl } from '@/lib/safe-url.js';
 
 /**
  * Dynamically detects the social platform name and icon key from a URL,
@@ -204,7 +205,13 @@ export default function SocialMediaLinks({
   variant = 'buttons',
   className = '',
 }) {
-  const visibleLinks = (socialLinks || []).filter((item) => item && item.url && item.isVisible !== false);
+  const visibleLinks = (socialLinks || [])
+    .filter((item) => item && item.url && item.isVisible !== false)
+    .map((item) => ({
+      ...item,
+      safeUrl: sanitizeSafeUrl(item.url, { allowRelative: false, allowMailto: true, fallback: '' }),
+    }))
+    .filter((item) => Boolean(item.safeUrl));
 
   if (visibleLinks.length === 0) {
     return null;
@@ -217,8 +224,8 @@ export default function SocialMediaLinks({
           const { label, Icon } = resolveSocialPlatformInfo(social);
           return (
             <a
-              key={social.id || social.url}
-              href={social.url}
+              key={social.id || social.safeUrl}
+              href={social.safeUrl}
               target="_blank"
               rel="noopener noreferrer"
               aria-label={`Follow on ${label}`}
@@ -239,9 +246,9 @@ export default function SocialMediaLinks({
         {visibleLinks.map((social) => {
           const { label, Icon } = resolveSocialPlatformInfo(social);
           return (
-            <li key={social.id || social.url}>
+            <li key={social.id || social.safeUrl}>
               <a
-                href={social.url}
+                href={social.safeUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="group inline-flex items-center gap-2.5 text-[#B4B4BC] hover:text-[#C8A464] transition-colors"
@@ -265,8 +272,8 @@ export default function SocialMediaLinks({
         const { label, Icon } = resolveSocialPlatformInfo(social);
         return (
           <a
-            key={social.id || social.url}
-            href={social.url}
+            key={social.id || social.safeUrl}
+            href={social.safeUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="group inline-flex items-center gap-2.5 px-4 py-2.5 rounded bg-[#111115] border border-[#2A2A32] hover:border-[#C8A464] text-xs font-semibold text-[#F4F1EA] hover:text-[#C8A464] transition-colors"

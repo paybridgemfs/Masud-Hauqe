@@ -1,6 +1,7 @@
 import React from 'react';
 import { getPublicWebsiteData } from '@/lib/db.js';
 import { buildPageSocialMetadata } from '@/lib/seo.js';
+import { safeJsonLdStringify } from '@/lib/safe-url.js';
 import SectionRenderer from '@/components/website/SectionRenderer.jsx';
 
 export const revalidate = 60;
@@ -34,7 +35,7 @@ export default async function HomePage() {
     <div>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(jsonLd) }}
       />
       {visibleSections.length > 0 ? (
         visibleSections.map((section) => (

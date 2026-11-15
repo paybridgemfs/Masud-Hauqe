@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Shield, KeyRound, UserCheck, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import { KeyRound, UserCheck, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 
 export default function AdminSettingsClient({ admin, promptPasswordChange = false }) {
   const router = useRouter();

@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Image from 'next/image';
 import { Plus, Trash2, Image as ImageIcon, Loader2 } from 'lucide-react';
 import DriveImageUpload from '@/components/admin/DriveImageUpload.jsx';
+import AdminConfirmModal from '@/components/admin/AdminConfirmModal.jsx';
 
 export function AdminGalleryManager({ initialGallery = [] }) {
   const [gallery, setGallery] = useState(initialGallery);
@@ -15,6 +16,13 @@ export function AdminGalleryManager({ initialGallery = [] }) {
   const [errorMsg, setErrorMsg] = useState('');
   const [addingPhoto, setAddingPhoto] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
+  const [photoToDelete, setPhotoToDelete] = useState(null);
+
+  const [prevInitialGallery, setPrevInitialGallery] = useState(initialGallery);
+  if (prevInitialGallery !== initialGallery) {
+    setPrevInitialGallery(initialGallery);
+    setGallery(initialGallery || []);
+  }
 
   async function handleAdd(e) {
     e.preventDefault();
@@ -43,7 +51,8 @@ export function AdminGalleryManager({ initialGallery = [] }) {
           },
         }),
       });
-      if (res.ok) {
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.ok !== false) {
         const refreshed = await fetch('/api/settings').then((r) => r.json());
         if (refreshed.gallery) setGallery(refreshed.gallery);
         setTitle('');
@@ -51,15 +60,22 @@ export function AdminGalleryManager({ initialGallery = [] }) {
         setImageFileId('');
         setDescription('');
         setStatusMsg('Photograph uploaded to Google Drive "Images" folder and saved in Gallery.');
+      } else {
+        setErrorMsg(data.error || 'Failed to add photograph to Gallery.');
       }
+    } catch {
+      setErrorMsg('Network error while adding photograph.');
     } finally {
       setAddingPhoto(false);
     }
   }
 
-  async function handleDelete(id) {
-    if (deletingId === id) return;
+  async function confirmDeletePhoto() {
+    if (!photoToDelete || deletingId === photoToDelete.id) return;
+    const id = photoToDelete.id;
     setDeletingId(id);
+    setErrorMsg('');
+    setStatusMsg('');
     try {
       const res = await fetch('/api/settings', {
         method: 'PUT',
@@ -71,9 +87,16 @@ export function AdminGalleryManager({ initialGallery = [] }) {
           item: { id },
         }),
       });
-      if (res.ok) {
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.ok !== false) {
         setGallery((prev) => prev.filter((g) => g.id !== id));
+        setStatusMsg(`Deleted photograph "${photoToDelete.title}".`);
+        setPhotoToDelete(null);
+      } else {
+        setErrorMsg(data.error || 'Failed to delete photograph.');
       }
+    } catch {
+      setErrorMsg('Network error while deleting photograph.');
     } finally {
       setDeletingId(null);
     }
@@ -183,7 +206,7 @@ export function AdminGalleryManager({ initialGallery = [] }) {
                 <button
                   type="button"
                   disabled={deletingId === item.id}
-                  onClick={() => handleDelete(item.id)}
+                  onClick={() => setPhotoToDelete(item)}
                   aria-label={`Delete ${item.title}`}
                   className="p-1.5 text-[#9A9AA2] hover:text-[#F87171] disabled:opacity-50"
                 >
@@ -206,6 +229,16 @@ export function AdminGalleryManager({ initialGallery = [] }) {
           </p>
         </div>
       )}
+
+      <AdminConfirmModal
+        isOpen={Boolean(photoToDelete)}
+        title="Delete Gallery Photograph"
+        message={`Are you sure you want to remove "${photoToDelete?.title || ''}" from your public Gallery?`}
+        confirmLabel="Delete Photograph"
+        loading={Boolean(photoToDelete && deletingId === photoToDelete.id)}
+        onConfirm={confirmDeletePhoto}
+        onCancel={() => setPhotoToDelete(null)}
+      />
     </div>
   );
 }

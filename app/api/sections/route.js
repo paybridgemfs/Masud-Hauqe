@@ -4,10 +4,36 @@ import { requireAdminSession } from '@/lib/auth.js';
 import { getDbState, updateDbState, appendAuditRecord, cuid } from '@/lib/db.js';
 import { sectionSchema } from '@/lib/validation.js';
 import { deleteFileFromGoogleDrive } from '@/lib/google-drive.js';
+import { sanitizeSafeUrl } from '@/lib/security.js';
+
+function sanitizeSectionContent(content) {
+  if (!content || typeof content !== 'object') return {};
+  const next = { ...content };
+  for (const key of ['ctaUrl', 'primaryCtaUrl', 'secondaryCtaUrl', 'backgroundImage']) {
+    if (typeof next[key] === 'string') {
+      next[key] = sanitizeSafeUrl(next[key], { allowRelative: true, fallback: '' });
+    }
+  }
+  if (Array.isArray(next.heroGridItems)) {
+    next.heroGridItems = next.heroGridItems.map((card) =>
+      card && typeof card === 'object'
+        ? {
+            ...card,
+            url: typeof card.url === 'string'
+              ? sanitizeSafeUrl(card.url, { allowRelative: true, fallback: '/' })
+              : '/',
+          }
+        : card
+    );
+  }
+  return next;
+}
 
 export async function GET() {
-  const db = await getDbState();
-  const sections = [...(db.sections || [])].sort((a, b) => a.position - b.position);
+  const [{ authorized }, db] = await Promise.all([requireAdminSession(), getDbState()]);
+  const sections = [...(db.sections || [])]
+    .filter((s) => (authorized ? true : s.isVisible))
+    .sort((a, b) => a.position - b.position);
   return NextResponse.json({ ok: true, sections });
 }
 
@@ -40,7 +66,7 @@ export async function POST(request) {
       type: parsed.data.type,
       position: parsed.data.position || nextPos,
       isVisible: Boolean(parsed.data.isVisible),
-      content: parsed.data.content || {},
+      content: sanitizeSectionContent(parsed.data.content || {}),
       settings: parsed.data.settings || {},
       createdAt: now,
       updatedAt: now,
@@ -221,9 +247,18 @@ export async function PUT(request) {
       },
     ];
 
+    const removedBgIds = [];
     await updateDbState((state) => {
+      for (const sec of state.sections || []) {
+        if (sec?.content?.backgroundImageFileId) {
+          removedBgIds.push(sec.content.backgroundImageFileId);
+        }
+      }
       state.sections = defaultSections;
     });
+    for (const bgId of removedBgIds) {
+      await deleteFileFromGoogleDrive(bgId);
+    }
     revalidatePath('/');
     return NextResponse.json({ ok: true, sections: defaultSections });
   }
@@ -255,15 +290,16 @@ export async function PUT(request) {
     if (typeof position === 'number') target.position = position;
     if (typeof isVisible === 'boolean') target.isVisible = isVisible;
     if (content && typeof content === 'object') {
+      const sanitizedContent = sanitizeSectionContent(content);
       const oldBgId = target.content?.backgroundImageFileId || '';
       const nextBgId =
-        typeof content.backgroundImageFileId === 'string'
-          ? content.backgroundImageFileId
+        typeof sanitizedContent.backgroundImageFileId === 'string'
+          ? sanitizedContent.backgroundImageFileId
           : oldBgId;
       if (oldBgId && oldBgId !== nextBgId) {
         oldBgFileIdToDelete = oldBgId;
       }
-      target.content = { ...target.content, ...content };
+      target.content = { ...target.content, ...sanitizedContent };
     }
     if (settings && typeof settings === 'object') target.settings = { ...target.settings, ...settings };
     target.updatedAt = new Date().toISOString();

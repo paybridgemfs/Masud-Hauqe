@@ -190,27 +190,35 @@ export default function GlobalMusicPlayer() {
     };
   }, [isScrubbing]);
 
+  const currentTimeRef = React.useRef(currentTime);
+  useEffect(() => {
+    currentTimeRef.current = currentTime;
+  }, [currentTime]);
+
   useEffect(() => {
     function handleKeyDown(e) {
       if (!currentTrack) return;
-      const tag = e.target?.tagName?.toLowerCase();
-      if (tag === 'input' || tag === 'textarea' || tag === 'select' || e.target?.isContentEditable) {
+      const targetEl = e.target;
+      const tag = targetEl?.tagName?.toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || tag === 'select' || targetEl?.isContentEditable) {
         return;
       }
       if (e.code === 'Space') {
+        const interactive = targetEl?.closest?.('button, a, [role="button"], [role="slider"]');
+        if (interactive) return;
         e.preventDefault();
         togglePlay();
       } else if (e.code === 'ArrowRight') {
         e.preventDefault();
-        seekTo(currentTime + 5);
+        seekTo(currentTimeRef.current + 5);
       } else if (e.code === 'ArrowLeft') {
         e.preventDefault();
-        seekTo(currentTime - 5);
+        seekTo(currentTimeRef.current - 5);
       }
     }
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentTrack, currentTime, seekTo, togglePlay]);
+  }, [currentTrack, seekTo, togglePlay]);
 
   if (!currentTrack) {
     return null;

@@ -8,7 +8,6 @@ import {
   Music,
   Disc,
   PlayCircle,
-  Download,
   HardDrive,
   Mail,
   Layers,

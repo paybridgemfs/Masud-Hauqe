@@ -30,6 +30,7 @@ import AlbumCard from '@/components/music/AlbumCard.jsx';
 import SocialMediaLinks from '@/components/website/SocialMediaLinks.jsx';
 import { usePlayer } from '@/components/player/PlayerContext.jsx';
 import ShimmerImage from '@/components/ui/ShimmerImage.jsx';
+import { sanitizeSafeUrl } from '@/lib/safe-url.js';
 
 const fadeUp = {
   initial: { opacity: 0, y: 20 },
@@ -97,11 +98,12 @@ function buildFourGridItems(rawItems, { publishedMusic = [], publishedAlbums = [
   const customList = Array.isArray(rawItems) ? rawItems : [];
   return defaults.map((def, idx) => {
     const item = customList[idx] || {};
+    const rawUrl = item.url !== undefined ? item.url.trim() : def.url;
     return {
       kicker: item.kicker && item.kicker.trim() ? item.kicker.trim() : def.kicker,
       title: item.title && item.title.trim() ? item.title.trim() : def.title,
       subtitle: item.subtitle && item.subtitle.trim() ? item.subtitle.trim() : def.subtitle,
-      url: item.url !== undefined ? item.url.trim() : def.url,
+      url: rawUrl ? sanitizeSafeUrl(rawUrl, { allowRelative: true, fallback: '' }) : '',
       Icon: def.Icon,
     };
   });
@@ -175,9 +177,9 @@ function HeroSpotlightSection({
   const showLatestPlay = content.showLatestPlayButton !== false;
   const latestPlayText = content.latestPlayButtonText || 'Play Latest Release';
   const primaryCtaText = content.primaryCtaText !== undefined ? content.primaryCtaText : 'Listen to Archive';
-  const primaryCtaUrl = content.primaryCtaUrl || '/music';
+  const primaryCtaUrl = sanitizeSafeUrl(content.primaryCtaUrl || '/music', { allowRelative: true, fallback: '/music' });
   const secondaryCtaText = content.secondaryCtaText !== undefined ? content.secondaryCtaText : 'Artist Monograph';
-  const secondaryCtaUrl = content.secondaryCtaUrl || '/about';
+  const secondaryCtaUrl = sanitizeSafeUrl(content.secondaryCtaUrl || '/about', { allowRelative: true, fallback: '/about' });
   const showHeroGrid = content.showHeroGrid !== false;
   const heroGridItems = buildFourGridItems(content.heroGridItems, {
     publishedMusic,
@@ -520,7 +522,7 @@ export default function SectionRenderer({
           : singlePublishedMusic.slice(0, displayLimit);
 
       const ctaText = content.ctaText !== undefined ? content.ctaText : 'Open Full Music Library';
-      const ctaUrl = content.ctaUrl || '/music';
+      const ctaUrl = sanitizeSafeUrl(content.ctaUrl || '/music', { allowRelative: true, fallback: '/music' });
       const showCta = content.showCtaButton !== false && Boolean(ctaText);
 
       return (
@@ -596,7 +598,7 @@ export default function SectionRenderer({
       const displayLimit = Number(content.limit) > 0 ? Number(content.limit) : 12;
       const cleanHeading = content.heading || section.name || 'Official Releases & Collections';
       const ctaText = content.ctaText !== undefined ? content.ctaText : 'View All Releases';
-      const ctaUrl = content.ctaUrl || '/releases';
+      const ctaUrl = sanitizeSafeUrl(content.ctaUrl || '/releases', { allowRelative: true, fallback: '/releases' });
       const showCta = content.showCtaButton !== false && Boolean(ctaText);
 
       return (
@@ -676,7 +678,7 @@ export default function SectionRenderer({
         artist?.shortBiography ||
         'Masud Hauqe is an independent recording artist and composer whose work explores atmospheric arrangements, vocal resonance, and timeless acoustic production.';
       const ctaText = content.ctaText !== undefined ? content.ctaText : 'Read Full Biography';
-      const ctaUrl = content.ctaUrl || '/about';
+      const ctaUrl = sanitizeSafeUrl(content.ctaUrl || '/about', { allowRelative: true, fallback: '/about' });
       const showCta = content.showCtaButton !== false && Boolean(ctaText);
 
       return (
@@ -745,7 +747,7 @@ export default function SectionRenderer({
         (showAchievements && achievements.length > 0);
 
       const ctaText = content.ctaText !== undefined ? content.ctaText : 'Explore Full Monograph';
-      const ctaUrl = content.ctaUrl || '/about';
+      const ctaUrl = sanitizeSafeUrl(content.ctaUrl || '/about', { allowRelative: true, fallback: '/about' });
       const showCta = content.showCtaButton !== false && Boolean(ctaText);
 
       return (
@@ -881,7 +883,7 @@ export default function SectionRenderer({
         (m) => Boolean(m.youtubeVideoId && m.includeYoutubeVideo)
       );
       const ctaText = content.ctaText !== undefined ? content.ctaText : 'Open Video Gallery';
-      const ctaUrl = content.ctaUrl || '/videos';
+      const ctaUrl = sanitizeSafeUrl(content.ctaUrl || '/videos', { allowRelative: true, fallback: '/videos' });
       const showCta = content.showCtaButton !== false && Boolean(ctaText);
 
       return (
@@ -991,7 +993,7 @@ export default function SectionRenderer({
     case 'GALLERY': {
       const displayLimit = Number(content.limit) > 0 ? Number(content.limit) : 6;
       const ctaText = content.ctaText !== undefined ? content.ctaText : 'Full Gallery →';
-      const ctaUrl = content.ctaUrl || '/gallery';
+      const ctaUrl = sanitizeSafeUrl(content.ctaUrl || '/gallery', { allowRelative: true, fallback: '/gallery' });
       const showCta = content.showCtaButton !== false && Boolean(ctaText);
 
       return (
@@ -1121,7 +1123,7 @@ export default function SectionRenderer({
         content.subheading ||
         'Connect directly with the management desk for performance bookings, sync licensing, or press requests.';
       const ctaText = content.ctaText !== undefined ? content.ctaText : 'Open Inquiry Desk';
-      const ctaUrl = content.ctaUrl || '/contact';
+      const ctaUrl = sanitizeSafeUrl(content.ctaUrl || '/contact', { allowRelative: true, fallback: '/contact' });
       const showCta = content.showCtaButton !== false && Boolean(ctaText);
       const showEmail = content.showEmailButton !== false;
 

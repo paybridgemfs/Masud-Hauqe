@@ -11,19 +11,29 @@ import {
 } from '@/lib/db.js';
 import { albumSchema } from '@/lib/validation.js';
 import { deleteFileFromGoogleDrive } from '@/lib/google-drive.js';
+import { sanitizeSafeUrl } from '@/lib/security.js';
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
-  const scope = searchParams.get('scope') || 'public';
+  const requestedScope = searchParams.get('scope') || 'public';
+  let isAdminScope = false;
+  if (requestedScope === 'admin') {
+    const { authorized } = await requireAdminSession();
+    if (!authorized) {
+      return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
+    }
+    isAdminScope = true;
+  }
+
   const db = await getDbState();
   const artist = db.artists?.[0] || { id: 'masud-hauqe', name: 'Masud Hauqe' };
 
   const albums = (db.albums || [])
-    .filter((a) => (scope === 'admin' ? true : a.isPublished))
+    .filter((a) => (isAdminScope ? true : a.isPublished))
     .map((album) => {
       const tracks = sortAlbumTracks(
         (db.music || []).filter(
-          (m) => m.albumId === album.id && (scope === 'admin' ? true : m.isPublished)
+          (m) => m.albumId === album.id && (isAdminScope ? true : m.isPublished)
         )
       );
       return { ...album, artist, tracks, trackCount: tracks.length };
@@ -67,7 +77,7 @@ export async function POST(request) {
         genre: parsed.data.genre?.trim() || 'Contemporary',
         releaseYear: derivedYear,
         description: parsed.data.description || '',
-        coverImage: parsed.data.coverImage || '',
+        coverImage: sanitizeSafeUrl(parsed.data.coverImage || '', { allowRelative: true, fallback: '' }),
         coverImageFileId: parsed.data.coverImageFileId || '',
         releaseDate: parsed.data.releaseDate || null,
         artistId,
@@ -117,12 +127,14 @@ export async function PUT(request) {
     orderedTrackIds,
   } = body;
   let updated = null;
+  let oldSlug = null;
   let updatedTracks = null;
   let oldCoverFileIdToDelete = null;
 
   await updateDbState(async (state) => {
     const target = state.albums.find((a) => a.id === id);
     if (!target) return;
+    oldSlug = target.slug;
 
     // Support reordering tracks inside this Release via Drag & Drop
     if (Array.isArray(orderedTrackIds)) {
@@ -139,15 +151,15 @@ export async function PUT(request) {
     }
 
     if (typeof title === 'string' && title.trim()) {
-      target.title = title.trim();
+      target.title = title.trim().slice(0, 200);
       target.slug = await createUniqueSlug(state.albums, target.title, target.id);
     }
-    if (typeof artistName === 'string') target.artistName = artistName.trim();
-    if (typeof genre === 'string') target.genre = genre.trim();
-    if (typeof releaseYear === 'string') target.releaseYear = releaseYear.trim();
-    if (typeof description === 'string') target.description = description.trim();
+    if (typeof artistName === 'string') target.artistName = artistName.trim().slice(0, 120);
+    if (typeof genre === 'string') target.genre = genre.trim().slice(0, 100);
+    if (typeof releaseYear === 'string') target.releaseYear = releaseYear.trim().slice(0, 16);
+    if (typeof description === 'string') target.description = description.trim().slice(0, 5000);
     if (typeof coverImage === 'string') {
-      target.coverImage = coverImage.trim();
+      target.coverImage = sanitizeSafeUrl(coverImage, { allowRelative: true, fallback: '' });
       for (const track of state.music || []) {
         if (track.albumId === target.id && !track.thumbnailFileId) {
           track.thumbnail = target.coverImage;
@@ -187,6 +199,9 @@ export async function PUT(request) {
 
   revalidatePath('/');
   revalidatePath('/releases');
+  if (oldSlug && oldSlug !== updated.slug) {
+    revalidatePath(`/releases/${oldSlug}`);
+  }
   revalidatePath(`/releases/${updated.slug}`);
   revalidatePath('/music');
 

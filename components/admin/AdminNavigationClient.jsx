@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Plus, Trash2, Save, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Plus, Trash2, Save, Eye, EyeOff, Loader2, AlertCircle, X } from 'lucide-react';
+import AdminConfirmModal from '@/components/admin/AdminConfirmModal.jsx';
 
 export default function AdminNavigationClient({ initialSettings = {}, initialNavItems = [] }) {
   const [navItems, setNavItems] = useState(initialNavItems);
@@ -11,7 +12,7 @@ export default function AdminNavigationClient({ initialSettings = {}, initialNav
     headerCtaLabel: initialSettings.headerCtaLabel || 'Explore Music',
     headerCtaUrl: initialSettings.headerCtaUrl || '/music',
     footerDescription: initialSettings.footerDescription || '',
-    copyrightText: initialSettings.copyrightText || '',
+    copyrightText: initialSettings.footerCopyright || initialSettings.copyrightText || '',
     contactEmail: initialSettings.contactEmail || '',
     contactLocation: initialSettings.contactLocation || '',
   });
@@ -20,12 +21,37 @@ export default function AdminNavigationClient({ initialSettings = {}, initialNav
   const [addingNav, setAddingNav] = useState(false);
   const [togglingNavId, setTogglingNavId] = useState(null);
   const [deletingNavId, setDeletingNavId] = useState(null);
+  const [navToDelete, setNavToDelete] = useState(null);
   const [statusMsg, setStatusMsg] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
+
+  const [prevInitialNavItems, setPrevInitialNavItems] = useState(initialNavItems);
+  if (prevInitialNavItems !== initialNavItems) {
+    setPrevInitialNavItems(initialNavItems);
+    setNavItems(initialNavItems || []);
+  }
+
+  const [prevInitialSettings, setPrevInitialSettings] = useState(initialSettings);
+  if (prevInitialSettings !== initialSettings) {
+    setPrevInitialSettings(initialSettings);
+    setHeaderFooter({
+      logoText: initialSettings.logoText || 'MASUD HAUQE',
+      stickyHeader: initialSettings.stickyHeader !== 'false',
+      headerCtaLabel: initialSettings.headerCtaLabel || 'Explore Music',
+      headerCtaUrl: initialSettings.headerCtaUrl || '/music',
+      footerDescription: initialSettings.footerDescription || '',
+      copyrightText: initialSettings.footerCopyright || initialSettings.copyrightText || '',
+      contactEmail: initialSettings.contactEmail || '',
+      contactLocation: initialSettings.contactLocation || '',
+    });
+  }
 
   async function handleSaveHeaderFooter(e) {
     e.preventDefault();
     if (savingHeaderFooter) return;
     setSavingHeaderFooter(true);
+    setStatusMsg('');
+    setErrorMsg('');
     try {
       const res = await fetch('/api/settings', {
         method: 'PUT',
@@ -34,13 +60,19 @@ export default function AdminNavigationClient({ initialSettings = {}, initialNav
           group: 'websiteSettings',
           values: {
             ...headerFooter,
+            footerCopyright: headerFooter.copyrightText || '',
             stickyHeader: String(headerFooter.stickyHeader),
           },
         }),
       });
-      if (res.ok) {
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.ok !== false) {
         setStatusMsg('Header and Footer configuration saved.');
+      } else {
+        setErrorMsg(data.error || 'Failed to save Header and Footer configuration.');
       }
+    } catch {
+      setErrorMsg('Network error while saving Header and Footer configuration.');
     } finally {
       setSavingHeaderFooter(false);
     }
@@ -50,6 +82,8 @@ export default function AdminNavigationClient({ initialSettings = {}, initialNav
     e.preventDefault();
     if (!newNav.label.trim() || !newNav.url.trim() || addingNav) return;
     setAddingNav(true);
+    setStatusMsg('');
+    setErrorMsg('');
     try {
       const res = await fetch('/api/settings', {
         method: 'PUT',
@@ -66,12 +100,17 @@ export default function AdminNavigationClient({ initialSettings = {}, initialNav
           },
         }),
       });
-      if (res.ok) {
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.ok !== false) {
         const refreshed = await fetch('/api/settings').then((r) => r.json());
         if (refreshed.navigationItems) setNavItems(refreshed.navigationItems);
         setNewNav({ label: '', url: '', location: 'header' });
         setStatusMsg('Navigation item added.');
+      } else {
+        setErrorMsg(data.error || 'Failed to add navigation item.');
       }
+    } catch {
+      setErrorMsg('Network error while adding navigation item.');
     } finally {
       setAddingNav(false);
     }
@@ -80,6 +119,7 @@ export default function AdminNavigationClient({ initialSettings = {}, initialNav
   async function toggleNavVisibility(item) {
     if (togglingNavId === item.id) return;
     setTogglingNavId(item.id);
+    setErrorMsg('');
     try {
       const res = await fetch('/api/settings', {
         method: 'PUT',
@@ -90,19 +130,27 @@ export default function AdminNavigationClient({ initialSettings = {}, initialNav
           item: { id: item.id, isVisible: !item.isVisible },
         }),
       });
-      if (res.ok) {
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.ok !== false) {
         setNavItems((prev) =>
           prev.map((n) => (n.id === item.id ? { ...n, isVisible: !n.isVisible } : n))
         );
+      } else {
+        setErrorMsg(data.error || 'Failed to update navigation visibility.');
       }
+    } catch {
+      setErrorMsg('Network error while updating navigation visibility.');
     } finally {
       setTogglingNavId(null);
     }
   }
 
-  async function deleteNavItem(id) {
-    if (deletingNavId === id) return;
+  async function confirmDeleteNav() {
+    if (!navToDelete || deletingNavId === navToDelete.id) return;
+    const id = navToDelete.id;
     setDeletingNavId(id);
+    setStatusMsg('');
+    setErrorMsg('');
     try {
       const res = await fetch('/api/settings', {
         method: 'PUT',
@@ -113,9 +161,16 @@ export default function AdminNavigationClient({ initialSettings = {}, initialNav
           item: { id },
         }),
       });
-      if (res.ok) {
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.ok !== false) {
         setNavItems((prev) => prev.filter((n) => n.id !== id));
+        setStatusMsg(`Deleted navigation item "${navToDelete.label}".`);
+        setNavToDelete(null);
+      } else {
+        setErrorMsg(data.error || 'Failed to delete navigation item.');
       }
+    } catch {
+      setErrorMsg('Network error while deleting navigation item.');
     } finally {
       setDeletingNavId(null);
     }
@@ -124,8 +179,22 @@ export default function AdminNavigationClient({ initialSettings = {}, initialNav
   return (
     <div className="space-y-8">
       {statusMsg && (
-        <div className="p-3.5 rounded bg-[#11261B] border border-[#166534] text-xs text-[#BBF7D0]">
-          {statusMsg}
+        <div className="p-3.5 rounded bg-[#11261B] border border-[#166534] text-xs text-[#BBF7D0] flex items-center justify-between gap-2">
+          <span>{statusMsg}</span>
+          <button type="button" onClick={() => setStatusMsg('')} className="hover:text-white">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+      {errorMsg && (
+        <div role="alert" className="p-3.5 rounded bg-[#2A1215] border border-[#7F1D1D] text-xs text-[#FECACA] flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-[#F87171] shrink-0" />
+            <span>{errorMsg}</span>
+          </div>
+          <button type="button" onClick={() => setErrorMsg('')} className="hover:text-white">
+            <X className="w-3.5 h-3.5" />
+          </button>
         </div>
       )}
 
@@ -330,7 +399,7 @@ export default function AdminNavigationClient({ initialSettings = {}, initialNav
                 <button
                   type="button"
                   disabled={deletingNavId === item.id}
-                  onClick={() => deleteNavItem(item.id)}
+                  onClick={() => setNavToDelete(item)}
                   aria-label={`Delete navigation item ${item.label}`}
                   className="text-[#9A9AA2] hover:text-[#F87171] disabled:opacity-50"
                 >
@@ -345,6 +414,16 @@ export default function AdminNavigationClient({ initialSettings = {}, initialNav
           ))}
         </div>
       </section>
+
+      <AdminConfirmModal
+        isOpen={Boolean(navToDelete)}
+        title="Delete Navigation Link"
+        message={`Are you sure you want to remove "${navToDelete?.label || ''}" (${navToDelete?.url || ''}) from ${navToDelete?.location || 'navigation'}?`}
+        confirmLabel="Delete Link"
+        loading={Boolean(navToDelete && deletingNavId === navToDelete.id)}
+        onConfirm={confirmDeleteNav}
+        onCancel={() => setNavToDelete(null)}
+      />
     </div>
   );
 }

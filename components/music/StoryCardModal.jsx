@@ -3,7 +3,7 @@
 import React, { useRef, useState } from 'react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'motion/react';
-import { Sparkles, Download, X, Play, Music, Share2, Check } from 'lucide-react';
+import { Sparkles, Download, X, Play, Music, Check } from 'lucide-react';
 
 export default function StoryCardModal({
   isOpen,
@@ -15,13 +15,15 @@ export default function StoryCardModal({
 }) {
   const [downloading, setDownloading] = useState(false);
   const [downloadSuccess, setDownloadSuccess] = useState(false);
+  const [corsWarning, setCorsWarning] = useState('');
   const canvasRef = useRef(null);
 
   if (!isOpen) return null;
 
   const title = track?.title || album?.title || 'Master Recording';
   const subtitle = track?.album?.title || (album ? `${(album.tracks || []).length} Master Tracks` : 'Official Single Master');
-  const duration = track?.duration || (album ? 'Official Release' : '3:45');
+  const duration =
+    track?.duration || (album ? `${(album.tracks || []).length} Tracks` : 'Official Master');
   const imageUrl = track?.thumbnail || album?.coverImage || '';
 
   // Resolve clean display domain/URL from APP_URL-backed shareUrl or window.location.origin
@@ -51,6 +53,7 @@ export default function StoryCardModal({
 
   async function generateAndDownloadStory() {
     setDownloading(true);
+    setCorsWarning('');
     try {
       const canvas = canvasRef.current;
       if (!canvas) return;
@@ -138,6 +141,9 @@ export default function StoryCardModal({
           });
           ctx.drawImage(img, artX, artY, artSize, artSize);
         } catch {
+          setCorsWarning(
+            'External cover art could not be embedded due to CORS restrictions; generated card uses monograph fallback.'
+          );
           // Fallback artwork drawing
           ctx.fillStyle = '#17171C';
           ctx.fillRect(artX, artY, artSize, artSize);
@@ -215,7 +221,7 @@ export default function StoryCardModal({
       ctx.fillStyle = '#8E8E96';
       ctx.font = '400 24px monospace';
       ctx.textAlign = 'left';
-      ctx.fillText('1:42', barX, barY + 45);
+      ctx.fillText('0:00', barX, barY + 45);
       ctx.textAlign = 'right';
       ctx.fillText(duration, barX + barWidth, barY + 45);
 
@@ -257,6 +263,7 @@ export default function StoryCardModal({
       setTimeout(() => setDownloadSuccess(false), 3000);
     } catch (err) {
       console.error('Story card generation error:', err);
+      setCorsWarning('Unable to export PNG card cleanly. Please try again.');
     } finally {
       setDownloading(false);
     }
@@ -328,7 +335,7 @@ export default function StoryCardModal({
                   <div className="w-3/5 h-full bg-[#C8A464] rounded-full" />
                 </div>
                 <div className="flex justify-between text-[8px] text-[#8E8E96] font-mono">
-                  <span>1:42</span>
+                  <span>0:00</span>
                   <span>{duration}</span>
                 </div>
               </div>
@@ -345,6 +352,15 @@ export default function StoryCardModal({
               </p>
             </div>
           </div>
+
+          {corsWarning && (
+            <div
+              role="status"
+              className="p-2.5 rounded-lg bg-[#2B2010] border border-[#C8A464]/40 text-[11px] text-[#FDE68A] text-center"
+            >
+              {corsWarning}
+            </div>
+          )}
 
           <p className="text-[11px] text-[#8E8E96] text-center leading-relaxed">
             Exports a high-resolution 1080×1920 PNG perfectly formatted for Instagram & Facebook Stories.

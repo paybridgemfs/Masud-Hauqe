@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Save, Plus, Trash2, CheckCircle2, AlertCircle, Sparkles, Loader2 } from 'lucide-react';
 import DriveImageUpload from '@/components/admin/DriveImageUpload.jsx';
+import AdminConfirmModal from '@/components/admin/AdminConfirmModal.jsx';
 import {
   resolveSocialPlatformInfo,
   SocialPlatformIcon,
@@ -31,7 +32,36 @@ export default function AdminArtistClient({ initialArtist, initialSocialLinks = 
   const [saving, setSaving] = useState(false);
   const [addingSocial, setAddingSocial] = useState(false);
   const [deletingSocialId, setDeletingSocialId] = useState(null);
+  const [socialToDelete, setSocialToDelete] = useState(null);
   const [status, setStatus] = useState(null);
+
+  const [prevInitialArtist, setPrevInitialArtist] = useState(initialArtist);
+  if (prevInitialArtist !== initialArtist) {
+    setPrevInitialArtist(initialArtist);
+    if (initialArtist) {
+      setArtist({
+        name: initialArtist.name || 'Masud Hauqe',
+        slug: initialArtist.slug || 'masud-hauqe',
+        shortBiography: initialArtist.shortBiography || '',
+        biography: initialArtist.biography || '',
+        careerInfo: initialArtist.careerInfo || '',
+        musicalBg: initialArtist.musicalBg || '',
+        profileImage: initialArtist.profileImage || '',
+        profileImageFileId: initialArtist.profileImageFileId || '',
+        coverImage: initialArtist.coverImage || '',
+        coverImageFileId: initialArtist.coverImageFileId || '',
+        location: initialArtist.location || '',
+        website: initialArtist.website || '',
+        achievements: Array.isArray(initialArtist.achievements) ? initialArtist.achievements : [],
+      });
+    }
+  }
+
+  const [prevInitialSocialLinks, setPrevInitialSocialLinks] = useState(initialSocialLinks);
+  if (prevInitialSocialLinks !== initialSocialLinks) {
+    setPrevInitialSocialLinks(initialSocialLinks);
+    setSocialLinks(initialSocialLinks || []);
+  }
 
   async function handleSaveArtist(e) {
     e.preventDefault();
@@ -134,7 +164,8 @@ export default function AdminArtistClient({ initialArtist, initialSocialLinks = 
           },
         }),
       });
-      if (res.ok) {
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.ok !== false) {
         const refreshed = await fetch('/api/settings').then((r) => r.json());
         if (refreshed.socialLinks) setSocialLinks(refreshed.socialLinks);
         setNewSocial({ platform: '', url: '' });
@@ -142,15 +173,24 @@ export default function AdminArtistClient({ initialArtist, initialSocialLinks = 
           type: 'success',
           text: `Added "${finalPlatform}" with automatic social icon detection.`,
         });
+      } else {
+        setStatus({
+          type: 'error',
+          text: data.error || 'Failed to add social media link.',
+        });
       }
+    } catch {
+      setStatus({ type: 'error', text: 'Network error while adding social media link.' });
     } finally {
       setAddingSocial(false);
     }
   }
 
-  async function handleDeleteSocial(id) {
-    if (deletingSocialId === id) return;
+  async function confirmDeleteSocial() {
+    if (!socialToDelete || deletingSocialId === socialToDelete.id) return;
+    const id = socialToDelete.id;
     setDeletingSocialId(id);
+    setStatus(null);
     try {
       const res = await fetch('/api/settings', {
         method: 'PUT',
@@ -162,9 +202,16 @@ export default function AdminArtistClient({ initialArtist, initialSocialLinks = 
           item: { id },
         }),
       });
-      if (res.ok) {
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.ok !== false) {
         setSocialLinks((prev) => prev.filter((s) => s.id !== id));
+        setStatus({ type: 'success', text: `Removed social link "${socialToDelete.platform}".` });
+        setSocialToDelete(null);
+      } else {
+        setStatus({ type: 'error', text: data.error || 'Failed to delete social media link.' });
       }
+    } catch {
+      setStatus({ type: 'error', text: 'Network error while deleting social media link.' });
     } finally {
       setDeletingSocialId(null);
     }
@@ -417,7 +464,7 @@ export default function AdminArtistClient({ initialArtist, initialSocialLinks = 
                   <button
                     type="button"
                     disabled={deletingSocialId === s.id}
-                    onClick={() => handleDeleteSocial(s.id)}
+                    onClick={() => setSocialToDelete(s)}
                     aria-label={`Delete ${s.platform}`}
                     className="p-1.5 text-[#9A9AA2] hover:text-[#F87171] shrink-0 disabled:opacity-50"
                   >
@@ -488,6 +535,16 @@ export default function AdminArtistClient({ initialArtist, initialSocialLinks = 
           </button>
         </form>
       </section>
+
+      <AdminConfirmModal
+        isOpen={Boolean(socialToDelete)}
+        title="Remove Social Media Link"
+        message={`Are you sure you want to remove "${socialToDelete?.platform || ''}" (${socialToDelete?.url || ''})?`}
+        confirmLabel="Remove Link"
+        loading={Boolean(socialToDelete && deletingSocialId === socialToDelete.id)}
+        onConfirm={confirmDeleteSocial}
+        onCancel={() => setSocialToDelete(null)}
+      />
     </div>
   );
 }

@@ -9,7 +9,6 @@ import {
   CheckCircle2,
   AlertCircle,
   FileAudio,
-  Plus,
   X,
   HardDrive,
   Loader2,

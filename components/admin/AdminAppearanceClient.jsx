@@ -29,10 +29,27 @@ export default function AdminAppearanceClient({ initialSettings = {} }) {
   const [formData, setFormData] = useState({
     ...DEFAULT_APPEARANCE,
     ...initialSettings,
+    footerCopyright:
+      initialSettings?.footerCopyright ||
+      initialSettings?.copyrightText ||
+      DEFAULT_APPEARANCE.footerCopyright,
   });
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState(null);
   const [error, setError] = useState(null);
+
+  const [prevInitialSettings, setPrevInitialSettings] = useState(initialSettings);
+  if (prevInitialSettings !== initialSettings) {
+    setPrevInitialSettings(initialSettings);
+    setFormData({
+      ...DEFAULT_APPEARANCE,
+      ...initialSettings,
+      footerCopyright:
+        initialSettings?.footerCopyright ||
+        initialSettings?.copyrightText ||
+        DEFAULT_APPEARANCE.footerCopyright,
+    });
+  }
 
   const handleChange = (key, value) => {
     setFormData((prev) => ({ ...prev, [key]: value }));
@@ -55,7 +72,10 @@ export default function AdminAppearanceClient({ initialSettings = {} }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           group: 'websiteSettings',
-          values: formData,
+          values: {
+            ...formData,
+            copyrightText: formData.footerCopyright || '',
+          },
         }),
       });
       const data = await res.json();

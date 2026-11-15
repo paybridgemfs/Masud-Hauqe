@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireAdminSession } from '@/lib/auth.js';
 import { uploadImageToGoogleDrive, deleteFileFromGoogleDrive } from '@/lib/google-drive.js';
 import { logAuditEvent } from '@/lib/db.js';
+import { verifyImageSignature } from '@/lib/security.js';
 
 const ALLOWED_IMAGE_MIME_TYPES = new Set([
   'image/jpeg',
@@ -10,7 +11,6 @@ const ALLOWED_IMAGE_MIME_TYPES = new Set([
   'image/webp',
   'image/gif',
   'image/avif',
-  'image/svg+xml',
   'image/x-icon',
   'image/vnd.microsoft.icon',
 ]);
@@ -48,7 +48,7 @@ export async function POST(request) {
       return NextResponse.json(
         {
           ok: false,
-          error: `Unsupported image format (${mimeType}). Please upload JPG, PNG, WebP, GIF, AVIF, SVG, or ICO.`,
+          error: `Unsupported image format (${mimeType}). Please upload JPG, PNG, WebP, GIF, AVIF, or ICO.`,
         },
         { status: 400 }
       );
@@ -71,11 +71,19 @@ export async function POST(request) {
       );
     }
 
+    const sigCheck = verifyImageSignature(buffer, mimeType);
+    if (!sigCheck.valid) {
+      return NextResponse.json(
+        { ok: false, error: sigCheck.reason },
+        { status: 400 }
+      );
+    }
+
     const safeFileName = sanitizeImageFilename(imageFile.name);
     const uploadResult = await uploadImageToGoogleDrive({
       buffer,
       fileName: safeFileName,
-      mimeType,
+      mimeType: sigCheck.detectedMime || mimeType,
     });
 
     // If replacing an existing Drive image, delete the old image from Google Drive

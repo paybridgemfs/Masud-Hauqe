@@ -2,7 +2,8 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Mail, MailOpen, Trash2, CheckCircle2, AlertCircle, Clock, Loader2 } from 'lucide-react';
+import { Mail, MailOpen, Trash2, AlertCircle, Clock, Loader2 } from 'lucide-react';
+import AdminConfirmModal from '@/components/admin/AdminConfirmModal.jsx';
 
 export default function AdminMessagesClient({ initialMessages = [] }) {
   const router = useRouter();
@@ -12,6 +13,13 @@ export default function AdminMessagesClient({ initialMessages = [] }) {
   const [error, setError] = useState(null);
   const [togglingId, setTogglingId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
+  const [msgToDelete, setMsgToDelete] = useState(null);
+
+  const [prevInitialMessages, setPrevInitialMessages] = useState(initialMessages);
+  if (prevInitialMessages !== initialMessages) {
+    setPrevInitialMessages(initialMessages);
+    setMessages(initialMessages || []);
+  }
 
   const filteredMessages = messages.filter((m) => (filter === 'unread' ? !m.isRead : true));
   const activeMessage =
@@ -43,8 +51,9 @@ export default function AdminMessagesClient({ initialMessages = [] }) {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (deletingId === id) return;
+  const confirmDeleteMessage = async () => {
+    if (!msgToDelete || deletingId === msgToDelete.id) return;
+    const id = msgToDelete.id;
     setError(null);
     setDeletingId(id);
     try {
@@ -57,6 +66,7 @@ export default function AdminMessagesClient({ initialMessages = [] }) {
         if (selectedId === id) {
           setSelectedId(remaining[0]?.id || null);
         }
+        setMsgToDelete(null);
         router.refresh();
       } else {
         setError('Failed to delete message.');
@@ -222,7 +232,7 @@ export default function AdminMessagesClient({ initialMessages = [] }) {
                     <button
                       type="button"
                       disabled={deletingId === activeMessage.id}
-                      onClick={() => handleDelete(activeMessage.id)}
+                      onClick={() => setMsgToDelete(activeMessage)}
                       className="px-3.5 py-2 bg-[#D64545]/10 hover:bg-[#D64545]/20 text-xs font-semibold text-[#D64545] rounded border border-[#D64545]/30 inline-flex items-center gap-1.5 transition-colors disabled:opacity-50"
                     >
                       {deletingId === activeMessage.id ? (
@@ -255,6 +265,16 @@ export default function AdminMessagesClient({ initialMessages = [] }) {
           </div>
         </div>
       )}
+
+      <AdminConfirmModal
+        isOpen={Boolean(msgToDelete)}
+        title="Delete Inquiry Message"
+        message={`Are you sure you want to permanently delete the inquiry from "${msgToDelete?.name || ''}"?`}
+        confirmLabel="Delete Message"
+        loading={Boolean(msgToDelete && deletingId === msgToDelete.id)}
+        onConfirm={confirmDeleteMessage}
+        onCancel={() => setMsgToDelete(null)}
+      />
     </div>
   );
 }

@@ -1,16 +1,28 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Save, Plus, Trash2, Loader2 } from 'lucide-react';
+import { Save, Plus, Trash2, Loader2, AlertCircle, X } from 'lucide-react';
+import AdminConfirmModal from '@/components/admin/AdminConfirmModal.jsx';
 
 export function AdminPagesManager({ initialPages = [] }) {
   const [pages, setPages] = useState(initialPages);
   const [selectedId, setSelectedId] = useState(initialPages[0]?.id || '');
   const [statusMsg, setStatusMsg] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
   const [newPage, setNewPage] = useState({ title: '', slug: '', content: '' });
   const [savingPage, setSavingPage] = useState(false);
   const [creatingPage, setCreatingPage] = useState(false);
   const [deletingPageId, setDeletingPageId] = useState(null);
+  const [pageToDelete, setPageToDelete] = useState(null);
+
+  const [prevInitialPages, setPrevInitialPages] = useState(initialPages);
+  if (prevInitialPages !== initialPages) {
+    setPrevInitialPages(initialPages);
+    setPages(initialPages || []);
+    setSelectedId((prev) =>
+      (initialPages || []).some((p) => p.id === prev) ? prev : initialPages?.[0]?.id || ''
+    );
+  }
 
   const currentPage = pages.find((p) => p.id === selectedId) || null;
 
@@ -18,6 +30,8 @@ export function AdminPagesManager({ initialPages = [] }) {
     e.preventDefault();
     if (!currentPage || savingPage) return;
     setSavingPage(true);
+    setStatusMsg('');
+    setErrorMsg('');
     try {
       const res = await fetch('/api/settings', {
         method: 'PUT',
@@ -28,9 +42,14 @@ export function AdminPagesManager({ initialPages = [] }) {
           page: currentPage,
         }),
       });
-      if (res.ok) {
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.ok !== false) {
         setStatusMsg(`Saved legal/CMS page "${currentPage.title}".`);
+      } else {
+        setErrorMsg(data.error || 'Failed to save page changes.');
       }
+    } catch {
+      setErrorMsg('Network error while saving page changes.');
     } finally {
       setSavingPage(false);
     }
@@ -40,6 +59,8 @@ export function AdminPagesManager({ initialPages = [] }) {
     e.preventDefault();
     if (!newPage.title.trim() || !newPage.content.trim() || creatingPage) return;
     setCreatingPage(true);
+    setStatusMsg('');
+    setErrorMsg('');
     try {
       const res = await fetch('/api/settings', {
         method: 'PUT',
@@ -50,7 +71,8 @@ export function AdminPagesManager({ initialPages = [] }) {
           page: newPage,
         }),
       });
-      if (res.ok) {
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.ok !== false) {
         const refreshed = await fetch('/api/settings').then((r) => r.json());
         if (refreshed.pages) {
           setPages(refreshed.pages);
@@ -58,15 +80,22 @@ export function AdminPagesManager({ initialPages = [] }) {
         }
         setNewPage({ title: '', slug: '', content: '' });
         setStatusMsg('Created new CMS page.');
+      } else {
+        setErrorMsg(data.error || 'Failed to create page.');
       }
+    } catch {
+      setErrorMsg('Network error while creating page.');
     } finally {
       setCreatingPage(false);
     }
   }
 
-  async function handleDeletePage(id) {
-    if (deletingPageId === id) return;
+  async function confirmDeletePage() {
+    if (!pageToDelete || deletingPageId === pageToDelete.id) return;
+    const id = pageToDelete.id;
     setDeletingPageId(id);
+    setStatusMsg('');
+    setErrorMsg('');
     try {
       const res = await fetch('/api/settings', {
         method: 'PUT',
@@ -77,11 +106,18 @@ export function AdminPagesManager({ initialPages = [] }) {
           page: { id },
         }),
       });
-      if (res.ok) {
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.ok !== false) {
         const next = pages.filter((p) => p.id !== id);
         setPages(next);
         setSelectedId(next[0]?.id || '');
+        setStatusMsg(`Deleted page "${pageToDelete.title}".`);
+        setPageToDelete(null);
+      } else {
+        setErrorMsg(data.error || 'Failed to delete page.');
       }
+    } catch {
+      setErrorMsg('Network error while deleting page.');
     } finally {
       setDeletingPageId(null);
     }
@@ -90,8 +126,22 @@ export function AdminPagesManager({ initialPages = [] }) {
   return (
     <div className="space-y-8">
       {statusMsg && (
-        <div className="p-3.5 rounded bg-[#11261B] border border-[#166534] text-xs text-[#BBF7D0]">
-          {statusMsg}
+        <div className="p-3.5 rounded bg-[#11261B] border border-[#166534] text-xs text-[#BBF7D0] flex items-center justify-between gap-2">
+          <span>{statusMsg}</span>
+          <button type="button" onClick={() => setStatusMsg('')} className="hover:text-white">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+      {errorMsg && (
+        <div role="alert" className="p-3.5 rounded bg-[#2A1215] border border-[#7F1D1D] text-xs text-[#FECACA] flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-[#F87171] shrink-0" />
+            <span>{errorMsg}</span>
+          </div>
+          <button type="button" onClick={() => setErrorMsg('')} className="hover:text-white">
+            <X className="w-3.5 h-3.5" />
+          </button>
         </div>
       )}
 
@@ -126,7 +176,7 @@ export function AdminPagesManager({ initialPages = [] }) {
                 <button
                   type="button"
                   disabled={deletingPageId === currentPage.id}
-                  onClick={() => handleDeletePage(currentPage.id)}
+                  onClick={() => setPageToDelete(currentPage)}
                   className="text-xs text-[#FCA5A5] hover:underline inline-flex items-center gap-1 disabled:opacity-50"
                 >
                   {deletingPageId === currentPage.id ? (
@@ -255,6 +305,16 @@ export function AdminPagesManager({ initialPages = [] }) {
           <span>{creatingPage ? 'Creating Page...' : 'Create Page'}</span>
         </button>
       </form>
+
+      <AdminConfirmModal
+        isOpen={Boolean(pageToDelete)}
+        title="Delete Legal / CMS Page"
+        message={`Are you sure you want to permanently delete "${pageToDelete?.title || ''}" (/${pageToDelete?.slug || ''})?`}
+        confirmLabel="Delete Page"
+        loading={Boolean(pageToDelete && deletingPageId === pageToDelete.id)}
+        onConfirm={confirmDeletePage}
+        onCancel={() => setPageToDelete(null)}
+      />
     </div>
   );
 }

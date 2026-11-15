@@ -1,11 +1,13 @@
+import crypto from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { handleGoogleOAuthCallback, verifySignedOAuthState } from '@/lib/google-drive.js';
+import { escapeHtml, safeJsonLdStringify } from '@/lib/security.js';
 
 const OAUTH_STATE_COOKIE = 'mh_google_oauth_state';
 
 function renderCallbackHtml({ ok, error = '', data = null }) {
-  const payload = JSON.stringify({
+  const payload = safeJsonLdStringify({
     type: ok ? 'GOOGLE_OAUTH_SUCCESS' : 'GOOGLE_OAUTH_ERROR',
     ok,
     error,
@@ -14,6 +16,7 @@ function renderCallbackHtml({ ok, error = '', data = null }) {
   const redirectTarget = ok
     ? '/admin/integrations/google-drive?connected=1'
     : `/admin/integrations/google-drive?error=${encodeURIComponent(error || 'oauth_failed')}`;
+  const safeErrorText = escapeHtml(error);
 
   const html = `<!DOCTYPE html>
 <html lang="en">
@@ -32,7 +35,7 @@ function renderCallbackHtml({ ok, error = '', data = null }) {
     <p style="font-size:12px;color:#9A9AA2;">${
       ok
         ? 'Creating "Musics" and "Images" folders... This window will close automatically.'
-        : error
+        : safeErrorText
     }</p>
   </div>
   <script>
@@ -40,12 +43,12 @@ function renderCallbackHtml({ ok, error = '', data = null }) {
       var msg = ${payload};
       if (window.opener && !window.opener.closed) {
         try {
-          window.opener.postMessage(msg, '*');
+          window.opener.postMessage(msg, window.location.origin);
           setTimeout(function() { window.close(); }, 300);
           return;
         } catch (e) {}
       }
-      window.location.replace(${JSON.stringify(redirectTarget)});
+      window.location.replace(${safeJsonLdStringify(redirectTarget)});
     })();
   </script>
 </body>
@@ -55,6 +58,15 @@ function renderCallbackHtml({ ok, error = '', data = null }) {
     status: 200,
     headers: { 'Content-Type': 'text/html; charset=utf-8' },
   });
+}
+
+function statesMatch(cookieVal, queryVal) {
+  if (!cookieVal || !queryVal || typeof cookieVal !== 'string' || typeof queryVal !== 'string') {
+    return false;
+  }
+  const a = Buffer.from(cookieVal);
+  const b = Buffer.from(queryVal);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 
 export async function GET(request) {
@@ -68,10 +80,12 @@ export async function GET(request) {
   }
 
   const cookieStore = await cookies();
+  const cookieState = cookieStore.get(OAUTH_STATE_COOKIE)?.value || '';
   cookieStore.delete(OAUTH_STATE_COOKIE);
 
   const verified = verifySignedOAuthState(state);
-  if (!code || !verified.valid) {
+  const cookieBound = !cookieState || statesMatch(cookieState, state);
+  if (!code || !verified.valid || !cookieBound) {
     return renderCallbackHtml({
       ok: false,
       error: 'Invalid or expired OAuth state parameter. Please click Connect again.',
