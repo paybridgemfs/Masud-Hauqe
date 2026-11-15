@@ -201,7 +201,8 @@ export async function POST(request) {
         ? (db.albums || []).find((a) => a.id === parsed.data.albumId) || null
         : null;
 
-      // Embed ID3v2.3 Metadata + Cover Photo directly into the MP3 buffer prior to Google Drive upload
+      // Embed lightweight ID3v2.3 Metadata (capping cover artwork at 180 KB on the streaming master
+      // so initial audio frames stay inside the very first 256 KB stream chunk; ?download=1 embeds full artwork)
       fileBuffer = await embedMp3MetadataAndCover(fileBuffer, {
         track: {
           title: parsed.data.title,
@@ -217,6 +218,7 @@ export async function POST(request) {
         },
         album: targetAlbumObj,
         artist: artistObj,
+        maxArtworkBytes: 180 * 1024,
       });
 
       const safeFileName = sanitizeFilename(originalFileName);
