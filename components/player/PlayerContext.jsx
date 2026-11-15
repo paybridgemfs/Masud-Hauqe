@@ -357,6 +357,7 @@ export function PlayerProvider({ children }) {
       setIsLoading(true);
       audio.volume = isMutedRef.current ? 0 : volumeRef.current;
       audio.src = streamUrl;
+      audio.load();
 
       if (autoPlay) {
         ensureWebAudioGraph();
